@@ -284,26 +284,7 @@ export default function LeaveCreatePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-500 hover:text-slate-800">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Kembali
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Pengambilan Cuti
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 pl-2 sm:pl-0">
-            Cari data karyawan pimpinan untuk memeriksa saldo dan mengajukan permohonan cuti.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
 
       {/* Success Notification Banner */}
       {successResult && (
@@ -422,7 +403,7 @@ export default function LeaveCreatePage() {
                   </div>
                 ) : filteredEmployees.length === 0 ? (
                   <div className="p-4 text-center text-xs text-slate-500">
-                    Tidak ditemukan karyawan dengan kata kunci <span className="font-semibold text-slate-800">"{searchQuery}"</span>.
+                    Tidak ditemukan karyawan dengan kata kunci <span className="font-semibold text-slate-800">&quot;{searchQuery}&quot;</span>.
                   </div>
                 ) : (
                   filteredEmployees.map((emp) => (

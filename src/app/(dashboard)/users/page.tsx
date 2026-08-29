@@ -48,6 +48,7 @@ import {
   updateUserAction,
   deleteUserAction,
 } from "@/actions/user-actions";
+import { getDepartmentsAction } from "@/actions/employee-actions";
 
 interface UserItem {
   id: string;
@@ -61,17 +62,16 @@ interface UserItem {
   updatedAt: Date | string;
 }
 
-const DEPARTMENTS = [
-  { code: "PIMPINAN", name: "Pimpinan" },
-  { code: "TUK", name: "Tata Usaha & Keuangan (TUK)" },
-  { code: "TAN", name: "Tanaman (TAN)" },
-  { code: "TEK", name: "Teknik (TEK)" },
-  { code: "PAB", name: "Pabrikasi (PAB)" },
-];
+interface DepartmentItem {
+  id: string;
+  code: string;
+  name: string;
+}
 
 export default function UsersPage() {
   const [isPending, startTransition] = useTransition();
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Search & Filter
@@ -107,11 +107,22 @@ export default function UsersPage() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await getUsersAction();
+      const [res, deptRes] = await Promise.all([
+        getUsersAction(),
+        getDepartmentsAction(),
+      ]);
+
       if (res.success && res.data) {
         setUsers(res.data as UserItem[]);
       } else {
         toast.error(res.message || "Gagal memuat data pengguna.");
+      }
+
+      if (deptRes.success && deptRes.data) {
+        setDepartments(deptRes.data as DepartmentItem[]);
+        if (deptRes.data.length > 0 && !department) {
+          setDepartment(deptRes.data[0].code);
+        }
       }
     } catch (err) {
       console.error("Load users error:", err);
@@ -123,6 +134,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filtered List (READ)
@@ -259,37 +271,19 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-500 hover:text-slate-800">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Kembali
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <UserCog className="h-6 w-6 text-blue-600" />
-              Kelola Pengguna (User)
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 pl-2 sm:pl-0">
-            Manajemen akun operator aplikasi cuti PG Trangkil (Admin Utama & Admin Bagian) dengan fitur CRUD lengkap.
-          </p>
-        </div>
-
-        {/* CREATE Button */}
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            size="sm"
-            className="gap-1.5 h-9 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
-          >
-            <UserPlus className="h-4 w-4" />
-            + Tambah User Baru
-          </Button>
-        </div>
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+        <p className="text-xs text-slate-500 font-medium">
+          Daftar akun operator aplikasi cuti PG Trangkil (Admin Utama & Admin Bagian)
+        </p>
+        <Button
+          onClick={() => setIsAddModalOpen(true)}
+          size="sm"
+          className="gap-1.5 h-8 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          + Tambah User Baru
+        </Button>
       </div>
 
       {/* Summary Stats */}
@@ -402,7 +396,7 @@ export default function UsersPage() {
               className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
             >
               <option value="ALL">Semua Bagian</option>
-              {DEPARTMENTS.map((d) => (
+              {departments.map((d) => (
                 <option key={d.code} value={d.code}>
                   {d.code} - {d.name}
                 </option>
@@ -418,92 +412,72 @@ export default function UsersPage() {
               Memuat data pengguna dari database...
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
-                <UserCog className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-semibold text-slate-800">
-                {users.length === 0 ? "Belum Ada Pengguna" : "Tidak Ada Data yang Sesuai"}
-              </h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                {users.length === 0
-                  ? "Klik tombol '+ Tambah User Baru' untuk mulai membuat akun pengguna."
-                  : `Tidak ditemukan akun dengan kata kunci "${searchQuery}".`}
-              </p>
+            <div className="p-12 text-center text-slate-400 text-xs">
+              Tidak ada data pengguna yang sesuai dengan filter pencarian.
             </div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/80 text-[11px]">
-                  <TableHead className="w-40 font-bold">USERNAME</TableHead>
-                  <TableHead className="font-bold">NAMA LENGKAP</TableHead>
-                  <TableHead className="font-bold">ROLE</TableHead>
-                  <TableHead className="font-bold">BAGIAN / AKSES</TableHead>
-                  <TableHead className="font-bold">STATUS</TableHead>
-                  <TableHead className="font-bold">LOGIN TERAKHIR</TableHead>
-                  <TableHead className="text-right font-bold w-28">AKSI</TableHead>
+              <TableHeader className="bg-slate-50/80">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-12 text-center text-xs font-semibold">NO</TableHead>
+                  <TableHead className="text-xs font-semibold">USERNAME</TableHead>
+                  <TableHead className="text-xs font-semibold">NAMA LENGKAP</TableHead>
+                  <TableHead className="text-xs font-semibold">ROLE / HAK AKSES</TableHead>
+                  <TableHead className="text-xs font-semibold">BAGIAN</TableHead>
+                  <TableHead className="text-xs font-semibold">LOGIN TERAKHIR</TableHead>
+                  <TableHead className="text-right text-xs font-semibold w-24">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((u) => (
-                  <TableRow key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                {filteredUsers.map((u, idx) => (
+                  <TableRow key={u.id} className="hover:bg-slate-50/50">
+                    {/* 0. Nomor */}
+                    <TableCell className="text-center text-xs text-slate-500 font-mono">
+                      {idx + 1}
+                    </TableCell>
+
                     {/* 1. Username */}
                     <TableCell className="font-mono text-xs font-bold text-slate-900">
                       {u.username}
                     </TableCell>
 
                     {/* 2. Nama Lengkap */}
-                    <TableCell className="text-xs font-medium text-slate-900">
+                    <TableCell className="text-xs font-medium text-slate-800">
                       {u.fullName}
                     </TableCell>
 
                     {/* 3. Role */}
                     <TableCell>
                       {u.role === "ADMIN_UTAMA" ? (
-                        <Badge className="bg-blue-600 text-white font-medium hover:bg-blue-700">
+                        <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-[10px] gap-1">
+                          <ShieldCheck className="h-3 w-3" />
                           Admin Utama
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="font-medium bg-slate-100 text-slate-700">
+                        <Badge variant="outline" className="text-slate-700 border-slate-300 text-[10px] gap-1">
+                          <Building2 className="h-3 w-3 text-slate-500" />
                           Admin Bagian
                         </Badge>
                       )}
                     </TableCell>
 
                     {/* 4. Bagian */}
-                    <TableCell>
+                    <TableCell className="text-xs text-slate-700">
                       {u.role === "ADMIN_UTAMA" ? (
-                        <Badge variant="outline" className="font-mono text-[11px] bg-blue-50 text-blue-700 border-blue-200">
-                          Semua Bagian (ALL)
-                        </Badge>
+                        <span className="text-slate-400 italic">Semua Bagian (ALL)</span>
                       ) : (
-                        <Badge variant="outline" className="font-semibold text-[11px] bg-slate-50 text-slate-800 border-slate-200">
+                        <Badge variant="secondary" className="text-[10px]">
                           {u.department || "-"}
                         </Badge>
                       )}
                     </TableCell>
 
-                    {/* 5. Status */}
-                    <TableCell>
-                      {u.isActive ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                          Aktif
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                          <span className="h-2 w-2 rounded-full bg-slate-400" />
-                          Nonaktif
-                        </span>
-                      )}
-                    </TableCell>
-
-                    {/* 6. Login Terakhir */}
+                    {/* 5. Login Terakhir */}
                     <TableCell className="text-xs text-slate-500 font-mono">
                       {formatDateTime(u.lastLoginAt)}
                     </TableCell>
 
-                    {/* 7. AKSI: Edit (U) & Delete (D) */}
+                    {/* 6. AKSI: Edit (U) & Delete (D) */}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -643,7 +617,7 @@ export default function UsersPage() {
                   {role === "ADMIN_UTAMA" ? (
                     <option value="ALL">Semua Bagian (ALL)</option>
                   ) : (
-                    DEPARTMENTS.map((d) => (
+                    departments.map((d) => (
                       <option key={d.code} value={d.code}>
                         {d.code} - {d.name}
                       </option>
@@ -805,7 +779,7 @@ export default function UsersPage() {
                   {editRole === "ADMIN_UTAMA" ? (
                     <option value="ALL">Semua Bagian (ALL)</option>
                   ) : (
-                    DEPARTMENTS.map((d) => (
+                    departments.map((d) => (
                       <option key={d.code} value={d.code}>
                         {d.code} - {d.name}
                       </option>

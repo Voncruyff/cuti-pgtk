@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Clock,
   CheckCircle2,
+  LayoutDashboard,
 } from "lucide-react";
 import { mockDb } from "@/lib/mock-db";
 import { requireAuth } from "@/lib/auth/session";
@@ -115,37 +116,7 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Dashboard Operasional
-            </h1>
-            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-              Dummy / Mock Data Mode
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Selamat datang, <span className="font-semibold text-slate-700">{user.fullName || user.username}</span>. Ringkasan sistem cuti PG Trangkil.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/leave/create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs font-medium">
-              <CalendarDays className="h-3.5 w-3.5" />
-              + Ambil Cuti
-            </Button>
-          </Link>
-          <Link href="/balances/add">
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs font-medium">
-              <PlusCircle className="h-3.5 w-3.5" />
-              Tambah Saldo
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
 
       {/* Operational Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

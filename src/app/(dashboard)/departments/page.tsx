@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import {
   Building2,
+  Factory,
   PlusCircle,
   Search,
   Users,
@@ -211,45 +212,47 @@ export default function DepartmentsPage() {
   };
 
   const totalActive = departments.filter((d) => d.isActive).length;
-  const totalEmployees = departments.reduce((acc, curr) => acc + curr.employeeCount, 0);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-500 hover:text-slate-800">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Kembali
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-blue-600" />
-              Master Bagian (Departemen)
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 pl-2 sm:pl-0">
-            Kelola data master unit kerja resmi PG Trangkil yang tersimpan di tabel database MySQL (<code className="font-mono text-slate-700">departments</code>).
-          </p>
+      {/* Top Action & Navigation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2">
+        {/* Tabs Switcher: Master Stasiun vs Master Bagian */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/stations"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <Factory className="h-4 w-4" />
+            Master Stasiun
+          </Link>
+          <Link
+            href="/departments"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold border-b-2 border-blue-600 text-blue-600"
+          >
+            <Building2 className="h-4 w-4" />
+            Master Bagian
+            <Badge className="h-5 px-1.5 text-[10px] bg-blue-100 text-blue-700 border-none">
+              {departments.length}
+            </Badge>
+          </Link>
         </div>
 
-        {/* CREATE Button */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <Button
             onClick={() => setIsAddModalOpen(true)}
             size="sm"
-            className="gap-1.5 h-9 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            className="gap-1.5 h-8 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
           >
-            <PlusCircle className="h-4 w-4" />
+            <PlusCircle className="h-3.5 w-3.5" />
             + Tambah Bagian Baru
           </Button>
         </div>
       </div>
 
       {/* Stats Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card className="border-slate-200 shadow-2xs">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
@@ -277,20 +280,6 @@ export default function DepartmentsPage() {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Total Karyawan Terdistribusi</p>
-              <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
-                {totalEmployees} Orang
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main Table Card (READ) */}
@@ -302,13 +291,13 @@ export default function DepartmentsPage() {
               Tabel Master Bagian PG Trangkil
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
-              Daftar unit kerja operasional dan jumlah karyawan yang terdaftar
+              Daftar unit kerja operasional resmi PG Trangkil
             </CardDescription>
           </div>
 
-          {/* Search & Filter */}
+          {/* Search */}
           <div className="flex items-center gap-2">
-            <div className="relative w-48 sm:w-60">
+            <div className="relative w-48 sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <Input
                 type="text"
@@ -327,16 +316,6 @@ export default function DepartmentsPage() {
                 </button>
               )}
             </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="ACTIVE">Hanya Aktif</option>
-              <option value="INACTIVE">Hanya Nonaktif</option>
-            </select>
           </div>
         </CardHeader>
 
@@ -364,11 +343,9 @@ export default function DepartmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 text-[11px]">
-                  <TableHead className="w-28 font-bold">KODE BAGIAN</TableHead>
+                  <TableHead className="w-32 font-bold">KODE BAGIAN</TableHead>
                   <TableHead className="font-bold">NAMA BAGIAN / UNIT KERJA</TableHead>
-                  <TableHead className="text-center font-bold">JUMLAH KARYAWAN</TableHead>
-                  <TableHead className="font-bold">STATUS</TableHead>
-                  <TableHead className="font-bold">TANGGAL DIBUAT</TableHead>
+                  <TableHead className="font-bold w-44">TANGGAL DIBUAT</TableHead>
                   <TableHead className="text-right font-bold w-24">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
@@ -387,41 +364,12 @@ export default function DepartmentsPage() {
                       {d.name}
                     </TableCell>
 
-                    {/* 3. Jumlah Karyawan */}
-                    <TableCell className="text-center">
-                      <Link href={`/employees`}>
-                        <Badge
-                          variant="secondary"
-                          className="font-medium text-[11px] bg-slate-100 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                          title="Lihat daftar karyawan"
-                        >
-                          <Users className="h-3 w-3 mr-1 text-slate-500" />
-                          {d.employeeCount} orang
-                        </Badge>
-                      </Link>
-                    </TableCell>
-
-                    {/* 4. Status */}
-                    <TableCell>
-                      {d.isActive ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                          Aktif
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                          <span className="h-2 w-2 rounded-full bg-slate-400" />
-                          Nonaktif
-                        </span>
-                      )}
-                    </TableCell>
-
-                    {/* 5. Tanggal Dibuat */}
+                    {/* 3. Tanggal Dibuat */}
                     <TableCell className="text-xs text-slate-500 font-mono">
                       {formatDate(d.createdAt)}
                     </TableCell>
 
-                    {/* 6. AKSI: Edit (U) & Delete (D) */}
+                    {/* 4. AKSI: Edit (U) & Delete (D) */}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button

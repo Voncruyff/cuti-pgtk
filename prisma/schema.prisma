@@ -28,25 +28,76 @@ model User {
 }
 
 model Department {
-  id        String   @id @default(uuid())
-  code      String   @unique @db.VarChar(50)
-  name      String   @db.VarChar(150)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  code      String    @unique @db.VarChar(50)
+  name      String    @db.VarChar(150)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  stations  Station[]
 
-  @@map("departments")
+  @@map("bagian")
+}
+
+model Station {
+  id           String      @id @default(uuid())
+  code         String      @unique @db.VarChar(50) // KOBAG
+  name         String      @db.VarChar(150)        // NABAG
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  employees    Employee[]
+
+  @@map("stasiun")
 }
 
 model Employee {
-  id        String   @id @default(uuid())
-  nip       String   @unique @db.VarChar(50)
-  nama      String   @db.VarChar(200)
-  jabatan   String   @db.VarChar(150)
-  bagian    String   @db.VarChar(100)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String        @id @default(uuid())
+  nip          String        @unique @db.VarChar(50)
+  nama         String        @db.VarChar(200)
+  jabatan      String        @db.VarChar(150)
+  bagian       String        @db.VarChar(100)
+  category     String        @default("PIMPINAN") @db.VarChar(50) // PIMPINAN / PELAKSANA
+  stationId    String?       @map("station_id")
+  stasiun      String?       @db.VarChar(150) // Stasiun
+  station      Station?      @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  leaveBalance LeaveBalance?
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  @@map("employees")
+  @@map("karyawan")
 }
+
+model LeaveBalance {
+  id           String    @id @default(uuid())
+  nip          String    @unique @db.VarChar(50)
+  nama         String    @db.VarChar(200)
+  employee     Employee  @relation(fields: [nip], references: [nip], onDelete: Cascade)
+
+  // Saldo Cuti diurutkan:
+  // 1. Cuti Tahunan
+  cutiTahunan  Int       @default(12) @map("cuti_tahunan")
+
+  // 2. Cuti Besar
+  cutiBesar    Int       @default(0) @map("cuti_besar")
+
+  // 3. Inhaldagen
+  inhaldagen   Int       @default(0) @map("inhaldagen")
+
+  // Total saldo akumulasi
+  total        Int       @default(12) @map("total_saldo")
+
+  // Periode Tahun
+  periode      Int       @default(2026) @map("periode_tahun")
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("saldo_cuti")
+}
+
+
+

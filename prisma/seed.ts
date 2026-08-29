@@ -1,5 +1,7 @@
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedStations } from "./seed-stations";
+import { seedLeaveBalances } from "./seed-leave-balances";
 
 const prisma = new PrismaClient();
 
@@ -130,6 +132,13 @@ async function main() {
   console.log("   - admin_b (Role: ADMIN_BAGIAN, Department: Bagian B)");
   console.log("   - admin_c (Role: ADMIN_BAGIAN, Department: Bagian C)");
   console.log("✅ 5 Bagian seeded: PIMPINAN, TUK, TAN, TEK, PAB");
+
+  // Seed 28 Master Stasiun
+  await seedStations();
+
+  // Seed Saldo Cuti Karyawan
+  await seedLeaveBalances();
+
   console.log("🎉 Seeding completed successfully!");
 }
 

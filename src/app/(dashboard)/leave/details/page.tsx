@@ -173,25 +173,11 @@ export default function LeaveDetailsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 print:p-0 print:m-0 print:max-w-none">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4 print:hidden">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-500 hover:text-slate-800">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Kembali
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Rincian & Kartu Cuti Karyawan
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 pl-2 sm:pl-0">
-            Buku mutasi saldo cuti (penambahan & pemotongan) karyawan pimpinan PG Trangkil.
-          </p>
-        </div>
-
+      {/* Top Action Bar (Print: Hidden) */}
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2">
+        <p className="text-xs text-slate-500 font-medium">
+          Buku mutasi saldo cuti (penambahan & pemotongan) karyawan pimpinan PG Trangkil
+        </p>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

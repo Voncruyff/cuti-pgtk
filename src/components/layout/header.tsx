@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, LogOut, ShieldCheck, UserCheck, Calendar } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { SessionUser } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,6 @@ export interface HeaderProps {
 interface PageMeta {
   title: string;
   category: string;
-  badgeColor?: string;
 }
 
 export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
@@ -41,11 +40,11 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
     });
   };
 
-  // Logika penyesuaian judul header untuk setiap halaman secara dinamis
+  // Otomatis menyesuaikan judul & kategori sesuai rute URL yang sedang dibuka
   const getPageMeta = (): PageMeta => {
     if (pathname === "/dashboard") {
       return {
-        title: "Dashboard Utama",
+        title: "Dashboard",
         category: "Menu Utama",
       };
     }
@@ -79,13 +78,19 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
         category: "Data Master",
       };
     }
+    if (pathname.startsWith("/stations")) {
+      return {
+        title: "Master Stasiun",
+        category: "Data Master",
+      };
+    }
     if (pathname.startsWith("/departments")) {
       return {
         title: "Master Bagian",
         category: "Data Master",
       };
     }
-    if (pathname.startsWith("/reports/summary") || pathname.startsWith("/reports")) {
+    if (pathname.startsWith("/reports")) {
       return {
         title: "Rekapitulasi Cuti",
         category: "Laporan",
@@ -93,25 +98,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
     }
     if (pathname.startsWith("/users")) {
       return {
-        title: "Kelola User Pengguna",
-        category: "Administrasi",
-      };
-    }
-    if (pathname.startsWith("/leave-types")) {
-      return {
-        title: "Master Jenis Cuti",
-        category: "Administrasi",
-      };
-    }
-    if (pathname.startsWith("/holidays")) {
-      return {
-        title: "Master Hari Libur",
-        category: "Administrasi",
-      };
-    }
-    if (pathname.startsWith("/audit")) {
-      return {
-        title: "Audit Log & Aktivitas",
+        title: "Kelola User",
         category: "Administrasi",
       };
     }
@@ -123,8 +110,8 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
     }
 
     return {
-      title: "Sistem Cuti PG Trangkil",
-      category: "Aplikasi",
+      title: "Sistem Pengelolaan Cuti",
+      category: "PG Trangkil",
     };
   };
 
@@ -147,8 +134,8 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-xs px-4 md:px-6 shadow-2xs transition-colors">
-      {/* Kiri: Toggle Mobile & Judul Halaman Dinamis */}
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-xs px-4 md:px-6 shadow-2xs transition-colors shrink-0">
+      {/* Sisi Kiri: Toggle Menu Mobile & Judul Halaman Dinamis */}
       <div className="flex items-center gap-3">
         {/* Tombol Hamburger Mobile */}
         <button
@@ -177,7 +164,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
         </div>
       </div>
 
-      {/* Kanan: Info Akun User & Tombol Keluar */}
+      {/* Sisi Kanan: Info Akun Operator & Tombol Keluar */}
       <div className="flex items-center gap-3">
         {/* Identitas Operator Aktif */}
         <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 sm:border-l-0">
