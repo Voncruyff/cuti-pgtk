@@ -1,7 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -10,16 +11,20 @@ import {
   FileSpreadsheet,
   Users,
   Building2,
+  Factory,
   FileText,
   UserCog,
-  CalendarRange,
-  ShieldCheck,
   Settings,
-  CalendarCheck,
   X,
+  LogOut,
+  Menu,
 } from "lucide-react";
+import { toast } from "sonner";
 import { SessionUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/actions/auth-actions";
 import { useSidebar } from "./sidebar-context";
 
 export interface SidebarProps {
@@ -29,12 +34,43 @@ export interface SidebarProps {
 }
 
 export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: SidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const context = useSidebar();
+  const [isPending, startTransition] = useTransition();
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : context.isOpen;
   const onClose = propOnClose || context.close;
   const isMainAdmin = user.role === "ADMIN_UTAMA";
+
+  const handleLogout = () => {
+    startTransition(async () => {
+      const res = await logoutAction();
+      if (res.success) {
+        toast.success("Berhasil keluar.");
+        router.push("/login");
+        router.refresh();
+      } else {
+        toast.error("Gagal logout.");
+      }
+    });
+  };
+
+  const getRoleLabel = () => {
+    if (user.role === "ADMIN_UTAMA") {
+      return "Admin Utama (ALL)";
+    }
+    return user.department ? `Admin Bagian ${user.department}` : "Admin Bagian";
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   const navigation = [
     {
@@ -63,12 +99,16 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
           icon: PlusCircle,
           roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
         },
-        {
-          name: "Proses Massal",
-          href: "/mass-process",
-          icon: Layers,
-          roles: ["ADMIN_UTAMA"],
-        },
+        ...(isMainAdmin
+          ? [
+              {
+                name: "Proses Massal",
+                href: "/mass-process",
+                icon: Layers,
+                roles: ["ADMIN_UTAMA"],
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -84,6 +124,12 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
           name: "Master Karyawan",
           href: "/employees",
           icon: Users,
+          roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
+        },
+        {
+          name: "Master Stasiun",
+          href: "/stations",
+          icon: Factory,
           roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
         },
         {
@@ -117,24 +163,6 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
                 roles: ["ADMIN_UTAMA"],
               },
               {
-                name: "Jenis Cuti",
-                href: "/leave-types",
-                icon: CalendarRange,
-                roles: ["ADMIN_UTAMA"],
-              },
-              {
-                name: "Hari Libur",
-                href: "/holidays",
-                icon: CalendarCheck,
-                roles: ["ADMIN_UTAMA"],
-              },
-              {
-                name: "Audit Log",
-                href: "/audit",
-                icon: ShieldCheck,
-                roles: ["ADMIN_UTAMA"],
-              },
-              {
                 name: "Pengaturan",
                 href: "/settings",
                 icon: Settings,
@@ -151,8 +179,8 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden"
           onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs transition-opacity lg:hidden"
         />
       )}
 
@@ -164,9 +192,9 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
         )}
       >
         {/* Header / Brand */}
-        <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
           <div className="flex items-center space-x-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 font-bold text-white shadow-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-600 font-bold text-white shadow-xs">
               PG
             </div>
             <div>

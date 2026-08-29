@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +20,12 @@ import {
   Award,
   CalendarDays,
   FileSpreadsheet,
+  Minus,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,6 +44,7 @@ interface EmployeeOption {
   employeeNumber: string;
   name: string;
   position: string;
+  category?: string;
   department: {
     id: string;
     code: string;
@@ -63,11 +70,17 @@ export default function AddBalancePage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
 
-  const [leaveType, setLeaveType] = useState<LeaveTypeCode>("INHALDAGEN");
-  const [amount, setAmount] = useState<number>(1);
+  // Search State
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+
+  // State penambahan hari per jenis cuti
+  const [inhaldagenAmount, setInhaldagenAmount] = useState<number>(1);
+  const [annualAmount, setAnnualAmount] = useState<number>(0);
+  const [longLeaveAmount, setLongLeaveAmount] = useState<number>(0);
 
   const todayStr = new Date().toISOString().split("T")[0];
-  const [transactionDate, setTransactionDate] = useState<string>(todayStr);
   const [description, setDescription] = useState<string>("Kompensasi Kerja Hari Libur / Piket");
   const [notes, setNotes] = useState<string>("");
 
@@ -91,6 +104,7 @@ export default function AddBalancePage() {
           if (empList.length > 0) {
             setSelectedEmployeeId(empList[0].id);
             setSelectedEmployee(empList[0]);
+            setSearchQuery(`${empList[0].employeeNumber} — ${empList[0].name}`);
           }
         }
       } catch (err) {
@@ -103,59 +117,51 @@ export default function AddBalancePage() {
     loadEmployees();
   }, []);
 
-  // Handle employee change
-  const handleEmployeeChange = async (empId: string) => {
-    setSelectedEmployeeId(empId);
-    const emp = employees.find((e) => e.id === empId);
-    if (emp) {
-      setSelectedEmployee(emp);
-    } else if (empId) {
-      const res = await getEmployeeBalanceAction(empId);
-      if (res.success && res.data?.employee) {
-        setSelectedEmployee(res.data.employee as EmployeeOption);
+  // Handle outside click to close search dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchOpen(false);
       }
     }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter employees based on search query
+  const filteredEmployees = employees.filter((emp) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      emp.employeeNumber.toLowerCase().includes(q) ||
+      emp.name.toLowerCase().includes(q) ||
+      emp.department.name.toLowerCase().includes(q) ||
+      emp.position.toLowerCase().includes(q)
+    );
+  });
+
+  // Handle selecting an employee from search results
+  const handleSelectEmployee = (emp: EmployeeOption) => {
+    setSelectedEmployee(emp);
+    setSelectedEmployeeId(emp.id);
+    setSearchQuery(`${emp.employeeNumber} — ${emp.name}`);
+    setIsSearchOpen(false);
+    setSuccessResult(null);
   };
 
-  // Preset description suggestions based on leave type
-  const handleLeaveTypeChange = (type: LeaveTypeCode) => {
-    setLeaveType(type);
-    if (type === "INHALDAGEN") {
-      setDescription("Kompensasi Kerja Hari Libur / Piket");
-      setAmount(1);
-    } else if (type === "ANNUAL") {
-      setDescription("Hak Cuti Tahunan Baru");
-      setAmount(12);
-    } else if (type === "LONG_LEAVE") {
-      setDescription("Pemberian Cuti Besar Berkala");
-      setAmount(30);
-    }
+  // Handle clearing selected employee
+  const handleClearEmployee = () => {
+    setSelectedEmployee(null);
+    setSelectedEmployeeId("");
+    setSearchQuery("");
+    setIsSearchOpen(false);
+    setSuccessResult(null);
   };
 
-  // Calculations for live simulation
-  const getCurrentBalanceForType = () => {
-    if (!selectedEmployee) return 0;
-    if (leaveType === "ANNUAL") return selectedEmployee.balances.annual;
-    if (leaveType === "LONG_LEAVE") return selectedEmployee.balances.longLeave;
-    if (leaveType === "INHALDAGEN") return selectedEmployee.balances.inhaldagen;
-    return 0;
-  };
-
-  const currentBalance = getCurrentBalanceForType();
-  const simulatedNewBalance = currentBalance + (Number(amount) || 0);
-
-  const getLeaveTypeLabel = (code: LeaveTypeCode) => {
-    switch (code) {
-      case "ANNUAL":
-        return "Cuti Tahunan";
-      case "LONG_LEAVE":
-        return "Cuti Besar";
-      case "INHALDAGEN":
-        return "Inhaldagen";
-    }
-  };
-
-  // Submit Handler
+  // Submit Handler: Mendukung penambahan satu atau beberapa jenis saldo sekaligus
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -164,8 +170,19 @@ export default function AddBalancePage() {
       return;
     }
 
-    if (amount <= 0) {
-      toast.error("Jumlah penambahan saldo minimal 1 hari.");
+    const itemsToAdd: { code: LeaveTypeCode; name: string; amount: number }[] = [];
+    if (inhaldagenAmount > 0) {
+      itemsToAdd.push({ code: "INHALDAGEN", name: "Inhaldagen", amount: inhaldagenAmount });
+    }
+    if (annualAmount > 0) {
+      itemsToAdd.push({ code: "ANNUAL", name: "Cuti Tahunan", amount: annualAmount });
+    }
+    if (longLeaveAmount > 0) {
+      itemsToAdd.push({ code: "LONG_LEAVE", name: "Cuti Besar", amount: longLeaveAmount });
+    }
+
+    if (itemsToAdd.length === 0) {
+      toast.error("Masukkan jumlah hari penambahan minimal 1 hari pada salah satu jenis cuti.");
       return;
     }
 
@@ -175,79 +192,68 @@ export default function AddBalancePage() {
     }
 
     startTransition(async () => {
-      const res = await addLeaveBalanceAction({
-        employeeId: selectedEmployeeId,
-        leaveTypeCode: leaveType,
-        amount: Number(amount),
-        transactionDate,
-        description,
-        notes,
-      });
+      let lastBalances = selectedEmployee?.balances;
+      let allSuccess = true;
+      const addedNames: string[] = [];
+      let totalDays = 0;
 
-      if (res.success && res.data) {
-        toast.success(res.message || "Saldo cuti berhasil ditambahkan!");
+      for (const item of itemsToAdd) {
+        const res = await addLeaveBalanceAction({
+          employeeId: selectedEmployeeId,
+          leaveTypeCode: item.code,
+          amount: item.amount,
+          transactionDate: todayStr,
+          description: description.trim() || `Penambahan saldo ${item.name}`,
+          notes: notes.trim(),
+        });
 
-        const newBal =
-          leaveType === "ANNUAL"
-            ? res.data.newBalances.annual
-            : leaveType === "LONG_LEAVE"
-            ? res.data.newBalances.longLeave
-            : res.data.newBalances.inhaldagen;
+        if (res.success && res.data) {
+          lastBalances = res.data.newBalances;
+          addedNames.push(`${item.name} (+${item.amount} hari)`);
+          totalDays += item.amount;
+        } else {
+          allSuccess = false;
+          toast.error(res.message || `Gagal menambahkan saldo ${item.name}.`);
+          break;
+        }
+      }
+
+      if (allSuccess && lastBalances) {
+        toast.success(`Saldo cuti berhasil ditambahkan: ${addedNames.join(", ")}!`);
 
         setSuccessResult({
           employeeName: selectedEmployee?.name || "",
-          leaveTypeName: getLeaveTypeLabel(leaveType),
-          addedAmount: Number(amount),
-          newBalance: newBal,
+          leaveTypeName: addedNames.join(", "),
+          addedAmount: totalDays,
+          newBalance: lastBalances.total,
         });
 
         // Update local employee balance state
         if (selectedEmployee) {
           const updatedEmp: EmployeeOption = {
             ...selectedEmployee,
-            balances: res.data.newBalances,
+            balances: lastBalances,
           };
           setSelectedEmployee(updatedEmp);
           setEmployees((prev) =>
             prev.map((e) => (e.id === updatedEmp.id ? updatedEmp : e))
           );
         }
-      } else {
-        toast.error(res.message || "Gagal menambahkan saldo cuti.");
       }
     });
   };
 
   const handleResetForm = () => {
     setSuccessResult(null);
-    setAmount(1);
+    setInhaldagenAmount(1);
+    setAnnualAmount(0);
+    setLongLeaveAmount(0);
+    setDescription("Kompensasi Kerja Hari Libur / Piket");
     setNotes("");
-    if (leaveType === "INHALDAGEN") {
-      setDescription("Kompensasi Kerja Hari Libur / Piket");
-    }
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-slate-500 hover:text-slate-800">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Kembali
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Tambah Saldo Cuti
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 pl-2 sm:pl-0">
-            Formulir penambahan saldo cuti karyawan pimpinan PG Trangkil (Tahunan, Cuti Besar, Inhaldagen).
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
 
       {/* Success Notification Card */}
       {successResult ? (
@@ -317,32 +323,110 @@ export default function AddBalancePage() {
             </CardHeader>
 
             <CardContent className="pt-4 space-y-4">
-              {/* Dropdown Karyawan */}
-              <div className="space-y-1.5">
-                <Label htmlFor="employeeSelect" required>
-                  Pilih Karyawan (NIP / Nama / Bagian)
+              {/* Kolom Pencarian Karyawan (Search Box with Autocomplete Dropdown) */}
+              <div className="space-y-1.5 relative" ref={searchContainerRef}>
+                <Label htmlFor="employeeSearchInput" required className="text-xs font-semibold text-slate-700">
+                  Cari Karyawan (Ketik NIP / Nama / Bagian)
                 </Label>
-                {isLoadingEmployees ? (
-                  <div className="flex items-center gap-2 text-xs text-slate-500 p-2 bg-slate-50 rounded-md border border-slate-200">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    Memuat daftar karyawan...
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="employeeSearchInput"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsSearchOpen(true);
+                      if (selectedEmployee && e.target.value !== `${selectedEmployee.employeeNumber} — ${selectedEmployee.name}`) {
+                        setSelectedEmployee(null);
+                        setSelectedEmployeeId("");
+                      }
+                    }}
+                    onFocus={() => setIsSearchOpen(true)}
+                    placeholder="Contoh: Ketik 1042 atau Janoko atau Teknik..."
+                    className="pl-9 pr-9 h-10 text-sm font-medium text-slate-900 bg-white"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={handleClearEmployee}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                      title="Hapus pencarian"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Hasil Pencarian */}
+                {isSearchOpen && (
+                  <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-slate-200 shadow-lg max-h-64 overflow-y-auto divide-y divide-slate-100">
+                    {isLoadingEmployees ? (
+                      <div className="p-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        Memuat data karyawan...
+                      </div>
+                    ) : filteredEmployees.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        Tidak ditemukan karyawan dengan kata kunci <span className="font-semibold text-slate-800">&quot;{searchQuery}&quot;</span>.
+                      </div>
+                    ) : (
+                      filteredEmployees.map((emp) => (
+                        <button
+                          key={emp.id}
+                          type="button"
+                          onClick={() => handleSelectEmployee(emp)}
+                          className="w-full text-left p-3 hover:bg-blue-50/70 transition-colors flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                              {emp.name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs text-slate-900 truncate flex items-center gap-2">
+                                <span>{emp.name}</span>
+                                {emp.category === "PELAKSANA" ? (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] px-1 py-0 h-4">
+                                    Pelaksana
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] px-1 py-0 h-4">
+                                    Pimpinan
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-mono">
+                                NIP: {emp.employeeNumber} • {emp.department.name} - {emp.position}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 pl-2">
+                            <span className="text-[11px] font-mono font-bold text-blue-600 block">
+                              {emp.balances.total} hari
+                            </span>
+                            <span className="text-[10px] text-slate-400">Total Saldo</span>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
-                ) : (
-                  <select
-                    id="employeeSelect"
-                    value={selectedEmployeeId}
-                    onChange={(e) => handleEmployeeChange(e.target.value)}
-                    disabled={isPending}
-                    className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                  >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        NIP: {emp.employeeNumber} — {emp.name} ({emp.department.name} - {emp.position})
-                      </option>
-                    ))}
-                  </select>
                 )}
               </div>
+
+              {/* Kondisi Jika Belum Ada Karyawan Terpilih */}
+              {!selectedEmployee && (
+                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center bg-slate-50/60 my-2">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-2">
+                    <Search className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-slate-800">
+                    Pilih Karyawan Terlebih Dahulu
+                  </h3>
+                  <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
+                    Ketik NIP atau Nama pada kolom pencarian di atas untuk melihat saldo dan menambah hari cuti.
+                  </p>
+                </div>
+              )}
 
               {/* Detail Karyawan & 3 Kartu Saldo Saat Ini */}
               {selectedEmployee && (
@@ -379,14 +463,7 @@ export default function AddBalancePage() {
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Cuti Tahunan */}
-                      <div
-                        onClick={() => handleLeaveTypeChange("ANNUAL")}
-                        className={`rounded-lg border p-3.5 cursor-pointer transition-all ${
-                          leaveType === "ANNUAL"
-                            ? "border-blue-500 bg-blue-50/70 ring-2 ring-blue-500/20"
-                            : "border-blue-200 bg-blue-50/30 hover:border-blue-300"
-                        }`}
-                      >
+                      <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-blue-900">Cuti Tahunan</span>
                           <Badge variant="annual" className="text-[10px]">Annual</Badge>
@@ -401,14 +478,7 @@ export default function AddBalancePage() {
                       </div>
 
                       {/* Cuti Besar */}
-                      <div
-                        onClick={() => handleLeaveTypeChange("LONG_LEAVE")}
-                        className={`rounded-lg border p-3.5 cursor-pointer transition-all ${
-                          leaveType === "LONG_LEAVE"
-                            ? "border-purple-500 bg-purple-50/70 ring-2 ring-purple-500/20"
-                            : "border-purple-200 bg-purple-50/30 hover:border-purple-300"
-                        }`}
-                      >
+                      <div className="rounded-lg border border-purple-200 bg-purple-50/40 p-3.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-purple-900">Cuti Besar</span>
                           <Badge variant="longLeave" className="text-[10px]">Long Leave</Badge>
@@ -423,14 +493,7 @@ export default function AddBalancePage() {
                       </div>
 
                       {/* Inhaldagen */}
-                      <div
-                        onClick={() => handleLeaveTypeChange("INHALDAGEN")}
-                        className={`rounded-lg border p-3.5 cursor-pointer transition-all ${
-                          leaveType === "INHALDAGEN"
-                            ? "border-amber-500 bg-amber-50/70 ring-2 ring-amber-500/20"
-                            : "border-amber-200 bg-amber-50/30 hover:border-amber-300"
-                        }`}
-                      >
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-amber-900">Inhaldagen</span>
                           <Badge variant="inhaldagen" className="text-[10px]">Inhaldagen</Badge>
@@ -450,7 +513,7 @@ export default function AddBalancePage() {
             </CardContent>
           </Card>
 
-          {/* Section 2: Formulir Penambahan Saldo & Simulasi */}
+          {/* Section 2: Formulir Penambahan Saldo */}
           <Card className="border-slate-200 shadow-xs">
             <CardHeader className="pb-3 border-b border-slate-100">
               <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -458,162 +521,292 @@ export default function AddBalancePage() {
                 2. Detail Penambahan Saldo
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
-                Pilih jenis cuti yang akan ditambah dan jumlah hari penambahan
+                Tentukan jumlah hari penambahan pada jenis cuti yang diinginkan
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="pt-4 space-y-5">
-              {/* Pilihan Jenis Cuti */}
-              <div className="space-y-2">
-                <Label required>Jenis Saldo yang Ditambahkan</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleLeaveTypeChange("INHALDAGEN")}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                      leaveType === "INHALDAGEN"
-                        ? "border-amber-500 bg-amber-50 text-amber-950 ring-1 ring-amber-500"
-                        : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    <div className="p-2 rounded-md bg-amber-100 text-amber-700 shrink-0">
+            <CardContent className="pt-4 space-y-4">
+              <Label required className="text-xs font-bold text-slate-800">
+                Jenis Saldo Cuti & Jumlah Hari Penambahan (+ Hari)
+              </Label>
+
+              <div className="space-y-3">
+                {/* Baris 1: Inhaldagen */}
+                <div
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                    inhaldagenAmount > 0
+                      ? "border-amber-400 bg-amber-50/50 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2.5 rounded-lg shrink-0 ${
+                        inhaldagenAmount > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
                       <Clock className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold">Inhaldagen</div>
-                      <div className="text-[10px] text-slate-500">Piket / Ganti Hari Libur</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">Inhaldagen</span>
+                        {selectedEmployee && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100/70 text-amber-800 font-mono font-medium">
+                            Saldo: {selectedEmployee.balances.inhaldagen} hari
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">Piket / Ganti Hari Libur</p>
                     </div>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleLeaveTypeChange("ANNUAL")}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                      leaveType === "ANNUAL"
-                        ? "border-blue-500 bg-blue-50 text-blue-950 ring-1 ring-blue-500"
-                        : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    <div className="p-2 rounded-md bg-blue-100 text-blue-700 shrink-0">
+                  {/* Stepper nambah/kurang panah */}
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInhaldagenAmount((v) => Math.max(0, v - 1))}
+                      disabled={isPending || inhaldagenAmount <= 0}
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Kurangi 1 hari"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+
+                    <div className="relative w-20">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={inhaldagenAmount}
+                        onChange={(e) => setInhaldagenAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                        disabled={isPending}
+                        className="text-center font-mono font-bold text-sm h-9 pr-6 bg-white"
+                      />
+                      <div className="absolute right-0.5 top-0.5 bottom-0.5 flex flex-col justify-center border-l border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setInhaldagenAmount((v) => v + 1)}
+                          disabled={isPending}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-tr"
+                          title="Tambah"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInhaldagenAmount((v) => Math.max(0, v - 1))}
+                          disabled={isPending || inhaldagenAmount <= 0}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-br disabled:opacity-40"
+                          title="Kurang"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInhaldagenAmount((v) => v + 1)}
+                      disabled={isPending}
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Tambah 1 hari"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs font-semibold text-slate-600 pl-1 w-8">hari</span>
+                  </div>
+                </div>
+
+                {/* Baris 2: Cuti Tahunan */}
+                <div
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                    annualAmount > 0
+                      ? "border-blue-400 bg-blue-50/50 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2.5 rounded-lg shrink-0 ${
+                        annualAmount > 0 ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold">Cuti Tahunan</div>
-                      <div className="text-[10px] text-slate-500">Hak Cuti Reguler</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">Cuti Tahunan</span>
+                        {selectedEmployee && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100/70 text-blue-800 font-mono font-medium">
+                            Saldo: {selectedEmployee.balances.annual} hari
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">Hak Cuti Reguler Tahunan</p>
                     </div>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleLeaveTypeChange("LONG_LEAVE")}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                      leaveType === "LONG_LEAVE"
-                        ? "border-purple-500 bg-purple-50 text-purple-950 ring-1 ring-purple-500"
-                        : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    <div className="p-2 rounded-md bg-purple-100 text-purple-700 shrink-0">
+                  {/* Stepper nambah/kurang panah */}
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnualAmount((v) => Math.max(0, v - 1))}
+                      disabled={isPending || annualAmount <= 0}
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Kurangi 1 hari"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+
+                    <div className="relative w-20">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={annualAmount}
+                        onChange={(e) => setAnnualAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                        disabled={isPending}
+                        className="text-center font-mono font-bold text-sm h-9 pr-6 bg-white"
+                      />
+                      <div className="absolute right-0.5 top-0.5 bottom-0.5 flex flex-col justify-center border-l border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setAnnualAmount((v) => v + 1)}
+                          disabled={isPending}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-tr"
+                          title="Tambah"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAnnualAmount((v) => Math.max(0, v - 1))}
+                          disabled={isPending || annualAmount <= 0}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-br disabled:opacity-40"
+                          title="Kurang"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnualAmount((v) => v + 1)}
+                      disabled={isPending}
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Tambah 1 hari"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs font-semibold text-slate-600 pl-1 w-8">hari</span>
+                  </div>
+                </div>
+
+                {/* Baris 3: Cuti Besar */}
+                <div
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                    longLeaveAmount > 0
+                      ? "border-purple-400 bg-purple-50/50 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2.5 rounded-lg shrink-0 ${
+                        longLeaveAmount > 0 ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
                       <Award className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold">Cuti Besar</div>
-                      <div className="text-[10px] text-slate-500">Berkala Masa Kerja</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">Cuti Besar</span>
+                        {selectedEmployee && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100/70 text-purple-800 font-mono font-medium">
+                            Saldo: {selectedEmployee.balances.longLeave} hari
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">Berkala Masa Kerja 6 Tahun</p>
                     </div>
-                  </button>
-                </div>
-              </div>
+                  </div>
 
-              {/* Jumlah Hari & Tombol Cepat */}
-              <div className="space-y-2">
-                <Label htmlFor="amountInput" required>
-                  Jumlah Hari yang Ditambahkan (+ Hari)
-                </Label>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="relative sm:w-48">
-                    <Input
-                      id="amountInput"
-                      type="number"
-                      min="1"
-                      max="90"
-                      value={amount || ""}
-                      onChange={(e) => setAmount(Number(e.target.value) || 0)}
+                  {/* Stepper nambah/kurang panah */}
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLongLeaveAmount((v) => Math.max(0, v - 1))}
+                      disabled={isPending || longLeaveAmount <= 0}
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Kurangi 1 hari"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+
+                    <div className="relative w-20">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={longLeaveAmount}
+                        onChange={(e) => setLongLeaveAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                        disabled={isPending}
+                        className="text-center font-mono font-bold text-sm h-9 pr-6 bg-white"
+                      />
+                      <div className="absolute right-0.5 top-0.5 bottom-0.5 flex flex-col justify-center border-l border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setLongLeaveAmount((v) => v + 1)}
+                          disabled={isPending}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-tr"
+                          title="Tambah"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLongLeaveAmount((v) => Math.max(0, v - 1))}
+                          disabled={isPending || longLeaveAmount <= 0}
+                          className="px-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center h-4 rounded-br disabled:opacity-40"
+                          title="Kurang"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLongLeaveAmount((v) => v + 1)}
                       disabled={isPending}
-                      placeholder="Contoh: 1"
-                      className="pr-12 text-sm font-semibold"
-                      required
-                    />
-                    <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">
-                      hari
-                    </span>
+                      className="h-9 w-9 p-0 text-slate-600 hover:text-slate-900 border-slate-300 bg-white"
+                      title="Tambah 1 hari"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs font-semibold text-slate-600 pl-1 w-8">hari</span>
                   </div>
-
-                  {/* Tombol Shortcut Preset Cepat */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-400 font-medium mr-1">Cepat:</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount(1)}
-                      className={`h-8 px-2.5 text-xs ${amount === 1 ? "border-blue-500 text-blue-600 bg-blue-50/50" : ""}`}
-                    >
-                      +1 Hari
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount(2)}
-                      className={`h-8 px-2.5 text-xs ${amount === 2 ? "border-blue-500 text-blue-600 bg-blue-50/50" : ""}`}
-                    >
-                      +2 Hari
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount(6)}
-                      className={`h-8 px-2.5 text-xs ${amount === 6 ? "border-blue-500 text-blue-600 bg-blue-50/50" : ""}`}
-                    >
-                      +6 Hari
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount(12)}
-                      className={`h-8 px-2.5 text-xs ${amount === 12 ? "border-blue-500 text-blue-600 bg-blue-50/50" : ""}`}
-                    >
-                      +12 Hari
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tanggal Mutasi */}
-              <div className="space-y-1.5">
-                <Label htmlFor="transactionDate" required>
-                  Tanggal Efektif Penambahan
-                </Label>
-                <div className="sm:w-64">
-                  <Input
-                    id="transactionDate"
-                    type="date"
-                    value={transactionDate}
-                    onChange={(e) => setTransactionDate(e.target.value)}
-                    disabled={isPending}
-                    required
-                  />
                 </div>
               </div>
 
               {/* Keterangan / Alasan */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="description" required>
-                    Alasan / Keterangan Penambahan
-                  </Label>
-                </div>
+              <div className="space-y-1.5 pt-2">
+                <Label htmlFor="description" required className="text-xs">
+                  Alasan / Keterangan Penambahan
+                </Label>
                 <Input
                   id="description"
                   type="text"
@@ -622,6 +815,7 @@ export default function AddBalancePage() {
                   placeholder="Contoh: Kompensasi Kerja Hari Libur / Piket"
                   disabled={isPending}
                   required
+                  className="h-9 text-xs bg-white"
                 />
                 {/* Template Chips */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
@@ -658,7 +852,7 @@ export default function AddBalancePage() {
 
               {/* Catatan Tambahan (Opsional) */}
               <div className="space-y-1.5">
-                <Label htmlFor="notes">Catatan Tambahan / Nomor Memo (Opsional)</Label>
+                <Label htmlFor="notes" className="text-xs">Catatan Tambahan / Nomor Memo (Opsional)</Label>
                 <Input
                   id="notes"
                   type="text"
@@ -666,45 +860,9 @@ export default function AddBalancePage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Contoh: Berdasarkan Memo Direksi / Surat Tugas No. 045/SK/2026"
                   disabled={isPending}
+                  className="h-9 text-xs bg-white"
                 />
               </div>
-
-              {/* Live Calculator Simulation Box */}
-              {selectedEmployee && amount > 0 && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                    <Sparkles className="h-4 w-4 text-emerald-600" />
-                    Simulasi Saldo Akhir Setelah Penambahan:
-                  </div>
-
-                  <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-emerald-200/80 shadow-2xs">
-                    <div className="text-center flex-1">
-                      <span className="text-[11px] text-slate-500 block">Saldo Saat Ini</span>
-                      <span className="font-mono text-base font-bold text-slate-800">
-                        {currentBalance} hari
-                      </span>
-                    </div>
-
-                    <div className="text-slate-300 font-bold text-lg">+</div>
-
-                    <div className="text-center flex-1">
-                      <span className="text-[11px] text-emerald-600 block font-medium">Penambahan</span>
-                      <span className="font-mono text-base font-bold text-emerald-600">
-                        +{amount} hari
-                      </span>
-                    </div>
-
-                    <div className="text-slate-300 font-bold text-lg">=</div>
-
-                    <div className="text-center flex-1">
-                      <span className="text-[11px] text-slate-700 block font-semibold">Saldo Baru</span>
-                      <span className="font-mono text-lg font-extrabold text-blue-700">
-                        {simulatedNewBalance} hari
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -717,7 +875,11 @@ export default function AddBalancePage() {
             </Link>
             <Button
               type="submit"
-              disabled={isPending || amount <= 0 || !selectedEmployeeId}
+              disabled={
+                isPending ||
+                (inhaldagenAmount === 0 && annualAmount === 0 && longLeaveAmount === 0) ||
+                !selectedEmployeeId
+              }
               className="h-10 px-6 text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
             >
               {isPending ? (
