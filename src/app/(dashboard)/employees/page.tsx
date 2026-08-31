@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -342,70 +343,70 @@ export default function EmployeesPage() {
   const pelaksanaCount = employees.filter((e) => e.category === "PELAKSANA").length;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Top Action & Navigation Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2">
-        {/* Tabs Switcher: Semua vs Karyawan Pimpinan vs Karyawan Pelaksana */}
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
+        {/* Tabs Switcher Kapsul: Semua vs Karyawan Pimpinan vs Karyawan Pelaksana */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 rounded-full border border-slate-200/80 overflow-x-auto w-fit">
           <button
             type="button"
             onClick={() => setCategoryTab("ALL")}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer ${
               categoryTab === "ALL"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-[#0084c7] text-white shadow-xs"
+                : "text-slate-600 hover:text-[#0077b6] hover:bg-white/60"
             }`}
           >
-            <Users className="h-4 w-4" />
+            <Users className="h-3.5 w-3.5" />
             Semua Karyawan
-            <Badge className="h-5 px-1.5 text-[10px] bg-slate-100 text-slate-700 border-none">
+            <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono ${categoryTab === "ALL" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
               {employees.length}
-            </Badge>
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setCategoryTab("PIMPINAN")}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer ${
               categoryTab === "PIMPINAN"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-[#0084c7] text-white shadow-xs"
+                : "text-slate-600 hover:text-[#0077b6] hover:bg-white/60"
             }`}
           >
-            <Briefcase className="h-4 w-4" />
-            Karyawan Pimpinan
-            <Badge className="h-5 px-1.5 text-[10px] bg-blue-100 text-blue-700 border-none">
+            <Briefcase className="h-3.5 w-3.5" />
+            Pimpinan
+            <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono ${categoryTab === "PIMPINAN" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
               {pimpinanCount}
-            </Badge>
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setCategoryTab("PELAKSANA")}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer ${
               categoryTab === "PELAKSANA"
-                ? "border-b-2 border-emerald-600 text-emerald-600"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-emerald-700 hover:bg-white/60"
             }`}
           >
-            <HardHat className="h-4 w-4" />
-            Karyawan Pelaksana
-            <Badge className="h-5 px-1.5 text-[10px] bg-emerald-100 text-emerald-700 border-none">
+            <HardHat className="h-3.5 w-3.5" />
+            Pelaksana
+            <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono ${categoryTab === "PELAKSANA" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
               {pelaksanaCount}
-            </Badge>
+            </span>
           </button>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-center">
           <Link href="/stations">
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 h-8 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-100"
+              className="rounded-full gap-1.5 h-9 px-3.5 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-100"
             >
               <Factory className="h-3.5 w-3.5 text-slate-500" />
-              Buka Master Stasiun
+              Master Stasiun
             </Button>
           </Link>
 
@@ -428,7 +429,7 @@ export default function EmployeesPage() {
               setIsAddModalOpen(true);
             }}
             size="sm"
-            className="gap-1.5 h-8 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            className="rounded-full gap-1.5 h-9 px-4 text-xs font-bold bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
           >
             <UserPlus className="h-3.5 w-3.5" />
             + Tambah Karyawan Baru
@@ -436,71 +437,47 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      {/* Stats Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Total Karyawan</p>
-              <p className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
-                {employees.length} Orang
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Summary Cards (Standar Global Konsisten) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <StatCard
+          title="Total Karyawan"
+          value={`${employees.length} Orang`}
+          subtitle="Pegawai terdaftar"
+          icon={Users}
+          variant="sky"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Karyawan Pimpinan</p>
-              <p className="text-xl font-bold text-blue-700 mt-0.5 tabular-nums">
-                {pimpinanCount} Orang
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <Briefcase className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Karyawan Pimpinan"
+          value={`${pimpinanCount} Orang`}
+          subtitle="Hak cuti pimpinan"
+          icon={Briefcase}
+          variant="indigo"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Karyawan Pelaksana</p>
-              <p className="text-xl font-bold text-emerald-600 mt-0.5 tabular-nums">
-                {pelaksanaCount} Orang
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <HardHat className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Karyawan Pelaksana"
+          value={`${pelaksanaCount} Orang`}
+          subtitle="Hak cuti pelaksana"
+          icon={HardHat}
+          variant="emerald"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Bagian & Stasiun</p>
-              <p className="text-sm font-bold text-slate-800 mt-1">
-                {departments.length} Bagian • {stations.length} Stasiun
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600 border border-purple-100">
-              <Factory className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Bagian & Stasiun"
+          value={`${departments.length} Bagian`}
+          subtitle={`${stations.length} Stasiun kerja`}
+          icon={Building2}
+          variant="purple"
+        />
       </div>
 
       {/* Main Table Card (Tampilan Bersih dan Simpel Model Tabel) */}
       <Card className="border-slate-200 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
+              <Users className="h-4 w-4 text-[#0093dc]" />
               Tabel Master Karyawan PG Trangkil
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
@@ -518,7 +495,7 @@ export default function EmployeesPage() {
                 placeholder="Cari NIP / nama..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-8 h-8 text-xs bg-slate-50"
+                className="pl-8 pr-8 h-8 text-xs bg-white focus-visible:ring-[#0093dc]"
               />
               {searchQuery && (
                 <button
@@ -538,7 +515,7 @@ export default function EmployeesPage() {
                 setSelectedDeptFilter(e.target.value);
                 setSelectedStationFilter("ALL"); // reset stasiun bila bagian berubah
               }}
-              className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 font-medium focus:border-[#0093dc] focus:outline-none"
             >
               <option value="ALL">Semua Bagian</option>
               {departments.map((d) => (
@@ -552,7 +529,7 @@ export default function EmployeesPage() {
             <select
               value={selectedStationFilter}
               onChange={(e) => setSelectedStationFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none max-w-[180px]"
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 font-medium focus:border-[#0093dc] focus:outline-none max-w-[180px]"
             >
               <option value="ALL">Semua Stasiun</option>
               {stationsForDeptFilter.map((s) => (
@@ -608,7 +585,6 @@ export default function EmployeesPage() {
                     <TableHead className="font-bold">JENIS</TableHead>
                     <TableHead className="font-bold">BAGIAN</TableHead>
                     <TableHead className="font-bold">STASIUN</TableHead>
-                    <TableHead className="text-center font-bold">SALDO CUTI</TableHead>
                     <TableHead className="text-right font-bold w-20">AKSI</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -622,7 +598,7 @@ export default function EmployeesPage() {
 
                       {/* NIP */}
                       <TableCell>
-                        <Badge className="font-mono text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">
+                        <Badge variant="code" className="text-xs px-2.5 py-0.5">
                           {emp.employeeNumber}
                         </Badge>
                       </TableCell>
@@ -640,11 +616,11 @@ export default function EmployeesPage() {
                       {/* Jenis Karyawan */}
                       <TableCell>
                         {emp.category === "PELAKSANA" ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                          <Badge variant="success" className="text-[10px]">
                             Pelaksana
                           </Badge>
                         ) : (
-                          <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                          <Badge variant="secondary" className="text-[10px]">
                             Pimpinan
                           </Badge>
                         )}
@@ -668,21 +644,6 @@ export default function EmployeesPage() {
                         ) : (
                           <span className="text-slate-400 text-xs italic">Semua / Belum Ada</span>
                         )}
-                      </TableCell>
-
-                      {/* Saldo Cuti */}
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-[11px] font-mono">
-                          <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100" title="Cuti Tahunan">
-                            T: {emp.balances?.annual ?? 0}
-                          </span>
-                          <span className="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100" title="Cuti Besar">
-                            B: {emp.balances?.longLeave ?? 0}
-                          </span>
-                          <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100" title="Inhaldagen">
-                            I: {emp.balances?.inhaldagen ?? 0}
-                          </span>
-                        </div>
                       </TableCell>
 
                       {/* Aksi */}
@@ -917,14 +878,14 @@ export default function EmployeesPage() {
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
                 disabled={isPending}
-                className="h-9 text-xs"
+                className="rounded-full h-9 text-xs"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="h-9 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                className="rounded-full h-9 text-xs font-bold gap-1.5 bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
               >
                 {isPending ? (
                   <>

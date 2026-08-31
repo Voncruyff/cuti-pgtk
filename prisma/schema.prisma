@@ -54,19 +54,20 @@ model Station {
 }
 
 model Employee {
-  id           String        @id @default(uuid())
-  nip          String        @unique @db.VarChar(50)
-  nama         String        @db.VarChar(200)
-  jabatan      String        @db.VarChar(150)
-  bagian       String        @db.VarChar(100)
-  category     String        @default("PIMPINAN") @db.VarChar(50) // PIMPINAN / PELAKSANA
-  stationId    String?       @map("station_id")
-  stasiun      String?       @db.VarChar(150) // Stasiun
-  station      Station?      @relation(fields: [stationId], references: [id], onDelete: SetNull)
-  leaveBalance LeaveBalance?
-  isActive     Boolean       @default(true) @map("is_active")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id                String            @id @default(uuid())
+  nip               String            @unique @db.VarChar(50)
+  nama              String            @db.VarChar(200)
+  jabatan           String            @db.VarChar(150)
+  bagian            String            @db.VarChar(100)
+  category          String            @default("PIMPINAN") @db.VarChar(50) // PIMPINAN / PELAKSANA
+  stationId         String?           @map("station_id")
+  stasiun           String?           @db.VarChar(150) // Stasiun
+  station           Station?          @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  leaveBalance      LeaveBalance?
+  balanceActivities BalanceActivity[]
+  isActive          Boolean           @default(true) @map("is_active")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   @@map("karyawan")
 }
@@ -97,6 +98,28 @@ model LeaveBalance {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("saldo_cuti")
+}
+
+model BalanceActivity {
+  id             String    @id @default(uuid())
+  nip            String    @db.VarChar(50)
+  nama           String    @default("") @db.VarChar(200)
+  employee       Employee  @relation(fields: [nip], references: [nip], onDelete: Cascade)
+  jenisTransaksi String    @map("jenis_transaksi") @db.VarChar(20) // AMBIL_CUTI / TAMBAH_SALDO
+  uraian         String    @default("") @map("uraian") @db.VarChar(255) // Uraian aktivitas
+  tglTransaksi   DateTime  @default(now()) @map("tgl_transaksi")
+  tglCuti        String?   @db.Text @map("tgl_cuti") // Daftar tanggal cuti (jika AMBIL_CUTI)
+  cutiTahunan    Int       @default(0) @map("cuti_tahunan")
+  cutiBesar      Int       @default(0) @map("cuti_besar")
+  inhaldagen     Int       @default(0) @map("inhaldagen")
+  totalHari      Int       @default(0) @map("total_hari")
+  keperluan      String?   @db.VarChar(255) @map("keperluan")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([nip])
+  @@index([jenisTransaksi])
+  @@map("aktivitas_saldo")
 }
 
 

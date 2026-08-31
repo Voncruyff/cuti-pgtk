@@ -19,16 +19,16 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden bg-slate-50">
-        {/* 1. KOMPONEN SIDEBAR MANDIRI */}
+        {/* 1. SIDEBAR FULL-HEIGHT DI SISI KIRI */}
         <Sidebar user={user} />
 
-        {/* 2. AREA KONTEN KANAN DENGAN SCROLL MANDIRI */}
+        {/* 2. AREA KONTEN KANAN DENGAN HEADER DI ATASNYA */}
         <div className="flex flex-1 flex-col h-screen overflow-y-auto min-w-0">
-          {/* 3. KOMPONEN HEADER MANDIRI */}
+          {/* HEADER MANDIRI DI ATAS KONTEN */}
           <Header user={user} />
 
-          {/* 4. ISI KONTEN HALAMAN */}
-          <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {/* ISI KONTEN HALAMAN (Standar Global Konsisten) */}
+          <main className="flex-1 p-4 md:p-6 lg:p-7 max-w-6xl w-full mx-auto">
             {children}
           </main>
         </div>

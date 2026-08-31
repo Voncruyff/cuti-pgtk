@@ -728,12 +728,13 @@ class MockDatabase {
     notes?: string | null;
     createdById: string;
     items: { leaveTypeId: string; days: number }[];
+    requestNumber?: string;
   }) {
     const count = this.leaveRequests.length + 1;
     const yearMonth = `${data.requestDate.getFullYear()}${String(
       data.requestDate.getMonth() + 1
     ).padStart(2, "0")}`;
-    const reqNumber = `CUTI-${yearMonth}-${String(count).padStart(4, "0")}`;
+    const reqNumber = data.requestNumber || `CT-${yearMonth}-${String(count).padStart(4, "0")}`;
 
     const newReq: MockLeaveRequest = {
       id: `req-${Date.now()}`,

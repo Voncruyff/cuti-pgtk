@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,87 +271,74 @@ export default function UsersPage() {
   const totalActive = users.filter((u) => u.isActive).length;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Top Action Bar */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-        <p className="text-xs text-slate-500 font-medium">
-          Daftar akun operator aplikasi cuti PG Trangkil (Admin Utama & Admin Bagian)
-        </p>
+    <div className="space-y-6 w-full pb-12">
+      {/* Top Banner Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0077b6] bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200/80">
+              • MODUL ADMINISTRASI UTAMA
+            </span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+            Kelola Pengguna Sistem
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Daftar akun operator aplikasi cuti PG Trangkil (Admin Utama & Admin Bagian)
+          </p>
+        </div>
+
         <Button
           onClick={() => setIsAddModalOpen(true)}
           size="sm"
-          className="gap-1.5 h-8 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+          className="rounded-full gap-1.5 h-9 px-4 text-xs font-bold bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs self-start sm:self-center"
         >
           <UserPlus className="h-3.5 w-3.5" />
           + Tambah User Baru
         </Button>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Total User</p>
-              <p className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
-                {users.length} akun
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <UserCog className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Summary Cards (Standar Global Konsisten) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <StatCard
+          title="Total Pengguna"
+          value={`${users.length} Akun`}
+          subtitle="Akun terdaftar"
+          icon={UserCog}
+          variant="sky"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Admin Utama (ALL)</p>
-              <p className="text-xl font-bold text-blue-700 mt-0.5 tabular-nums">
-                {totalAdminUtama} akun
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Admin Utama"
+          value={`${totalAdminUtama} Akun`}
+          subtitle="Hak akses penuh"
+          icon={ShieldCheck}
+          variant="indigo"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Admin Bagian</p>
-              <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
-                {totalAdminBagian} akun
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
-              <Building2 className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Admin Bagian"
+          value={`${totalAdminBagian} Akun`}
+          subtitle="Hak akses bagian"
+          icon={Building2}
+          variant="purple"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">User Aktif</p>
-              <p className="text-xl font-bold text-emerald-600 mt-0.5 tabular-nums">
-                {totalActive} akun
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="User Aktif"
+          value={`${totalActive} Akun`}
+          subtitle="Dapat login"
+          icon={CheckCircle2}
+          variant="emerald"
+        />
       </div>
 
       {/* Main Table Card (READ) */}
-      <Card className="border-slate-200 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card className="border-slate-200/90 shadow-xs">
+        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <UserCog className="h-4 w-4 text-blue-600" />
+              <UserCog className="h-4 w-4 text-[#0093dc]" />
               Tabel Data Pengguna (Users)
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
@@ -367,13 +355,13 @@ export default function UsersPage() {
                 placeholder="Cari username / nama..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-8 h-8 text-xs bg-slate-50"
+                className="pl-8 pr-8 h-8.5 text-xs bg-white rounded-full focus-visible:ring-[#0084c7]"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -383,7 +371,7 @@ export default function UsersPage() {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
+              className="h-8.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0084c7] focus:outline-none"
             >
               <option value="ALL">Semua Role</option>
               <option value="ADMIN_UTAMA">Admin Utama</option>
@@ -393,7 +381,7 @@ export default function UsersPage() {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
+              className="h-8.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0084c7] focus:outline-none"
             >
               <option value="ALL">Semua Bagian</option>
               {departments.map((d) => (
@@ -408,7 +396,7 @@ export default function UsersPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center p-12 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#0084c7]" />
               Memuat data pengguna dari database...
             </div>
           ) : filteredUsers.length === 0 ? (
@@ -438,18 +426,20 @@ export default function UsersPage() {
 
                     {/* 1. Username */}
                     <TableCell className="font-mono text-xs font-bold text-slate-900">
-                      {u.username}
+                      <Badge variant="code" className="text-[10px] px-2 py-0.5">
+                        @{u.username}
+                      </Badge>
                     </TableCell>
 
                     {/* 2. Nama Lengkap */}
-                    <TableCell className="text-xs font-medium text-slate-800">
+                    <TableCell className="text-xs font-bold text-slate-900">
                       {u.fullName}
                     </TableCell>
 
                     {/* 3. Role */}
                     <TableCell>
                       {u.role === "ADMIN_UTAMA" ? (
-                        <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-[10px] gap-1">
+                        <Badge variant="default" className="text-[10px] gap-1">
                           <ShieldCheck className="h-3 w-3" />
                           Admin Utama
                         </Badge>
@@ -635,7 +625,7 @@ export default function UsersPage() {
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
                 disabled={isPending}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                className="h-4 w-4 rounded border-slate-300 text-[#0084c7] focus:ring-[#0084c7] cursor-pointer"
               />
               <Label htmlFor="createIsActive" className="text-xs font-normal cursor-pointer text-slate-700">
                 Akun langsung aktif dan dapat login
@@ -648,14 +638,14 @@ export default function UsersPage() {
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
                 disabled={isPending}
-                className="h-9 text-xs"
+                className="rounded-full h-9 text-xs"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="h-9 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                className="rounded-full h-9 text-xs font-bold gap-1.5 bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
               >
                 {isPending ? (
                   <>
@@ -797,7 +787,7 @@ export default function UsersPage() {
                 checked={editIsActive}
                 onChange={(e) => setEditIsActive(e.target.checked)}
                 disabled={isPending}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                className="h-4 w-4 rounded border-slate-300 text-[#0084c7] focus:ring-[#0084c7] cursor-pointer"
               />
               <Label htmlFor="editIsActive" className="text-xs font-normal cursor-pointer text-slate-700">
                 Akun aktif dan diizinkan login ke sistem
@@ -810,19 +800,19 @@ export default function UsersPage() {
                 variant="outline"
                 onClick={() => setIsEditModalOpen(false)}
                 disabled={isPending}
-                className="h-9 text-xs"
+                className="rounded-full h-9 text-xs"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="h-9 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                className="rounded-full h-9 text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
               >
                 {isPending ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Memperbarui...
+                    Menyimpan...
                   </>
                 ) : (
                   <>

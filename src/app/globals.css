@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    /* slate-50 */
+    --background: 210 40% 98.5%;
+    /* slate-50 refined */
     --foreground: 222.2 84% 4.9%;
     /* slate-900 */
 
@@ -16,40 +16,36 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83.2% 53.3%;
-    /* blue-600 */
+    /* PG Trangkil Cerulean Sky Blue (#0093dc) */
+    --primary: 200 100% 43.1%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    /* slate-100 */
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 204 45% 95.5%;
+    --secondary-foreground: 200 90% 25%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    /* slate-500 */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 200 90% 96%;
+    --accent-foreground: 200 95% 30%;
 
     --destructive: 0 84.2% 60.2%;
-    /* red-600 */
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
-    /* slate-200 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 200 100% 43.1%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary: 200 100% 43.1%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 200 85% 96%;
+    --sidebar-accent-foreground: 200 95% 30%;
     --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
+    --sidebar-ring: 200 100% 43.1%;
   }
 }
 
@@ -58,8 +54,37 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased text-sm;
+  }
+
+  /* Custom Slim Sky Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(147, 197, 253, 0.5);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(2, 132, 199, 0.8);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(147, 197, 253, 0.5) transparent;
   }
 
   h1,
@@ -72,6 +97,36 @@
   }
 }
 
+@layer utilities {
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, #0084c7 0%, #0093dc 50%, #0284c7 100%);
+  }
+
+  .bg-brand-gradient-hover {
+    background-image: linear-gradient(135deg, #0077b6 0%, #0084c7 50%, #0369a1 100%);
+  }
+
+  .bg-card-header-gradient {
+    background-image: linear-gradient(135deg, rgba(240, 249, 255, 0.9) 0%, rgba(248, 250, 252, 0.6) 100%);
+  }
+
+  .shadow-brand-glow {
+    box-shadow: 0 4px 20px -2px rgba(0, 132, 199, 0.25), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-card-subtle {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  }
+
+  .pill-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .card-sigap {
+    @apply rounded-2xl border border-slate-200/85 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
+
 /* Print CSS */
 @media print {
   .no-print {
@@ -80,8 +135,12 @@
 
   body {
     background: white !important;
-    color: black !important;
     font-size: 11pt !important;
+  }
+
+  @page {
+    margin: 1cm;
+    size: auto;
   }
 
   .print-container {
