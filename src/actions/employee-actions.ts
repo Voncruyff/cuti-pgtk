@@ -77,12 +77,14 @@ export async function getLeadersAction() {
         });
       }
 
+      const isPelaksana = resolvedCategory === "PELAKSANA";
+      const inhaldagenVal = isPelaksana ? 0 : (emp.leaveBalance?.inhaldagen ?? 0);
       const balances = emp.leaveBalance
         ? {
             annual: emp.leaveBalance.cutiTahunan,
             longLeave: emp.leaveBalance.cutiBesar,
-            inhaldagen: emp.leaveBalance.inhaldagen,
-            total: emp.leaveBalance.total,
+            inhaldagen: inhaldagenVal,
+            total: emp.leaveBalance.cutiTahunan + emp.leaveBalance.cutiBesar + inhaldagenVal,
           }
         : {
             annual: 12,

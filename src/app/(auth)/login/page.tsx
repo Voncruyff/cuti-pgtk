@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
+import Image from "next/image";
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -48,19 +50,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100/75 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-sky-50/40 to-slate-100 p-4">
       <div className="w-full max-w-sm">
         {/* Main Card */}
-        <Card className="border-slate-200 shadow-md">
-          <CardHeader className="text-center pb-4 pt-6">
-            <div className="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-xs">
-              PG
+        <Card className="border-slate-200/90 shadow-xl rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="text-center pb-4 pt-6 bg-gradient-to-b from-sky-50/70 via-white to-transparent border-b border-slate-100">
+            <div className="relative w-full max-w-[240px] h-[38px] mx-auto mb-2.5">
+              <Image
+                src="/assets/PGTrangkilLogo.png"
+                alt="PT Kebon Agung - PG Trangkil"
+                fill
+                priority
+                className="object-contain"
+              />
             </div>
-            <CardTitle className="text-lg font-bold text-slate-900">
-              PG TRANGKIL
+            <CardTitle className="text-base font-extrabold text-slate-900 tracking-tight">
+              Sistem Informasi Pengelolaan Cuti
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 font-medium">
-              Sistem Cuti Karyawan Pimpinan
+              SIP-CUTI — Pimpinan & Pelaksana
             </CardDescription>
           </CardHeader>
 

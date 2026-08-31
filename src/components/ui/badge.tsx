@@ -3,24 +3,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#0084c7] focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-blue-600 text-white shadow-sm",
+          "border-transparent bg-[#0084c7] text-white font-bold shadow-xs",
         secondary:
-          "border-transparent bg-slate-100 text-slate-900",
+          "border-sky-200 bg-sky-50 text-[#0077b6] font-bold",
         destructive:
-          "border-transparent bg-red-100 text-red-800 border-red-200",
+          "bg-rose-50 text-rose-700 border-rose-200 font-bold",
         success:
-          "border-transparent bg-emerald-100 text-emerald-800 border-emerald-200",
+          "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold",
         warning:
-          "border-transparent bg-amber-100 text-amber-800 border-amber-200",
-        outline: "text-slate-700 border-slate-300",
-        annual: "bg-blue-50 text-blue-700 border-blue-200",
-        longLeave: "bg-purple-50 text-purple-700 border-purple-200",
-        inhaldagen: "bg-teal-50 text-teal-700 border-teal-200",
+          "bg-amber-50 text-amber-800 border-amber-200 font-bold",
+        outline:
+          "text-slate-700 border-slate-200 bg-white font-medium",
+        code:
+          "font-mono font-bold text-[#0077b6] bg-sky-50 border-sky-200/90 shadow-2xs",
+        annual:
+          "bg-sky-50 text-sky-800 border-sky-200 font-bold",
+        longLeave:
+          "bg-indigo-50 text-indigo-800 border-indigo-200 font-bold",
+        inhaldagen:
+          "bg-amber-50 text-amber-800 border-amber-200 font-bold",
       },
     },
     defaultVariants: {

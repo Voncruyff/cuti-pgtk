@@ -11,9 +11,11 @@ import {
   CheckCircle2,
   LayoutDashboard,
 } from "lucide-react";
+import { prisma } from "@/lib/db/prisma";
 import { mockDb } from "@/lib/mock-db";
 import { requireAuth } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,30 +26,58 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { formatDateIndo, formatSignedDays } from "@/lib/utils";
+import { formatDateIndo } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
-
-  // Load operational stats from mockDb
-  const employees = mockDb.getEmployees();
-  const totalActiveEmployees = employees.filter((e) => e.isActive).length;
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const transactions = mockDb.getTransactions();
-  const currentMonthTransactions = transactions.filter(
-    (tx) => tx.transactionDate >= startOfMonth && !tx.isVoid
-  ).length;
+  let totalActiveEmployees = 0;
+  let currentMonthTransactions = 0;
+  let todayLeaveRequests = 0;
+  let recentTransactionsList: any[] = [];
 
-  const leaveRequests = mockDb.getLeaveRequests();
-  const todayLeaveRequests = leaveRequests.filter(
-    (req) => req.requestDate >= startOfToday
-  ).length;
+  try {
+    totalActiveEmployees = await prisma.employee.count({
+      where: { isActive: true },
+    });
 
-  const recentTransactions = transactions.slice(0, 5);
+    const rows: any[] = await prisma.$queryRaw`
+      SELECT a.id, a.nip, a.nama, a.jenis_transaksi, a.uraian, a.tgl_transaksi, a.tgl_cuti, 
+             a.cuti_tahunan, a.cuti_besar, a.inhaldagen, a.total_hari, a.keperluan, a.created_at,
+             k.bagian, k.stasiun, k.category, k.jabatan
+      FROM aktivitas_saldo a
+      LEFT JOIN karyawan k ON a.nip = k.nip
+      ORDER BY a.tgl_transaksi DESC
+      LIMIT 8
+    `;
+
+    currentMonthTransactions = rows.filter(
+      (r) => new Date(r.tgl_transaksi || r.created_at) >= startOfMonth
+    ).length;
+
+    todayLeaveRequests = rows.filter(
+      (r) =>
+        r.jenis_transaksi === "AMBIL_CUTI" &&
+        new Date(r.tgl_transaksi || r.created_at) >= startOfToday
+    ).length;
+
+    recentTransactionsList = rows;
+  } catch {
+    const employees = mockDb.getEmployees();
+    totalActiveEmployees = employees.filter((e) => e.isActive).length;
+    const transactions = mockDb.getTransactions();
+    currentMonthTransactions = transactions.filter(
+      (tx) => tx.transactionDate >= startOfMonth && !tx.isVoid
+    ).length;
+    const leaveRequests = mockDb.getLeaveRequests();
+    todayLeaveRequests = leaveRequests.filter(
+      (req) => req.requestDate >= startOfToday
+    ).length;
+  }
 
   const shortcuts = [
     {
@@ -55,7 +85,6 @@ export default async function DashboardPage() {
       desc: "Input form permohonan cuti",
       href: "/leave/create",
       icon: CalendarDays,
-      color: "bg-blue-50 text-blue-700 border-blue-200",
       roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
     },
     {
@@ -63,39 +92,34 @@ export default async function DashboardPage() {
       desc: "Tambah saldo cuti karyawan",
       href: "/balances/add",
       icon: PlusCircle,
-      color: "bg-emerald-50 text-emerald-700 border-emerald-200",
       roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
+    },
+    {
+      title: "Proses Massal",
+      desc: "Alokasi tahunan & cuti besar massal",
+      href: "/mass-process",
+      icon: Layers,
+      roles: ["ADMIN_UTAMA"],
     },
     {
       title: "Rincian Cuti",
       desc: "Lihat saldo & histori per karyawan",
       href: "/leave/details",
-      icon: FileSpreadsheet,
-      color: "bg-purple-50 text-purple-700 border-purple-200",
-      roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
-    },
-    {
-      title: "Rekap Cuti",
-      desc: "Laporan rekap & cetak dokumen",
-      href: "/reports/summary",
       icon: FileText,
-      color: "bg-amber-50 text-amber-700 border-amber-200",
       roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
     },
     {
-      title: "Proses Massal",
-      desc: "Pemberian cuti massal tahunan",
-      href: "/mass-process",
-      icon: Layers,
-      color: "bg-indigo-50 text-indigo-700 border-indigo-200",
-      roles: ["ADMIN_UTAMA"],
+      title: "Laporan Cuti",
+      desc: "Laporan rekap & cetak dokumen",
+      href: "/reports",
+      icon: FileSpreadsheet,
+      roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
     },
     {
       title: "Master Karyawan",
       desc: "Kelola data karyawan & NIP",
       href: "/employees",
       icon: Users,
-      color: "bg-slate-50 text-slate-700 border-slate-200",
       roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
     },
   ];
@@ -105,8 +129,10 @@ export default async function DashboardPage() {
   const getLeaveTypeBadge = (code: string) => {
     switch (code) {
       case "ANNUAL":
-        return <Badge variant="annual">Tahunan</Badge>;
+      case "TAHUNAN":
+        return <Badge variant="default">Tahunan</Badge>;
       case "LONG_LEAVE":
+      case "BESAR":
         return <Badge variant="longLeave">Besar</Badge>;
       case "INHALDAGEN":
         return <Badge variant="inhaldagen">Inhaldagen</Badge>;
@@ -116,81 +142,83 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
 
-      {/* Operational Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Total Karyawan Aktif</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                {totalActiveEmployees}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Karyawan pimpinan terdaftar</p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <Users className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Transaksi Bulan Ini</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                {currentMonthTransactions}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Ledger mutasi aktif</p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Permohonan Cuti Hari Ini</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                {todayLeaveRequests}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Permohonan diajukan</p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-50 text-purple-600 border border-purple-100">
-              <Clock className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Hero Welcome Banner (Inspirasi SIGAP) */}
+      <div className="flex flex-col items-center text-center pt-2 pb-1 space-y-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200/80 text-sky-800 text-xs font-bold shadow-2xs">
+          <span className="h-2 w-2 rounded-full bg-[#0084c7] animate-pulse" />
+          PT KEBON AGUNG • PABRIK GULA TRANGKIL
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          Sistem Informasi Pengelolaan Cuti
+        </h2>
+        <p className="text-xs text-slate-500 max-w-lg">
+          Layanan terpadu pengelolaan kuota cuti tahunan, cuti besar, dan inhaldagen karyawan pimpinan & pelaksana secara akurat dan realtime.
+        </p>
       </div>
 
-      {/* Menu Shortcuts Grid */}
+      {/* Operational Stats Cards (Standar Global Konsisten 3 Kolom) */}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+        <StatCard
+          title="Total Karyawan Aktif"
+          value={totalActiveEmployees}
+          badgeText="Pimpinan & Pelaksana"
+          icon={Users}
+          variant="sky"
+        />
+
+        <StatCard
+          title="Transaksi Bulan Ini"
+          value={currentMonthTransactions}
+          badgeText="Mutasi Ledger Aktif"
+          icon={CheckCircle2}
+          variant="emerald"
+        />
+
+        <StatCard
+          title="Permohonan Hari Ini"
+          value={todayLeaveRequests}
+          badgeText="Pengajuan Terkini"
+          icon={Clock}
+          variant="indigo"
+        />
+      </div>
+
+      {/* Menu Shortcuts Grid (Inspirasi SIGAP Feature Cards) */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-900 mb-3">
-          Shortcut Menu Operasional
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4 text-[#0084c7]" />
+            Menu Operasional Cuti
+          </h3>
+          <span className="text-[11px] text-slate-400">Pilih modul untuk memulai</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {visibleShortcuts.map((shortcut) => {
             const Icon = shortcut.icon;
             return (
               <Link key={shortcut.title} href={shortcut.href}>
-                <Card className="hover:border-blue-400 hover:shadow-xs transition-all cursor-pointer h-full group">
-                  <CardContent className="p-4 flex items-start gap-3">
-                    <div className={`p-2 rounded-md border shrink-0 ${shortcut.color}`}>
+                <Card className="hover:border-sky-400 hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-pointer h-full group bg-white border-slate-200/85">
+                  <CardContent className="p-4 flex items-start gap-3.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white shadow-xs group-hover:scale-105 transition-transform">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        <p className="text-xs font-bold text-slate-900 group-hover:text-[#0084c7] transition-colors">
                           {shortcut.title}
                         </p>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                        <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-[#0084c7] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
                         {shortcut.desc}
                       </p>
+                      <div className="mt-2">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0077b6] bg-sky-50 border border-sky-200/80 px-2 py-0.5 rounded-full">
+                          Akses Modul →
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -204,13 +232,13 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between py-3.5">
           <div>
-            <CardTitle className="text-sm font-semibold">Transaksi Terbaru</CardTitle>
+            <CardTitle className="text-sm font-bold text-slate-900">Transaksi Terbaru</CardTitle>
             <CardDescription className="text-[11px]">
               Mutasi ledger saldo cuti terakhir
             </CardDescription>
           </div>
           <Link href="/leave/details">
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 hover:text-blue-700">
+            <Button variant="outline" size="sm" className="h-7.5 px-3 text-xs text-[#0084c7] hover:text-[#0077b6] hover:bg-sky-50 font-semibold rounded-full">
               Lihat Semua
             </Button>
           </Link>
@@ -219,59 +247,59 @@ export default async function DashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">Tanggal</TableHead>
-                <TableHead>Karyawan</TableHead>
-                <TableHead>Bagian</TableHead>
-                <TableHead>Jenis Cuti</TableHead>
-                <TableHead>Uraian</TableHead>
-                <TableHead className="text-right">Jumlah</TableHead>
-                <TableHead>Operator</TableHead>
+                <TableHead className="w-28">Tanggal</TableHead>
+                <TableHead>Karyawan & NIP</TableHead>
+                <TableHead>Bagian & Stasiun</TableHead>
+                <TableHead>Jenis Transaksi</TableHead>
+                <TableHead>Uraian / Keperluan</TableHead>
+                <TableHead className="text-right">Jumlah Hari</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentTransactions.length === 0 ? (
+              {recentTransactionsList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-slate-500 text-xs">
+                  <TableCell colSpan={6} className="h-24 text-center text-slate-500 text-xs">
                     Belum ada transaksi cuti tercatat.
                   </TableCell>
                 </TableRow>
               ) : (
-                recentTransactions.map((tx) => {
-                  const amount = Number(tx.amount);
-                  const isPositive = amount > 0;
+                recentTransactionsList.map((tx) => {
+                  const isAmbil = tx.jenis_transaksi === "AMBIL_CUTI";
+                  const totalHari = Number(tx.total_hari || (Number(tx.cuti_tahunan || 0) + Number(tx.cuti_besar || 0) + Number(tx.inhaldagen || 0)));
+                  const txDate = tx.tgl_transaksi || tx.created_at || new Date();
                   return (
                     <TableRow key={tx.id}>
                       <TableCell className="font-mono text-xs text-slate-600">
-                        {formatDateIndo(tx.transactionDate)}
+                        {formatDateIndo(new Date(txDate))}
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium text-slate-900 text-xs">
-                          {tx.employee.name}
+                        <div className="font-semibold text-slate-900 text-xs">
+                          {tx.nama || "Karyawan"}
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          NIP: {tx.employee.employeeNumber}
+                          NIP: {tx.nip}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-slate-600">
-                        {tx.employee.department.name}
+                        <span className="font-medium text-slate-800">{tx.bagian || "-"}</span>
+                        {tx.stasiun && tx.stasiun !== "-" && (
+                          <span className="text-[10px] text-slate-400 block">{tx.stasiun}</span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        {getLeaveTypeBadge(tx.leaveType.code)}
+                        <Badge variant={isAmbil ? "default" : "secondary"}>
+                          {isAmbil ? "Ambil Cuti" : "Tambah Saldo"}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-700 max-w-[200px] truncate">
-                        {tx.description}
+                      <TableCell className="text-xs text-slate-700 max-w-[220px] truncate">
+                        {tx.uraian || tx.keperluan || (isAmbil ? "Pengambilan Cuti" : "Penambahan Saldo")}
                       </TableCell>
                       <TableCell
-                        className={`text-right font-mono font-semibold text-xs tabular-nums ${
-                          isPositive
-                            ? "text-emerald-700"
-                            : "text-red-700"
+                        className={`text-right font-mono font-bold text-xs tabular-nums ${
+                          isAmbil ? "text-red-700" : "text-emerald-700"
                         }`}
                       >
-                        {formatSignedDays(amount)} hari
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {tx.createdBy.fullName || tx.createdBy.username}
+                        {isAmbil ? `-${totalHari}` : `+${totalHari}`} hari
                       </TableCell>
                     </TableRow>
                   );

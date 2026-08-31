@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,36 +215,36 @@ export default function DepartmentsPage() {
   const totalActive = departments.filter((d) => d.isActive).length;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Top Action & Navigation Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2">
         {/* Tabs Switcher: Master Stasiun vs Master Bagian */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 rounded-full border border-slate-200/80 w-fit">
           <Link
             href="/stations"
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-[#0077b6] hover:bg-white/60 rounded-full transition-colors"
           >
-            <Factory className="h-4 w-4" />
+            <Factory className="h-3.5 w-3.5" />
             Master Stasiun
           </Link>
           <Link
             href="/departments"
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold border-b-2 border-blue-600 text-blue-600"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full bg-[#0084c7] text-white shadow-xs"
           >
-            <Building2 className="h-4 w-4" />
+            <Building2 className="h-3.5 w-3.5" />
             Master Bagian
-            <Badge className="h-5 px-1.5 text-[10px] bg-blue-100 text-blue-700 border-none">
+            <span className="h-4.5 px-1.5 text-[10px] bg-white/25 text-white font-bold rounded-full flex items-center justify-center">
               {departments.length}
-            </Badge>
+            </span>
           </Link>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-center">
           <Button
             onClick={() => setIsAddModalOpen(true)}
             size="sm"
-            className="gap-1.5 h-8 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            className="rounded-full gap-1.5 h-9 px-4 text-xs font-bold bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
           >
             <PlusCircle className="h-3.5 w-3.5" />
             + Tambah Bagian Baru
@@ -251,43 +252,47 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
-      {/* Stats Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Total Bagian Terdaftar</p>
-              <p className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
-                {departments.length} Bagian
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <Building2 className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Summary Cards (Standar Global Konsisten 4 Kolom) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <StatCard
+          title="Total Master Bagian"
+          value={`${departments.length} Bagian`}
+          subtitle="Unit terdaftar"
+          icon={Building2}
+          variant="sky"
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Bagian Aktif</p>
-              <p className="text-xl font-bold text-emerald-600 mt-0.5 tabular-nums">
-                {totalActive} Bagian
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Bagian Aktif"
+          value={`${totalActive} Bagian`}
+          subtitle="Status operasional"
+          icon={CheckCircle2}
+          variant="emerald"
+        />
+
+        <StatCard
+          title="Unit Kerja"
+          value="PG Trangkil"
+          subtitle="Pati, Jawa Tengah"
+          icon={Building2}
+          variant="purple"
+        />
+
+        <StatCard
+          title="Sinkronisasi DB"
+          value="Tersinkron"
+          subtitle="Database MySQL"
+          icon={Layers}
+          variant="slate"
+        />
       </div>
 
       {/* Main Table Card (READ) */}
-      <Card className="border-slate-200 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card className="border-slate-200/90 shadow-xs">
+        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-blue-600" />
+              <Building2 className="h-4 w-4 text-[#0084c7]" />
               Tabel Master Bagian PG Trangkil
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
@@ -295,34 +300,32 @@ export default function DepartmentsPage() {
             </CardDescription>
           </div>
 
-          {/* Search */}
-          <div className="flex items-center gap-2">
-            <div className="relative w-48 sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Cari kode / nama bagian..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-8 h-8 text-xs bg-slate-50"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Cari kode / nama bagian..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-8 h-8.5 text-xs bg-white rounded-full focus-visible:ring-[#0084c7]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </CardHeader>
 
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center p-12 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#0084c7]" />
               Memuat data bagian dari database...
             </div>
           ) : filteredDepartments.length === 0 ? (
@@ -354,7 +357,7 @@ export default function DepartmentsPage() {
                   <TableRow key={d.id} className="hover:bg-slate-50/60 transition-colors">
                     {/* 1. Kode Bagian */}
                     <TableCell>
-                      <Badge className="font-mono text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">
+                      <Badge variant="code" className="text-xs px-2.5 py-0.5">
                         {d.code}
                       </Badge>
                     </TableCell>
@@ -471,14 +474,14 @@ export default function DepartmentsPage() {
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
                 disabled={isPending}
-                className="h-9 text-xs"
+                className="rounded-full h-9 text-xs"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="h-9 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                className="rounded-full h-9 text-xs font-bold gap-1.5 bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
               >
                 {isPending ? (
                   <>

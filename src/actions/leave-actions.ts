@@ -68,19 +68,21 @@ export async function getEmployeeBalanceAction(employeeId: string) {
       };
     }
 
+    const isPelaksana = emp.category?.toUpperCase() === "PELAKSANA";
+    const inhaldagenVal = isPelaksana ? 0 : (emp.leaveBalance?.inhaldagen ?? 0);
     const balances = emp.leaveBalance
       ? {
-          annual: emp.leaveBalance.cutiTahunan,
-          longLeave: emp.leaveBalance.cutiBesar,
-          inhaldagen: emp.leaveBalance.inhaldagen,
-          total: emp.leaveBalance.total,
-        }
+        annual: emp.leaveBalance.cutiTahunan,
+        longLeave: emp.leaveBalance.cutiBesar,
+        inhaldagen: inhaldagenVal,
+        total: emp.leaveBalance.cutiTahunan + emp.leaveBalance.cutiBesar + inhaldagenVal,
+      }
       : {
-          annual: 12,
-          longLeave: 0,
-          inhaldagen: 0,
-          total: 12,
-        };
+        annual: 12,
+        longLeave: 0,
+        inhaldagen: 0,
+        total: 12,
+      };
 
     return {
       success: true,
@@ -128,6 +130,7 @@ export async function createLeaveRequestAction(
   const {
     employeeId,
     requestDate,
+    selectedDates,
     startDate,
     endDate,
     annualDays,
@@ -217,6 +220,40 @@ export async function createLeaveRequestAction(
     const requestNumber = `CT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}-${String(Math.floor(1000 + Math.random() * 9000))}`;
     const reqId = `req-${Date.now()}`;
 
+    // Compute effective dates from selectedDates
+    const sortedDates = [...(selectedDates || [])].sort();
+    const effectiveStartDate = startDate || sortedDates[0] || requestDate;
+    const effectiveEndDate = endDate || sortedDates[sortedDates.length - 1] || effectiveStartDate;
+    const formattedDatesList = sortedDates
+      .map((d) => {
+        const [y, m, day] = d.split("-");
+        return `${day}/${m}/${y}`;
+      })
+      .join(", ");
+
+    const dateDetailNote = formattedDatesList ? `Tgl: ${formattedDatesList}` : "";
+    const combinedNotes = [notes, dateDetailNote].filter(Boolean).join(" • ");
+
+    const typesList: string[] = [];
+    if (annualDays > 0) typesList.push("Cuti Tahunan");
+    if (longLeaveDays > 0) typesList.push("Cuti Besar");
+    if (inhaldagenDays > 0) typesList.push("Inhaldagen");
+    const uraianStr = `Pengambilan ${typesList.join(" & ") || "Cuti"}`;
+
+    // Simpan langsung ke tabel MySQL `aktivitas_saldo`
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO aktivitas_saldo (
+          id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
+        ) VALUES (
+          ${reqId}, ${employee.nip}, ${employee.nama}, 'AMBIL_CUTI', ${uraianStr}, ${new Date(requestDate)}, ${formattedDatesList || effectiveStartDate}, 
+          ${annualDays}, ${longLeaveDays}, ${inhaldagenDays}, ${totalDays}, ${purpose || "-"}, NOW(), NOW()
+        )
+      `;
+    } catch (dbErr) {
+      console.error("Gagal simpan ke tabel aktivitas_saldo:", dbErr);
+    }
+
     // Also update mockDb if available in memory
     try {
       const leaveTypes = mockDb.getLeaveTypes();
@@ -232,12 +269,13 @@ export async function createLeaveRequestAction(
       mockDb.createLeaveRequest({
         employeeId,
         requestDate: new Date(requestDate),
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: new Date(effectiveStartDate),
+        endDate: new Date(effectiveEndDate),
         purpose,
-        notes: notes || null,
+        notes: combinedNotes || null,
         createdById: user.id,
         items,
+        requestNumber,
       });
     } catch (mockErr) {
       console.error("MockDb leave request sync warning:", mockErr);
@@ -249,11 +287,13 @@ export async function createLeaveRequestAction(
       action: "CREATE_LEAVE_REQUEST",
       entityType: "LEAVE_REQUEST",
       entityId: reqId,
-      description: `Pengambilan cuti ${employee.nama} (${employee.nip}) sebanyak ${totalDays} hari dengan No: ${requestNumber}.`,
+      description: `Pengambilan cuti ${employee.nama} (${employee.nip}) sebanyak ${totalDays} hari (${formattedDatesList || "1 hari"}) dengan No: ${requestNumber}.`,
       newValues: {
         requestNumber,
         employeeName: employee.nama,
         totalDays,
+        selectedDates: sortedDates,
+        formattedDates: formattedDatesList,
         annualDays,
         longLeaveDays,
         inhaldagenDays,
@@ -273,6 +313,152 @@ export async function createLeaveRequestAction(
     return {
       success: false,
       message: "Terjadi kesalahan saat memproses permohonan cuti di database.",
+    };
+  }
+}
+
+export interface EmployeeLeaveHistoryItem {
+  id: string;
+  requestNumber: string;
+  employeeId: string;
+  transactionType?: "AMBIL_CUTI" | "TAMBAH_SALDO";
+  uraian?: string;
+  requestDate: string;
+  startDate: string;
+  endDate: string;
+  selectedDates?: string[];
+  totalDays: number;
+  annualDays: number;
+  longLeaveDays: number;
+  inhaldagenDays: number;
+  purpose: string;
+  notes: string | null;
+  status: "APPROVED" | "CANCELLED" | "PENDING";
+  createdByName: string;
+  createdAt: string;
+}
+
+export async function getEmployeeLeaveRequestsAction(
+  employeeId: string
+): Promise<ActionResult<EmployeeLeaveHistoryItem[]>> {
+  await requireAuth();
+
+  try {
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (employee) {
+      try {
+        const rows: any[] = await prisma.$queryRaw`
+          SELECT id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at
+          FROM aktivitas_saldo
+          WHERE nip = ${employee.nip}
+          ORDER BY created_at ASC
+        `;
+
+        if (rows && rows.length > 0) {
+          const items: EmployeeLeaveHistoryItem[] = rows.map((r) => {
+            const datesList = r.tgl_cuti ? r.tgl_cuti.split(", ").map((s: string) => s.trim()) : [];
+            const reqDate = r.tgl_transaksi ? new Date(r.tgl_transaksi) : new Date(r.created_at);
+            const isTambah = r.jenis_transaksi === "TAMBAH_SALDO";
+
+            const types: string[] = [];
+            if (Number(r.cuti_tahunan) > 0) types.push("Cuti Tahunan");
+            if (Number(r.cuti_besar) > 0) types.push("Cuti Besar");
+            if (Number(r.inhaldagen) > 0) types.push("Inhaldagen");
+            const fallbackUraian = isTambah 
+              ? `Penambahan Saldo ${types.join(" & ") || "Cuti"}`
+              : `Pengambilan ${types.join(" & ") || "Cuti"}`;
+
+            const computedUraian = (r.uraian && String(r.uraian).trim() !== "") ? r.uraian : fallbackUraian;
+
+            return {
+              id: r.id,
+              requestNumber: `CT-${r.nip}`,
+              employeeId: employee.id,
+              transactionType: (r.jenis_transaksi as "AMBIL_CUTI" | "TAMBAH_SALDO") || "AMBIL_CUTI",
+              uraian: computedUraian,
+              requestDate: reqDate.toISOString(),
+              startDate: reqDate.toISOString(),
+              endDate: reqDate.toISOString(),
+              selectedDates: datesList,
+              totalDays: Number(r.total_hari) || (Number(r.cuti_tahunan) + Number(r.cuti_besar) + Number(r.inhaldagen)),
+              annualDays: Number(r.cuti_tahunan) || 0,
+              longLeaveDays: Number(r.cuti_besar) || 0,
+              inhaldagenDays: Number(r.inhaldagen) || 0,
+              purpose: r.keperluan || (isTambah ? "Penambahan Saldo" : "-"),
+              notes: null,
+              status: "APPROVED",
+              createdByName: "Admin",
+              createdAt: new Date(r.created_at).toISOString(),
+            };
+          });
+
+          return {
+            success: true,
+            data: items,
+          };
+        }
+      } catch (sqlErr) {
+        console.warn("Querying aktivitas_saldo fallback to mockDb:", sqlErr);
+      }
+    }
+
+    const rawRequests = mockDb.getLeaveRequests(employeeId);
+
+    const items: EmployeeLeaveHistoryItem[] = rawRequests.map((req) => {
+      const details = req.details || [];
+      let annualDays = 0;
+      let longLeaveDays = 0;
+      let inhaldagenDays = 0;
+
+      for (const d of details) {
+        if (d.leaveType?.code === "ANNUAL") annualDays += d.days;
+        else if (d.leaveType?.code === "LONG_LEAVE") longLeaveDays += d.days;
+        else if (d.leaveType?.code === "INHALDAGEN") inhaldagenDays += d.days;
+      }
+
+      const totalDays = annualDays + longLeaveDays + inhaldagenDays || 1;
+
+      let datesList: string[] = [];
+      if (req.notes && req.notes.includes("Tgl: ")) {
+        const parts = req.notes.split("Tgl: ");
+        if (parts[1]) {
+          datesList = parts[1].split(" • ")[0].split(", ").map((s) => s.trim());
+        }
+      }
+
+      return {
+        id: req.id,
+        requestNumber: req.requestNumber,
+        employeeId: req.employeeId,
+        requestDate: req.requestDate.toISOString(),
+        startDate: req.startDate ? req.startDate.toISOString() : req.requestDate.toISOString(),
+        endDate: req.endDate ? req.endDate.toISOString() : req.startDate ? req.startDate.toISOString() : req.requestDate.toISOString(),
+        selectedDates: datesList,
+        totalDays,
+        annualDays,
+        longLeaveDays,
+        inhaldagenDays,
+        purpose: req.purpose,
+        notes: req.notes,
+        status: (req.status as "APPROVED" | "CANCELLED") || "APPROVED",
+        createdByName: req.createdBy?.fullName || req.createdBy?.username || "Admin",
+        createdAt: req.createdAt.toISOString(),
+      };
+    });
+
+    return {
+      success: true,
+      data: items,
+    };
+  } catch (error) {
+    console.error("Get employee leave requests error:", error);
+    return {
+      success: false,
+      message: "Gagal memuat riwayat cuti karyawan.",
+      data: [],
     };
   }
 }
@@ -311,6 +497,234 @@ export async function getEmployeeTransactionsAction(employeeId: string) {
     return {
       success: false,
       message: "Gagal mengambil riwayat transaksi cuti.",
+    };
+  }
+}
+
+export interface CorrectLeaveRequestInput {
+  activityId: string;
+  employeeId: string;
+  requestDate: string;
+  startDate?: string;
+  endDate?: string;
+  selectedDates: string[];
+  annualDays: number;
+  longLeaveDays: number;
+  inhaldagenDays: number;
+  purpose: string;
+  notes?: string;
+}
+
+export async function correctLeaveRequestAction(
+  input: CorrectLeaveRequestInput
+): Promise<ActionResult<{ success: boolean; message: string; updatedBalances: { annual: number; longLeave: number; inhaldagen: number; total: number } }>> {
+  const user = await requireAuth();
+
+  try {
+    const {
+      activityId,
+      employeeId,
+      requestDate,
+      selectedDates,
+      annualDays,
+      longLeaveDays,
+      inhaldagenDays,
+      purpose,
+    } = input;
+
+    // Fetch employee & leave balance from MySQL
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      include: {
+        leaveBalance: true,
+      },
+    });
+
+    if (!employee) {
+      return {
+        success: false,
+        message: "Karyawan tidak ditemukan di database.",
+      };
+    }
+
+    // Fetch existing activity from MySQL aktivitas_saldo
+    const existingRows: any[] = await prisma.$queryRaw`
+      SELECT * FROM aktivitas_saldo WHERE id = ${activityId} AND nip = ${employee.nip}
+    `;
+
+    if (!existingRows || existingRows.length === 0) {
+      return {
+        success: false,
+        message: "Data transaksi cuti yang ingin dikoreksi tidak ditemukan.",
+      };
+    }
+
+    const existing = existingRows[0];
+    if (existing.jenis_transaksi !== "AMBIL_CUTI") {
+      return {
+        success: false,
+        message: "Hanya transaksi pengambilan cuti yang dapat dikoreksi melalui form ini.",
+      };
+    }
+
+    // Previous deductions of this record
+    const oldAnnual = Number(existing.cuti_tahunan) || 0;
+    const oldLongLeave = Number(existing.cuti_besar) || 0;
+    const oldInhaldagen = Number(existing.inhaldagen) || 0;
+
+    // Current balances
+    const balanceRecord = employee.leaveBalance;
+    const currentAnnual = balanceRecord?.cutiTahunan ?? 0;
+    const currentLongLeave = balanceRecord?.cutiBesar ?? 0;
+    const currentInhaldagen = balanceRecord?.inhaldagen ?? 0;
+
+    // Effective balances before this new deduction (current + refund of old)
+    const effectiveAnnual = currentAnnual + oldAnnual;
+    const effectiveLongLeave = currentLongLeave + oldLongLeave;
+    const effectiveInhaldagen = currentInhaldagen + oldInhaldagen;
+
+    const totalDays = annualDays + longLeaveDays + inhaldagenDays;
+
+    if (!selectedDates || selectedDates.length === 0) {
+      return {
+        success: false,
+        message: "Silakan pilih minimal 1 tanggal cuti di kalender.",
+      };
+    }
+
+    if (totalDays !== selectedDates.length) {
+      return {
+        success: false,
+        message: `Total alokasi cuti (${totalDays} hari) tidak sama dengan jumlah tanggal yang dipilih (${selectedDates.length} hari).`,
+      };
+    }
+
+    if (annualDays > effectiveAnnual) {
+      return {
+        success: false,
+        message: `Alokasi Cuti Tahunan melebihi batas yang tersedia. (Diminta: ${annualDays} hari, Tersedia: ${effectiveAnnual} hari)`,
+      };
+    }
+
+    if (longLeaveDays > effectiveLongLeave) {
+      return {
+        success: false,
+        message: `Alokasi Cuti Besar melebihi batas yang tersedia. (Diminta: ${longLeaveDays} hari, Tersedia: ${effectiveLongLeave} hari)`,
+      };
+    }
+
+    if (inhaldagenDays > effectiveInhaldagen) {
+      return {
+        success: false,
+        message: `Alokasi Inhaldagen melebihi batas yang tersedia. (Diminta: ${inhaldagenDays} hari, Tersedia: ${effectiveInhaldagen} hari)`,
+      };
+    }
+
+    // Calculate new balance
+    const newAnnual = effectiveAnnual - annualDays;
+    const newLongLeave = effectiveLongLeave - longLeaveDays;
+    const newInhaldagen = effectiveInhaldagen - inhaldagenDays;
+    const newTotal = newAnnual + newLongLeave + newInhaldagen;
+
+    // Update MySQL saldo_cuti
+    await prisma.leaveBalance.upsert({
+      where: { nip: employee.nip },
+      create: {
+        nip: employee.nip,
+        nama: employee.nama,
+        cutiTahunan: newAnnual,
+        cutiBesar: newLongLeave,
+        inhaldagen: newInhaldagen,
+        total: newTotal,
+        periode: new Date().getFullYear(),
+      },
+      update: {
+        nama: employee.nama,
+        cutiTahunan: newAnnual,
+        cutiBesar: newLongLeave,
+        inhaldagen: newInhaldagen,
+        total: newTotal,
+      },
+    });
+
+    // Format new selectedDates
+    const sortedDates = [...selectedDates].sort();
+    const formattedDatesList = sortedDates
+      .map((d) => {
+        if (d.includes("/")) return d;
+        const [y, m, day] = d.split("-");
+        return `${day}/${m}/${y}`;
+      })
+      .join(", ");
+
+    const typesList: string[] = [];
+    if (annualDays > 0) typesList.push("Cuti Tahunan");
+    if (longLeaveDays > 0) typesList.push("Cuti Besar");
+    if (inhaldagenDays > 0) typesList.push("Inhaldagen");
+    const uraianStr = `Pengambilan ${typesList.join(" & ") || "Cuti"}`;
+
+    // Update MySQL aktivitas_saldo
+    await prisma.$executeRaw`
+      UPDATE aktivitas_saldo
+      SET
+        uraian = ${uraianStr},
+        tgl_transaksi = ${new Date(requestDate)},
+        tgl_cuti = ${formattedDatesList},
+        cuti_tahunan = ${annualDays},
+        cuti_besar = ${longLeaveDays},
+        inhaldagen = ${inhaldagenDays},
+        total_hari = ${totalDays},
+        keperluan = ${purpose || "-"},
+        updated_at = NOW()
+      WHERE id = ${activityId}
+    `;
+
+    // Audit log
+    await logAudit({
+      userId: user.id,
+      action: "EDIT_LEAVE_REQUEST",
+      entityType: "LEAVE_REQUEST",
+      entityId: activityId,
+      description: `Koreksi cuti ${employee.nama} (${employee.nip}): dari ${existing.total_hari} hari (${existing.tgl_cuti}) menjadi ${totalDays} hari (${formattedDatesList}).`,
+      newValues: {
+        previousTglCuti: existing.tgl_cuti,
+        previousAnnual: existing.cuti_tahunan,
+        previousLongLeave: existing.cuti_besar,
+        previousInhaldagen: existing.inhaldagen,
+        previousTotalHari: existing.total_hari,
+        tglCuti: formattedDatesList,
+        cutiTahunan: annualDays,
+        cutiBesar: longLeaveDays,
+        inhaldagen: inhaldagenDays,
+        totalHari: totalDays,
+        updatedBalances: {
+          annual: newAnnual,
+          longLeave: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: "Koreksi permohonan cuti berhasil disimpan. Saldo cuti telah disesuaikan.",
+      data: {
+        success: true,
+        message: "Berhasil",
+        updatedBalances: {
+          annual: newAnnual,
+          longLeave: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Correct leave request error:", error);
+    return {
+      success: false,
+      message: "Terjadi kesalahan saat memproses koreksi cuti di database.",
     };
   }
 }

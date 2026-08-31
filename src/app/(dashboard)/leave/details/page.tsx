@@ -1,43 +1,37 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   FileSpreadsheet,
-  User,
   Building2,
   Briefcase,
-  ArrowLeft,
   Loader2,
   CalendarDays,
   PlusCircle,
-  Clock,
-  Printer,
-  Sparkles,
+  Factory,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import {
   getEmployeesForLeaveAction,
-  getEmployeeTransactionsAction,
+  getEmployeeLeaveRequestsAction,
+  EmployeeLeaveHistoryItem,
 } from "@/actions/leave-actions";
-import { formatDateIndo, formatSignedDays } from "@/lib/utils";
+import { BalanceActivityCard } from "@/components/leave/balance-activity-card";
 
 interface EmployeeOption {
   id: string;
   employeeNumber: string;
   name: string;
   position: string;
+  category?: string;
+  stasiun?: string;
   department: {
     id: string;
     code: string;
@@ -51,35 +45,53 @@ interface EmployeeOption {
   };
 }
 
-interface TransactionItem {
-  id: string;
-  employeeId: string;
-  transactionType: string;
-  transactionDate: string | Date;
-  amount: number;
-  description: string;
-  notes: string | null;
-  leaveType: {
-    code: string;
-    name: string;
-  };
-  createdBy: {
-    fullName: string;
-    username: string;
-  };
-}
-
 export default function LeaveDetailsPage() {
-  const [isPending, startTransition] = useTransition();
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  // Search & Selected Employee
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
-  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load employees on mount
+  // History / Activity Transactions
+  const [employeeHistory, setEmployeeHistory] = useState<EmployeeLeaveHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Load employee leave history
+  const loadEmployeeHistory = useCallback(async (employeeId: string) => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await getEmployeeLeaveRequestsAction(employeeId);
+      if (res.success && res.data) {
+        setEmployeeHistory(res.data);
+      } else {
+        setEmployeeHistory([]);
+      }
+    } catch (err) {
+      console.error("Failed to load history:", err);
+      setEmployeeHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  // Fetch employees on mount
   useEffect(() => {
     async function loadEmployees() {
       setIsLoadingEmployees(true);
@@ -88,11 +100,6 @@ export default function LeaveDetailsPage() {
         if (res.success && res.data) {
           const empList = res.data as EmployeeOption[];
           setEmployees(empList);
-          if (empList.length > 0) {
-            setSelectedEmployeeId(empList[0].id);
-            setSelectedEmployee(empList[0]);
-            loadTransactions(empList[0].id);
-          }
         }
       } catch (err) {
         console.error("Failed to load employees:", err);
@@ -104,313 +111,288 @@ export default function LeaveDetailsPage() {
     loadEmployees();
   }, []);
 
-  const loadTransactions = (empId: string) => {
-    setIsLoadingTransactions(true);
-    startTransition(async () => {
-      try {
-        const res = await getEmployeeTransactionsAction(empId);
-        if (res.success && res.data) {
-          setTransactions(res.data.transactions as unknown as TransactionItem[]);
-          if (res.data.employee) {
-            setSelectedEmployee(res.data.employee as EmployeeOption);
-          }
-        } else {
-          toast.error(res.message || "Gagal mengambil data transaksi.");
-        }
-      } catch (err) {
-        console.error("Load transactions error:", err);
-        toast.error("Terjadi kesalahan saat memuat mutasi cuti.");
-      } finally {
-        setIsLoadingTransactions(false);
-      }
-    });
+  // Filter employees by search query
+  const filteredEmployees = employees.filter((emp) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      emp.name.toLowerCase().includes(q) ||
+      emp.employeeNumber.toLowerCase().includes(q) ||
+      emp.department.name.toLowerCase().includes(q) ||
+      (emp.stasiun && emp.stasiun.toLowerCase().includes(q)) ||
+      emp.position.toLowerCase().includes(q)
+    );
+  });
+
+  // Handle selecting an employee from search results
+  const handleSelectEmployee = (emp: EmployeeOption) => {
+    setSelectedEmployee(emp);
+    setSearchQuery(`${emp.employeeNumber} - ${emp.name}`);
+    setIsSearchOpen(false);
+    loadEmployeeHistory(emp.id);
   };
 
-  const handleEmployeeChange = (empId: string) => {
-    setSelectedEmployeeId(empId);
-    const emp = employees.find((e) => e.id === empId);
-    if (emp) {
-      setSelectedEmployee(emp);
-    }
-    loadTransactions(empId);
-  };
-
-  const getLeaveTypeBadge = (code: string) => {
-    switch (code) {
-      case "ANNUAL":
-        return <Badge variant="annual">Tahunan</Badge>;
-      case "LONG_LEAVE":
-        return <Badge variant="longLeave">Besar</Badge>;
-      case "INHALDAGEN":
-        return <Badge variant="inhaldagen">Inhaldagen</Badge>;
-      default:
-        return <Badge variant="outline">{code}</Badge>;
-    }
-  };
-
-  const getTransactionTypeLabel = (type: string) => {
-    switch (type) {
-      case "OPENING_BALANCE":
-        return "Saldo Awal";
-      case "ADD_BALANCE":
-        return "Tambah Saldo";
-      case "HOLIDAY_COMPENSATION":
-        return "Kompensasi Libur";
-      case "LEAVE_USAGE":
-        return "Pengambilan Cuti";
-      case "MASS_GRANT":
-        return "Pemberian Massal";
-      case "REVERSAL":
-        return "Pembatalan";
-      default:
-        return type;
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
+  // Handle clearing selected employee
+  const handleClearEmployee = () => {
+    setSelectedEmployee(null);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+    setEmployeeHistory([]);
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 print:p-0 print:m-0 print:max-w-none">
-      {/* Top Action Bar (Print: Hidden) */}
-      <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2">
-        <p className="text-xs text-slate-500 font-medium">
-          Buku mutasi saldo cuti (penambahan & pemotongan) karyawan pimpinan PG Trangkil
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="gap-1.5 h-8 text-xs font-medium"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Cetak Kartu Cuti
-          </Button>
-          <Link href="/balances/add">
-            <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs font-medium text-emerald-700 border-emerald-300 bg-emerald-50 hover:bg-emerald-100">
-              <PlusCircle className="h-3.5 w-3.5" />
-              + Tambah Saldo
-            </Button>
-          </Link>
-          <Link href="/leave/create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white">
-              <CalendarDays className="h-3.5 w-3.5" />
-              - Ambil Cuti
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Print Only Header */}
-      <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold tracking-tight uppercase">
-              PT PERKEBUNAN NUSANTARA — PG TRANGKIL PATI
-            </h2>
-            <h3 className="text-sm font-semibold text-slate-700">
-              KARTU MUTASI SALDO CUTI KARYAWAN PIMPINAN
-            </h3>
-          </div>
-          <div className="text-right text-xs font-mono">
-            <div>Dokumen: Internal Kepegawaian</div>
-            <div>Dicetak: {formatDateIndo(new Date())}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Selector & Employee Details Card */}
-      <Card className="border-slate-200 shadow-xs print:border-none print:shadow-none">
-        <CardContent className="p-4 space-y-4">
-          <div className="print:hidden space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Pilih Karyawan yang Ingin Dilihat:
-            </label>
-            {isLoadingEmployees ? (
-              <div className="flex items-center gap-2 text-xs text-slate-500 p-2 bg-slate-50 rounded-md border border-slate-200">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                Memuat data karyawan...
-              </div>
-            ) : (
-              <select
-                value={selectedEmployeeId}
-                onChange={(e) => handleEmployeeChange(e.target.value)}
-                disabled={isPending || isLoadingTransactions}
-                className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-              >
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    NIP: {emp.employeeNumber} — {emp.name} ({emp.department.name} - {emp.position})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {selectedEmployee && (
-            <div className="space-y-4">
-              {/* Info Karyawan Bar */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50/90 p-3 rounded-lg border border-slate-200 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">NIP / Nomor Induk</span>
-                  <span className="font-bold font-mono text-slate-900">{selectedEmployee.employeeNumber}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">Nama Lengkap</span>
-                  <span className="font-bold text-slate-900">{selectedEmployee.name}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">Jabatan</span>
-                  <span className="font-semibold text-slate-800">{selectedEmployee.position}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">Bagian</span>
-                  <span className="font-semibold text-slate-800">{selectedEmployee.department.name}</span>
-                </div>
+    <div className="space-y-6 w-full pb-16">
+      {/* SECTION 1: HEADER & DATA KARYAWAN (COMPACT & RINGKAS) */}
+      <Card className="border-slate-200 shadow-xs">
+        <CardContent className="p-4 space-y-3">
+          {/* Kolom Pencarian Karyawan (Search Box with Autocomplete) */}
+          <div className="relative" ref={searchContainerRef}>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  id="employeeSearchInput"
+                  type="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSearchOpen(true);
+                    if (
+                      selectedEmployee &&
+                      e.target.value !== `${selectedEmployee.employeeNumber} - ${selectedEmployee.name}`
+                    ) {
+                      setSelectedEmployee(null);
+                      setEmployeeHistory([]);
+                    }
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  placeholder="Cari Karyawan untuk Melihat Rincian Saldo (Ketik NIP, Nama, atau Bagian)..."
+                  className="pl-9 pr-8 h-9 text-xs font-medium text-slate-900 bg-slate-50/50 focus:bg-white"
+                />
+                {searchQuery && !selectedEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setIsSearchOpen(true);
+                    }}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    title="Hapus ketikan"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
-              {/* 3 Kartu Saldo Aktif */}
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-between">
-                  <span>Posisi Saldo Aktif Saat Ini:</span>
-                  <span className="text-slate-600 font-normal">
-                    Total Keseluruhan: <strong className="text-blue-700 font-mono">{selectedEmployee.balances.total} hari</strong>
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-blue-900">Cuti Tahunan</span>
-                      <Badge variant="annual" className="text-[10px]">Annual</Badge>
-                    </div>
-                    <div className="mt-1 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-blue-700 tabular-nums">
-                        {selectedEmployee.balances.annual}
-                      </span>
-                      <span className="text-xs text-blue-600 font-medium">hari</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-purple-200 bg-purple-50/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-purple-900">Cuti Besar</span>
-                      <Badge variant="longLeave" className="text-[10px]">Long Leave</Badge>
-                    </div>
-                    <div className="mt-1 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-purple-700 tabular-nums">
-                        {selectedEmployee.balances.longLeave}
-                      </span>
-                      <span className="text-xs text-purple-600 font-medium">hari</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-amber-900">Inhaldagen</span>
-                      <Badge variant="inhaldagen" className="text-[10px]">Inhaldagen</Badge>
-                    </div>
-                    <div className="mt-1 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-amber-700 tabular-nums">
-                        {selectedEmployee.balances.inhaldagen}
-                      </span>
-                      <span className="text-xs text-amber-600 font-medium">hari</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Tombol Tutup di kanan searchbar */}
+              {selectedEmployee && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearEmployee}
+                  className="h-9 px-3 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5"
+                  title="Tutup pencarian"
+                >
+                  <X className="h-3.5 w-3.5 text-rose-600" />
+                  Tutup
+                </Button>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Tabel Mutasi Buku Cuti */}
-      <Card className="border-slate-200 shadow-xs print:border-none print:shadow-none">
-        <CardHeader className="py-3.5 border-b border-slate-100 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-blue-600" />
-              Histori Mutasi Saldo Cuti
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Rincian keluar masuk hari cuti tercatat di buku besar kepegawaian
-            </CardDescription>
-          </div>
-          {transactions.length > 0 && (
-            <Badge variant="outline" className="text-xs font-mono">
-              {transactions.length} Transaksi
-            </Badge>
-          )}
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {isLoadingTransactions ? (
-            <div className="flex items-center justify-center p-8 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              Memuat histori mutasi...
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/80 text-[11px]">
-                  <TableHead className="w-28 font-bold">Tanggal</TableHead>
-                  <TableHead className="font-bold">Jenis Cuti</TableHead>
-                  <TableHead className="font-bold">Aktivitas</TableHead>
-                  <TableHead className="font-bold">Uraian / Alasan</TableHead>
-                  <TableHead className="text-center font-bold">Masuk (+)</TableHead>
-                  <TableHead className="text-center font-bold">Keluar (-)</TableHead>
-                  <TableHead className="font-bold">Operator</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-slate-500 text-xs">
-                      Belum ada catatan mutasi untuk karyawan ini.
-                    </TableCell>
-                  </TableRow>
+            {/* Dropdown Hasil Pencarian */}
+            {isSearchOpen && (
+              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-slate-200 shadow-lg max-h-60 overflow-y-auto divide-y divide-slate-100">
+                {isLoadingEmployees ? (
+                  <div className="p-3 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0084c7]" />
+                    Memuat data karyawan...
+                  </div>
+                ) : filteredEmployees.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-500">
+                    Tidak ditemukan karyawan dengan kata kunci &quot;{searchQuery}&quot;.
+                  </div>
                 ) : (
-                  transactions.map((tx) => {
-                    const amount = Number(tx.amount);
-                    const isPositive = amount > 0;
+                  filteredEmployees.map((emp) => {
+                    const deptStr = emp.department?.name && emp.department.name !== "-" ? emp.department.name : "";
+                    const stationStr = emp.stasiun && emp.stasiun !== "-" ? `Stasiun: ${emp.stasiun}` : "";
+                    const posStr = emp.position && emp.position !== "-" ? emp.position : "";
+                    const metaParts = [`NIP: ${emp.employeeNumber}`, deptStr, stationStr, posStr].filter(Boolean);
+
                     return (
-                      <TableRow key={tx.id} className="hover:bg-slate-50/50">
-                        <TableCell className="font-mono text-xs text-slate-700">
-                          {formatDateIndo(tx.transactionDate)}
-                        </TableCell>
-                        <TableCell>
-                          {getLeaveTypeBadge(tx.leaveType.code)}
-                        </TableCell>
-                        <TableCell className="text-xs font-medium text-slate-700">
-                          {getTransactionTypeLabel(tx.transactionType)}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-800 max-w-xs">
-                          <div>{tx.description}</div>
-                          {tx.notes && (
-                            <div className="text-[10px] text-slate-400 italic">
-                              Catatan: {tx.notes}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-xs tabular-nums text-emerald-700">
-                          {isPositive ? `+${amount}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-xs tabular-nums text-red-600">
-                          {!isPositive ? `${amount}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {tx.createdBy.fullName || tx.createdBy.username}
-                        </TableCell>
-                      </TableRow>
+                      <button
+                        key={emp.id}
+                        type="button"
+                        onClick={() => handleSelectEmployee(emp)}
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50/70 transition-colors flex items-center justify-between group"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs text-slate-900 truncate">
+                            {emp.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                            {metaParts.join(" • ")}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] font-mono text-slate-600 h-5 shrink-0 ml-2">
+                          Saldo: {emp.balances.total} hr
+                        </Badge>
+                      </button>
                     );
                   })
                 )}
-              </TableBody>
-            </Table>
-          )}
+              </div>
+            )}
+          </div>
+
+          {/* Profil Karyawan & Posisi Saldo Cuti */}
+          {selectedEmployee && (() => {
+            const isPelaksana = selectedEmployee.category?.toUpperCase() === "PELAKSANA";
+            return (
+              <div className="pt-2 border-t border-slate-100 space-y-2.5 animate-in fade-in-50 duration-200">
+                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-bold text-slate-900 text-sm">
+                      {selectedEmployee.employeeNumber}
+                    </span>
+                    <span className="text-slate-400 font-normal text-sm">-</span>
+                    <span className="font-bold text-slate-900 text-sm">
+                      {selectedEmployee.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-600">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-medium ${
+                      isPelaksana
+                        ? "bg-amber-50 text-amber-900 border-amber-200 font-semibold"
+                        : "bg-indigo-50 text-indigo-900 border-indigo-200 font-semibold"
+                    }`}>
+                      Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 px-2 py-0.5 rounded-md border border-sky-200/80 font-medium">
+                      <Building2 className="h-3 w-3 text-[#0093dc]" />
+                      {selectedEmployee.department.name}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200 font-medium">
+                      <Factory className="h-3 w-3 text-slate-600" />
+                      Stasiun: {selectedEmployee.stasiun && selectedEmployee.stasiun !== "-" ? selectedEmployee.stasiun : "Semua Stasiun"}
+                    </span>
+                    {selectedEmployee.position && selectedEmployee.position !== "-" && (
+                      <span className="inline-flex items-center gap-1 bg-indigo-50/80 text-indigo-800 px-2 py-0.5 rounded-md border border-indigo-200/80 font-medium">
+                        <Briefcase className="h-3 w-3 text-indigo-600" />
+                        {selectedEmployee.position}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Saldo Cuti Ringkas (2 Grid untuk Pelaksana, 3 Grid untuk Pimpinan) */}
+                <div className={`grid ${isPelaksana ? "grid-cols-2" : "grid-cols-3"} gap-2.5 text-xs`}>
+                  {/* Tahunan */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/90 shadow-2xs">
+                    <div>
+                      <span className="text-[10px] text-sky-950 font-bold block">Cuti Tahunan</span>
+                      <span className="text-[10px] text-sky-600/90 font-medium">Reguler</span>
+                    </div>
+                    <span className="font-bold font-mono text-base text-[#0093dc]">
+                      {selectedEmployee.balances.annual} <span className="text-[10px] font-medium font-sans">hr</span>
+                    </span>
+                  </div>
+
+                  {/* Besar */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-200/90 shadow-2xs">
+                    <div>
+                      <span className="text-[10px] text-indigo-950 font-bold block">Cuti Besar</span>
+                      <span className="text-[10px] text-indigo-600/90 font-medium">6 Tahunan</span>
+                    </div>
+                    <span className="font-bold font-mono text-base text-indigo-700">
+                      {selectedEmployee.balances.longLeave} <span className="text-[10px] font-medium font-sans">hr</span>
+                    </span>
+                  </div>
+
+                  {/* Inhaldagen (Hanya tampil untuk Pimpinan) */}
+                  {!isPelaksana && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 shadow-2xs">
+                      <div>
+                        <span className="text-[10px] text-amber-950 font-bold block">Inhaldagen</span>
+                        <span className="text-[10px] text-amber-600/90 font-medium">Pengganti</span>
+                      </div>
+                      <span className="font-bold font-mono text-base text-amber-700">
+                        {selectedEmployee.balances.inhaldagen} <span className="text-[10px] font-medium font-sans">hr</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
+
+      {/* SECTION 2: EMPTY STATE JIKA BELUM ADA KARYAWAN DIPILIH */}
+      {!selectedEmployee && (
+        <Card className="border-dashed border-slate-300 bg-slate-50/50">
+          <CardContent className="p-8 text-center space-y-2.5">
+            <div className="mx-auto w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Search className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-slate-800">
+                Pilih Karyawan Terlebih Dahulu
+              </h4>
+              <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
+                Ketik nama, NIP, atau bagian pada kolom pencarian di atas untuk melihat profil lengkap, sisa saldo, dan riwayat mutasi aktivitas cuti.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SECTION 3: KOMPONEN REUSABLE RIWAYAT AKTIVITAS SALDO */}
+      {selectedEmployee && (
+        <BalanceActivityCard
+          employee={selectedEmployee}
+          history={employeeHistory}
+          isLoading={isLoadingHistory}
+          onRefreshHistory={loadEmployeeHistory}
+          onEmployeeBalancesUpdated={(updatedBalances) => {
+            const updatedEmp = {
+              ...selectedEmployee,
+              balances: updatedBalances,
+            };
+            setSelectedEmployee(updatedEmp);
+            setEmployees((prev) =>
+              prev.map((e) => (e.id === updatedEmp.id ? updatedEmp : e))
+            );
+          }}
+          actionButton={
+            <div className="flex items-center gap-2">
+              <Link href="/balances/add">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full gap-1.5 h-9 px-4 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
+                >
+                  <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
+                  + Tambah Saldo
+                </Button>
+              </Link>
+              <Link href="/leave/create">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-full gap-1.5 h-9 px-4 text-xs font-bold bg-[#0084c7] hover:bg-[#0077b6] text-white shadow-xs"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  + Ambil Cuti
+                </Button>
+              </Link>
+            </div>
+          }
+        />
+      )}
     </div>
   );
 }
