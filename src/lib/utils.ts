@@ -40,3 +40,16 @@ export function formatNumber(value: number | string | { toString: () => string }
     maximumFractionDigits: 2,
   }).format(num);
 }
+
+/**
+ * Mengubah nama bagian panjang menjadi singkatannya (misal: "Tata Usaha & Keuangan" -> "TUK")
+ */
+export function formatSingkatanBagian(bagian: string | null | undefined): string {
+  if (!bagian) return "-";
+  const b = bagian.trim().toUpperCase();
+  if (b.includes("TATA USAHA") || b.includes("KEUANGAN") || b === "TUK") return "TUK";
+  if (b.includes("PABRIKASI") || b === "PAB") return "PAB";
+  if (b.includes("TEKNIK") || b === "TEK") return "TEK";
+  if (b.includes("TANAMAN") || b === "TAN") return "TAN";
+  return bagian;
+}

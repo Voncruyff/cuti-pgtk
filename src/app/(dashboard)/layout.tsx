@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/session";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { SidebarProvider } from "@/components/layout/sidebar-context";
+import { Sidebar } from "@/components/tata-letak/sidebar";
+import { Header } from "@/components/tata-letak/header";
+import { SidebarProvider } from "@/components/tata-letak/konteks-sidebar";
 
 /**
  * Layout Induk Halaman Dashboard:
@@ -23,7 +23,7 @@ export default async function DashboardLayout({
         <Sidebar user={user} />
 
         {/* 2. AREA KONTEN KANAN DENGAN HEADER DI ATASNYA */}
-        <div className="flex flex-1 flex-col h-screen overflow-y-auto min-w-0">
+        <div className="flex flex-1 flex-col h-screen overflow-y-scroll min-w-0">
           {/* HEADER MANDIRI DI ATAS KONTEN */}
           <Header user={user} />
 

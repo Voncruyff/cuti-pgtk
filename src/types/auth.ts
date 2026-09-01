@@ -1,15 +1,2 @@
-export type UserRole = "ADMIN_UTAMA" | "ADMIN_BAGIAN";
-
-export interface SessionUser {
-  id: string;
-  username: string;
-  fullName: string;
-  role: UserRole;
-  department?: string | null;
-  isActive: boolean;
-}
-
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: SessionUser | null;
-}
+// Re-export untuk backward compatibility dengan nama Indonesia (autentikasi.ts)
+export * from "./autentikasi";
