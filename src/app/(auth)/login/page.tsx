@@ -55,13 +55,14 @@ export default function LoginPage() {
         {/* Main Card */}
         <Card className="border-slate-200/90 shadow-xl rounded-2xl overflow-hidden bg-white">
           <CardHeader className="text-center pb-4 pt-6 bg-gradient-to-b from-sky-50/70 via-white to-transparent border-b border-slate-100">
-            <div className="relative w-full max-w-[240px] h-[38px] mx-auto mb-2.5">
+            <div className="w-full max-w-[240px] h-[38px] mx-auto mb-2.5 flex items-center justify-center">
               <Image
                 src="/assets/PGTrangkilLogo.png"
                 alt="PT Kebon Agung - PG Trangkil"
-                fill
+                width={240}
+                height={38}
                 priority
-                className="object-contain"
+                className="h-9 w-auto max-w-[240px] object-contain mx-auto"
               />
             </div>
             <CardTitle className="text-base font-extrabold text-slate-900 tracking-tight">

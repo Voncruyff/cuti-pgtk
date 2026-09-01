@@ -24,6 +24,8 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  @@index([role])
+  @@index([isActive])
   @@map("users")
 }
 
@@ -36,6 +38,7 @@ model Department {
   updatedAt DateTime  @updatedAt @map("updated_at")
   stations  Station[]
 
+  @@index([isActive])
   @@map("bagian")
 }
 
@@ -50,6 +53,7 @@ model Station {
   updatedAt    DateTime    @updatedAt @map("updated_at")
   employees    Employee[]
 
+  @@index([isActive])
   @@map("stasiun")
 }
 
@@ -65,10 +69,15 @@ model Employee {
   station           Station?          @relation(fields: [stationId], references: [id], onDelete: SetNull)
   leaveBalance      LeaveBalance?
   balanceActivities BalanceActivity[]
+  appointmentDate   DateTime?         @map("tgl_pengangkatan")
   isActive          Boolean           @default(true) @map("is_active")
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
+  @@index([bagian])
+  @@index([category])
+  @@index([isActive])
+  @@index([nama])
   @@map("karyawan")
 }
 
@@ -97,6 +106,7 @@ model LeaveBalance {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  @@index([periode])
   @@map("saldo_cuti")
 }
 
@@ -119,6 +129,8 @@ model BalanceActivity {
 
   @@index([nip])
   @@index([jenisTransaksi])
+  @@index([tglTransaksi])
+  @@index([nip, tglTransaksi])
   @@map("aktivitas_saldo")
 }
 
