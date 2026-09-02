@@ -9,7 +9,6 @@ import {
   Trash2,
   Loader2,
   X,
-  Layers,
   Building2,
   RefreshCw,
 } from "lucide-react";
@@ -111,11 +110,10 @@ export function TabelStasiun({
       </div>
 
       {/* Kartu Statistik */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <StatCard title="Total Master Stasiun" value={isLoading ? "..." : `${stasiun.length} Stasiun`} subtitle="Titik operasional" icon={FactoryIcon} variant="sky" />
         <StatCard title="Stasiun Aktif" value={isLoading ? "..." : `${totalAktif} Aktif`} subtitle="Status operasional" icon={CheckCircle2} variant="emerald" />
         <StatCard title="Bagian Induk" value={isLoading ? "..." : `${bagian.length} Bagian`} subtitle="Unit kerja penaung" icon={Building2} variant="purple" />
-        <StatCard title="Status Sinkronisasi" value="Tersinkron" subtitle="Database MySQL" icon={Layers} variant="slate" />
       </div>
 
       {/* Tabel Utama */}
