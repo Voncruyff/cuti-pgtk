@@ -136,7 +136,7 @@ export default function PengaturanBackupPage() {
         <StatCard
           title="Versi Aplikasi"
           value={systemMetrics?.appVersion || "v1.0.0"}
-          subtitle="Next.js 14 App Router"
+          subtitle="Next.js 15 (Turbopack)"
           icon={Info}
           variant="slate"
         />

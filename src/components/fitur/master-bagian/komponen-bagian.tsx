@@ -9,7 +9,7 @@ import {
   Loader2,
   CheckCircle2,
   X,
-  Layers,
+  Users,
   AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,6 +56,7 @@ export function TabelBagian({
   });
 
   const totalAktif = bagian.filter((d) => d.isActive).length;
+  const totalKaryawan = bagian.reduce((acc, curr) => acc + (curr.employeeCount || 0), 0);
 
   const formatTanggal = (val: Date | string) => {
     const d = new Date(val);
@@ -74,11 +75,10 @@ export function TabelBagian({
       </div>
 
       {/* Kartu Statistik */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <StatCard title="Total Master Bagian" value={`${bagian.length} Bagian`} subtitle="Unit terdaftar" icon={Building2} variant="sky" />
-        <StatCard title="Bagian Aktif" value={`${totalAktif} Bagian`} subtitle="Status operasional" icon={CheckCircle2} variant="emerald" />
-        <StatCard title="Unit Kerja" value="PG Trangkil" subtitle="Pati, Jawa Tengah" icon={Building2} variant="purple" />
-        <StatCard title="Sinkronisasi DB" value="Tersinkron" subtitle="Database MySQL" icon={Layers} variant="slate" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <StatCard title="Total Master Bagian" value={`${bagian.length} Bagian`} subtitle="Unit kerja terdaftar" icon={Building2} variant="sky" />
+        <StatCard title="Bagian Aktif" value={`${totalAktif} Bagian`} subtitle="Status operasional aktif" icon={CheckCircle2} variant="emerald" />
+        <StatCard title="Total Karyawan" value={`${totalKaryawan} Orang`} subtitle="Tersebar di seluruh bagian" icon={Users} variant="purple" />
       </div>
 
       {/* Tabel Utama */}
