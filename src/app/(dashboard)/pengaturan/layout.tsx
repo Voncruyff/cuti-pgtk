@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Building2,
   ShieldCheck,
-  Database,
 } from "lucide-react";
 
 interface TabItem {
@@ -40,13 +39,6 @@ const TABS: TabItem[] = [
     icon: ShieldCheck,
     description: "Kredensial login & ubah kata sandi",
   },
-  {
-    id: "backup",
-    name: "Cadangan & Pemulihan",
-    href: "/pengaturan/backup",
-    icon: Database,
-    description: "Status database & ekspor cadangan data",
-  },
 ];
 
 export default function PengaturanLayout({
@@ -64,7 +56,7 @@ export default function PengaturanLayout({
           Pengaturan Sistem
         </h1>
         <p className="text-xs text-slate-500">
-          Kelola ketentuan saldo otomatis, profil unit PG Trangkil, keamanan akun, dan pemeliharaan data.
+          Kelola ketentuan saldo otomatis, profil unit PG Trangkil, serta keamanan akun Anda.
         </p>
       </div>
 
