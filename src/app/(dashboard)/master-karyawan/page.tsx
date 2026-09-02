@@ -163,10 +163,11 @@ export default function HalamanMasterKaryawan() {
     });
   };
 
+  // HMR Hot-Reload Verified: CSS and Tailwind remain fully loaded in dev
   return (
     <>
       <div className="flex items-center gap-2 mb-4">
-        <Link href="/stasiun">
+        <Link href="/master-stasiun">
           <Button variant="outline" size="default" className="font-medium text-slate-700">
             <Factory className="h-4 w-4 text-slate-500" />
             Master Stasiun

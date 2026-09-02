@@ -19,6 +19,7 @@ model User {
   fullName     String    @db.VarChar(200)
   role         UserRole  @default(ADMIN_BAGIAN)
   department   String?   @db.VarChar(100)
+  fotoProfil   String?   @db.LongText @map("foto_profil")
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -132,6 +133,44 @@ model BalanceActivity {
   @@index([tglTransaksi])
   @@index([nip, tglTransaksi])
   @@map("aktivitas_saldo")
+}
+
+model OtomasiSaldoCuti {
+  id              String   @id @default(uuid())
+  jenisCuti       String   @unique @db.VarChar(50) @map("jenis_cuti") // CUTI_TAHUNAN, CUTI_BESAR
+  namaKebijakan   String   @db.VarChar(100) @map("nama_kebijakan")
+  isOtomatisAktif Boolean  @default(true) @map("is_otomatis_aktif")
+  saldoDiberikan  Int      @default(12) @map("saldo_diberikan")
+  satuanSaldo     String   @default("HARI") @map("satuan_saldo") @db.VarChar(20)
+  minMasaKerja    Int      @default(1) @map("min_masa_kerja")
+  satuanMasaKerja String   @default("TAHUN") @map("satuan_masa_kerja") @db.VarChar(20)
+  siklusUlang     Int      @default(1) @map("siklus_ulang")
+  satuanSiklus    String   @default("TAHUN") @map("satuan_siklus") @db.VarChar(20)
+  masaBerlaku     Int      @default(1) @map("masa_berlaku")
+  satuanBerlaku   String   @default("TAHUN") @map("satuan_berlaku") @db.VarChar(20)
+  isCarryOver     Boolean  @default(true) @map("is_carry_over")
+  maxCarryOver    Int      @default(6) @map("max_carry_over")
+  satuanCarryOver String   @default("HARI") @map("satuan_carry_over") @db.VarChar(20)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("otomasi_saldo_cuti")
+}
+
+model ProfilPerusahaan {
+  id                 String   @id @default("DEFAULT_PROFILE")
+  companyName        String   @default("PT KEBON AGUNG") @map("nama_perusahaan") @db.VarChar(200)
+  unitName           String   @default("PABRIK GULA TRANGKIL") @map("nama_unit") @db.VarChar(200)
+  location           String   @default("Trangkil, Pati, Jawa Tengah") @map("lokasi") @db.VarChar(255)
+  hrManagerName      String   @default("Hendra Wijaya, S.E.") @map("nama_sdm") @db.VarChar(200)
+  hrManagerNip       String   @default("198503152010011002") @map("nip_sdm") @db.VarChar(50)
+  hrManagerTitle     String   @default("Kepala Bagian SDM & Umum") @map("jabatan_sdm") @db.VarChar(150)
+  generalManagerName String   @default("Ir. Bambang Santoso, M.M.") @map("nama_gm") @db.VarChar(200)
+  generalManagerNip  String   @default("197805122003121001") @map("nip_gm") @db.VarChar(50)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("profil_perusahaan")
 }
 
 

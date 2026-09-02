@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
-import { ActionResult } from "@/actions/leave-actions";
+import type { ActionResult } from "@/types/actions";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 
@@ -58,6 +58,7 @@ export async function getUsersAction() {
         fullName: true,
         role: true,
         department: true,
+        fotoProfil: true,
         isActive: true,
         lastLoginAt: true,
         createdAt: true,

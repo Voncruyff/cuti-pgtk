@@ -70,6 +70,7 @@ export default function HalamanMasterStasiun() {
 
   useEffect(() => {
     muatData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTambah = (e: React.FormEvent) => {

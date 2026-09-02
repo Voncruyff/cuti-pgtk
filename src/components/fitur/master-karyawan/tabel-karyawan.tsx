@@ -186,7 +186,7 @@ export function TabelKaryawan({
             <Users className="h-3.5 w-3.5" />
             Semua Karyawan
             <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "ALL" ? "bg-slate-100 text-slate-800 font-bold" : "bg-slate-200 text-slate-600"}`}>
-              {karyawan.length}
+              {isLoading ? "..." : karyawan.length}
             </span>
           </button>
 
@@ -202,7 +202,7 @@ export function TabelKaryawan({
             <Briefcase className="h-3.5 w-3.5" />
             Pimpinan
             <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PIMPINAN" ? "bg-sky-50 text-[#0084c7] font-bold border border-sky-100" : "bg-slate-200 text-slate-600"}`}>
-              {jumlahPimpinan}
+              {isLoading ? "..." : jumlahPimpinan}
             </span>
           </button>
 
@@ -218,7 +218,7 @@ export function TabelKaryawan({
             <HardHat className="h-3.5 w-3.5" />
             Pelaksana
             <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PELAKSANA" ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-100" : "bg-slate-200 text-slate-600"}`}>
-              {jumlahPelaksana}
+              {isLoading ? "..." : jumlahPelaksana}
             </span>
           </button>
         </div>
@@ -233,10 +233,34 @@ export function TabelKaryawan({
 
       {/* Kartu Statistik */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <StatCard title="Total Karyawan" value={`${karyawan.length} Orang`} subtitle="Pegawai terdaftar" icon={Users} variant="sky" />
-        <StatCard title="Karyawan Pimpinan" value={`${jumlahPimpinan} Orang`} subtitle="Hak cuti pimpinan" icon={Briefcase} variant="indigo" />
-        <StatCard title="Karyawan Pelaksana" value={`${jumlahPelaksana} Orang`} subtitle="Hak cuti pelaksana" icon={HardHat} variant="emerald" />
-        <StatCard title="Bagian & Stasiun" value={`${bagian.length} Bagian`} subtitle={`${stasiun.length} Stasiun kerja`} icon={Building2} variant="purple" />
+        <StatCard
+          title="Total Karyawan"
+          value={isLoading ? "..." : `${karyawan.length} Orang`}
+          subtitle="Pegawai terdaftar"
+          icon={Users}
+          variant="sky"
+        />
+        <StatCard
+          title="Karyawan Pimpinan"
+          value={isLoading ? "..." : `${jumlahPimpinan} Orang`}
+          subtitle="Hak cuti pimpinan"
+          icon={Briefcase}
+          variant="indigo"
+        />
+        <StatCard
+          title="Karyawan Pelaksana"
+          value={isLoading ? "..." : `${jumlahPelaksana} Orang`}
+          subtitle="Hak cuti pelaksana"
+          icon={HardHat}
+          variant="emerald"
+        />
+        <StatCard
+          title="Bagian & Stasiun"
+          value={isLoading ? "..." : `${bagian.length} Bagian`}
+          subtitle={`${stasiun.length} Stasiun kerja`}
+          icon={Building2}
+          variant="purple"
+        />
       </div>
 
       {/* Tabel Utama */}
@@ -295,9 +319,37 @@ export function TabelKaryawan({
 
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              Memuat data karyawan dari MySQL...
+            <div className="p-6 space-y-4 select-none">
+              <div className="flex items-center justify-center p-4 gap-3 text-xs font-semibold text-sky-800 bg-sky-50/70 rounded-xl border border-sky-100/90 shadow-2xs">
+                <Loader2 className="h-4 w-4 animate-spin text-[#0084c7]" />
+                <span>Sedang mengambil dan menyinkronkan data karyawan dari MySQL...</span>
+              </div>
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-white animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-8 bg-slate-200/80 rounded font-mono" />
+                      <div className="h-6 w-20 bg-sky-100/70 rounded-full" />
+                      <div className="space-y-1.5">
+                        <div className="h-4 w-40 bg-slate-200 rounded" />
+                        <div className="h-3 w-28 bg-slate-100 rounded" />
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-4">
+                      <div className="h-5 w-20 bg-slate-100 rounded-full" />
+                      <div className="h-5 w-24 bg-slate-100 rounded" />
+                      <div className="h-5 w-24 bg-slate-100 rounded" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 bg-slate-100 rounded-lg" />
+                      <div className="h-7 w-7 bg-slate-100 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : karyawanFiltered.length === 0 ? (
             <div className="p-12 text-center">

@@ -6,6 +6,7 @@ export interface SessionUser {
   fullName: string;
   role: UserRole;
   department?: string | null;
+  fotoProfil?: string | null;
   isActive: boolean;
 }
 

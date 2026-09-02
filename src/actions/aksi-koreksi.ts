@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
-import { ActionResult } from "@/actions/aksi-cuti";
+import type { ActionResult } from "@/types/actions";
 
 export interface LeaveRequestCorrectionItem {
   id: string;

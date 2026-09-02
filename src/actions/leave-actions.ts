@@ -1,3 +1,3 @@
-// Re-export untuk backward compatibility dengan nama Indonesia
-export * from "./aksi-cuti";
+"use server";
 
+export * from "./aksi-cuti";

@@ -45,6 +45,7 @@ export interface ItemPengguna {
   fullName: string;
   role: "ADMIN_UTAMA" | "ADMIN_BAGIAN";
   department: string | null;
+  fotoProfil?: string | null;
   isActive: boolean;
   lastLoginAt: Date | string | null;
   createdAt: Date | string;
@@ -279,7 +280,20 @@ export function TabelPengguna({
                     </TableCell>
 
                     <TableCell className="text-xs font-bold text-slate-900">
-                      {u.fullName}
+                      <div className="flex items-center gap-2.5">
+                        {u.fotoProfil ? (
+                          <img
+                            src={u.fotoProfil}
+                            alt={u.fullName}
+                            className="h-7 w-7 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
+                          />
+                        ) : (
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-[10px] font-bold shadow-2xs shrink-0 select-none">
+                            {u.fullName.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span>{u.fullName}</span>
+                      </div>
                     </TableCell>
 
                     <TableCell>

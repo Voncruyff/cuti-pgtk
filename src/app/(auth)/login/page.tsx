@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { loginSchema, LoginInput } from "@/lib/validation/auth-schema";
-import { loginAction } from "@/actions/auth-actions";
+import { loginAction } from "@/actions/aksi-autentikasi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

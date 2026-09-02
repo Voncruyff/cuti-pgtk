@@ -5,13 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { loginSchema, LoginInput } from "@/lib/validation/auth-schema";
 import { setSessionCookie, clearSessionCookie, getCurrentUser } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
-
-export interface ActionResult<T = unknown> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  errors?: Record<string, string[]>;
-}
+import type { ActionResult } from "@/types/actions";
 
 export async function loginAction(
   data: LoginInput
@@ -60,6 +54,7 @@ export async function loginAction(
       fullName: user.fullName,
       role: user.role,
       department: user.department,
+      fotoProfil: user.fotoProfil,
       isActive: user.isActive,
     });
 
