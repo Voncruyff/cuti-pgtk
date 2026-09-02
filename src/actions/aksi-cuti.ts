@@ -4,14 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
 import { leaveRequestSchema, LeaveRequestInput } from "@/lib/validation/leave-schema";
-import { getLeadersAction } from "@/actions/employee-actions";
-
-export interface ActionResult<T = unknown> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  errors?: Record<string, string[]>;
-}
+import { getLeadersAction } from "@/actions/aksi-karyawan";
+import type { ActionResult } from "@/types/actions";
 
 export async function getEmployeesForLeaveAction() {
   const user = await requireAuth();

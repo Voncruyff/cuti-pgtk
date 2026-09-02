@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
 import { addBalanceSchema, AddBalanceInput } from "@/lib/validation/balance-schema";
-import { ActionResult } from "@/actions/leave-actions";
+import type { ActionResult } from "@/types/actions";
 
 export async function addLeaveBalanceAction(
   data: AddBalanceInput

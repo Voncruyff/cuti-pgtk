@@ -112,9 +112,9 @@ export function TabelStasiun({
 
       {/* Kartu Statistik */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <StatCard title="Total Master Stasiun" value={`${stasiun.length} Stasiun`} subtitle="Titik operasional" icon={FactoryIcon} variant="sky" />
-        <StatCard title="Stasiun Aktif" value={`${totalAktif} Aktif`} subtitle="Status operasional" icon={CheckCircle2} variant="emerald" />
-        <StatCard title="Bagian Induk" value={`${bagian.length} Bagian`} subtitle="Unit kerja penaung" icon={Building2} variant="purple" />
+        <StatCard title="Total Master Stasiun" value={isLoading ? "..." : `${stasiun.length} Stasiun`} subtitle="Titik operasional" icon={FactoryIcon} variant="sky" />
+        <StatCard title="Stasiun Aktif" value={isLoading ? "..." : `${totalAktif} Aktif`} subtitle="Status operasional" icon={CheckCircle2} variant="emerald" />
+        <StatCard title="Bagian Induk" value={isLoading ? "..." : `${bagian.length} Bagian`} subtitle="Unit kerja penaung" icon={Building2} variant="purple" />
         <StatCard title="Status Sinkronisasi" value="Tersinkron" subtitle="Database MySQL" icon={Layers} variant="slate" />
       </div>
 
@@ -138,9 +138,17 @@ export function TabelStasiun({
                 </button>
               )}
             </div>
-            <select value={filterBagian} onChange={(e) => onUbahFilterBagian(e.target.value)} className="h-8 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
+            <select
+              value={filterBagian}
+              onChange={(e) => onUbahFilterBagian(e.target.value)}
+              className="h-8.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0084c7] focus:outline-none"
+            >
               <option value="ALL">Semua Bagian</option>
-              {bagian.map((d) => (<option key={d.id} value={d.id}>{d.code} - {d.name}</option>))}
+              {bagian.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
             </select>
             <Button variant="outline" size="sm" onClick={onMuatUlang} disabled={isLoading} title="Muat ulang data" className="h-8 w-8 p-0 text-slate-500">
               <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -149,9 +157,33 @@ export function TabelStasiun({
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              Memuat data master stasiun dari MySQL...
+            <div className="p-6 space-y-4 select-none">
+              <div className="flex items-center justify-center p-4 gap-3 text-xs font-semibold text-sky-800 bg-sky-50/70 rounded-xl border border-sky-100/90 shadow-2xs">
+                <Loader2 className="h-4 w-4 animate-spin text-[#0084c7]" />
+                <span>Sedang mengambil dan menyinkronkan data master stasiun...</span>
+              </div>
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-white animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-8 bg-slate-200/80 rounded" />
+                      <div className="h-6 w-24 bg-sky-100/70 rounded-full" />
+                      <div className="h-4 w-40 bg-slate-200 rounded" />
+                    </div>
+                    <div className="hidden sm:flex items-center gap-4">
+                      <div className="h-5 w-28 bg-slate-100 rounded-full" />
+                      <div className="h-5 w-24 bg-slate-100 rounded" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 bg-slate-100 rounded-lg" />
+                      <div className="h-7 w-7 bg-slate-100 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : stasiunFiltered.length === 0 ? (
             <div className="p-12 text-center">

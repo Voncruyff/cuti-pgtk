@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
-import { ActionResult } from "@/actions/leave-actions";
+import type { ActionResult } from "@/types/actions";
 import { z } from "zod";
 
 const stationSchema = z.object({

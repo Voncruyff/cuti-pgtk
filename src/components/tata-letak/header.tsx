@@ -82,7 +82,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
     if (pathname === "/kelola-user" || pathname === "/pengguna" || pathname === "/users" || pathname === "/kelolauser") {
       return "Kelola User";
     }
-    if (pathname === "/pengaturan" || pathname === "/settings") {
+    if (pathname.startsWith("/pengaturan") || pathname.startsWith("/settings")) {
       return "Pengaturan Sistem";
     }
     return "SIP-CUTI";
@@ -146,10 +146,18 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
           aria-expanded={isDropdownOpen}
           aria-label="Menu Pengguna"
         >
-          {/* Avatar Inisial */}
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-xs font-bold shadow-xs select-none shrink-0">
-            {getInitials(user.fullName || user.username)}
-          </div>
+          {/* Avatar (Foto Profil atau Inisial) */}
+          {user.fotoProfil ? (
+            <img
+              src={user.fotoProfil}
+              alt={user.fullName || user.username}
+              className="h-8 w-8 rounded-full object-cover border border-slate-200 shadow-xs select-none shrink-0"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-xs font-bold shadow-xs select-none shrink-0">
+              {getInitials(user.fullName || user.username)}
+            </div>
+          )}
 
           {/* Nama & Role */}
           <div className="hidden sm:flex flex-col text-left">
@@ -176,30 +184,54 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
 
         {/* Dropdown Menu Popup */}
         {isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-200/90 shadow-xl py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+          <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl border border-slate-200/90 shadow-xl py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
             {/* Header User Detail di dalam dropdown */}
-            <div className="px-3.5 py-2.5 border-b border-slate-100">
-              <p className="text-xs font-bold text-slate-900 truncate">
-                {user.fullName || user.username}
-              </p>
-              <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
-                @{user.username}
-              </p>
-              <div className="mt-2">
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  <Shield className="h-3 w-3 text-blue-600" />
-                  {getRoleLabel()}
-                </span>
+            <div className="px-3.5 py-3 border-b border-slate-100 flex items-center gap-3">
+              {user.fotoProfil ? (
+                <img
+                  src={user.fotoProfil}
+                  alt={user.fullName || user.username}
+                  className="h-10 w-10 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-xs font-bold shadow-2xs shrink-0 select-none">
+                  {getInitials(user.fullName || user.username)}
+                </div>
+              )}
+              <div className="overflow-hidden min-w-0">
+                <p className="text-xs font-bold text-slate-900 truncate">
+                  {user.fullName || user.username}
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+                  @{user.username}
+                </p>
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    <Shield className="h-2.5 w-2.5 text-blue-600" />
+                    {getRoleLabel()}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Menu Aksi Logout */}
-            <div className="p-1">
+            {/* Menu Navigasi & Aksi */}
+            <div className="p-1 space-y-0.5">
+              <Link
+                href="/pengaturan/keamanan"
+                onClick={() => setIsDropdownOpen(false)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-[#0084c7] hover:bg-sky-50/70 rounded-lg transition-colors group text-left"
+              >
+                <User className="h-4 w-4 text-slate-400 group-hover:text-[#0084c7] transition-colors" />
+                <span>Pengaturan Akun</span>
+              </Link>
+
+              <div className="my-1 border-t border-slate-100" />
+
               <button
                 type="button"
                 onClick={handleLogout}
                 disabled={isPending}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors group text-left disabled:opacity-50"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors group text-left disabled:opacity-50 cursor-pointer"
               >
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin text-rose-600" />

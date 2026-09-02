@@ -16,6 +16,7 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
     fullName: user.fullName,
     role: user.role,
     department: user.department ?? null,
+    fotoProfil: user.fotoProfil ?? null,
     isActive: user.isActive,
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -35,6 +36,7 @@ export async function verifySessionToken(
       fullName: payload.fullName as string,
       role: payload.role as UserRole,
       department: (payload.department as string | null) ?? null,
+      fotoProfil: (payload.fotoProfil as string | null) ?? null,
       isActive: payload.isActive as boolean,
     };
   } catch {
@@ -44,7 +46,7 @@ export async function verifySessionToken(
 
 export async function setSessionCookie(user: SessionUser) {
   const token = await createSessionToken(user);
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -55,12 +57,12 @@ export async function setSessionCookie(user: SessionUser) {
 }
 
 export async function clearSessionCookie() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verifySessionToken(token);
