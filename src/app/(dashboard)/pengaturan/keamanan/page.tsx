@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Shield,
-  Save,
   Loader2,
   Camera,
   Trash2,
@@ -15,6 +14,7 @@ import {
   CheckCircle2,
   ArrowRight,
   KeyRound,
+  User,
 } from "lucide-react";
 import {
   Card,
@@ -23,29 +23,33 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   getSystemSettingsAction,
-  updateUserProfileInfoAction,
   updateUserProfilePhotoAction,
   deleteUserProfilePhotoAction,
   SystemSettingsData,
 } from "@/actions/aksi-pengaturan";
 import { ModalCropFoto } from "@/components/fitur/pengaturan/modal-crop-foto";
 import { ModalUbahPassword } from "@/components/fitur/pengaturan/modal-ubah-password";
+import { ModalUbahNama } from "@/components/fitur/pengaturan/modal-ubah-nama";
+import { ModalUbahUsername } from "@/components/fitur/pengaturan/modal-ubah-username";
 
 export default function PengaturanKeamananPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<SystemSettingsData["currentUser"] | null>(null);
 
-  // Profile Edit Form State
-  const [isPendingProfile, startTransitionProfile] = useTransition();
+  // Profile Data State
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
+
+  // Modals State
+  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
+  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Profile Photo State & Crop Modal
   const [isPendingPhoto, startTransitionPhoto] = useTransition();
@@ -53,9 +57,6 @@ export default function PengaturanKeamananPage() {
   const [cropModalImage, setCropModalImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Password Modal State
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -155,41 +156,6 @@ export default function PengaturanKeamananPage() {
         await loadUser();
       } else {
         toast.error(res.message || "Gagal menghapus foto profil.");
-      }
-    });
-  };
-
-  // 4. Simpan Profil Akun (Username & Nama Lengkap)
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!username.trim() || username.trim().length < 3) {
-      toast.error("Username minimal 3 karakter.");
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-      toast.error("Username hanya boleh memuat huruf, angka, dan garis bawah (_).");
-      return;
-    }
-
-    if (!fullName.trim() || fullName.trim().length < 2) {
-      toast.error("Nama lengkap minimal 2 karakter.");
-      return;
-    }
-
-    startTransitionProfile(async () => {
-      const res = await updateUserProfileInfoAction({
-        username: username.trim(),
-        fullName: fullName.trim(),
-      });
-
-      if (res.success) {
-        toast.success(res.message || "Profil akun berhasil diperbarui!");
-        router.refresh();
-        await loadUser();
-      } else {
-        toast.error(res.message || "Gagal memperbarui profil akun.");
       }
     });
   };
@@ -344,144 +310,141 @@ export default function PengaturanKeamananPage() {
           </CardContent>
         </Card>
 
-        {/* ================= CARD EDIT DI KANAN ================= */}
+        {/* ================= CARD INFORMASI AKUN DI KANAN ================= */}
         <div className="lg:col-span-8">
           <Card className="border-slate-200/80 shadow-xs bg-white">
             <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <UserCog className="h-4 w-4 text-[#0084c7]" />
-                Pengaturan Informasi Akun
+                Pengaturan Informasi Akun & Keamanan
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
-                Perbarui nama lengkap, username login, serta kelola kata sandi akun Anda.
+                Kelola identitas akun, username login, serta kata sandi Anda.
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-5 sm:p-6 space-y-5">
-              {/* Form Ubah Nama & Username */}
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                {/* Field Nama Lengkap */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="fullName" className="text-xs font-semibold text-slate-700">
-                    Nama Lengkap & Gelar
-                  </Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Contoh: Budi Santoso, S.Kom."
-                    className="h-9 text-xs font-medium"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-400">
-                    Nama ini akan dicantumkan pada laporan serta header aplikasi.
-                  </p>
+            <CardContent className="p-5 sm:p-6 space-y-3.5">
+              {/* ITEM 1: NAMA LENGKAP & GELAR */}
+              <button
+                type="button"
+                onClick={() => setIsNameModalOpen(true)}
+                className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-sky-50/70 hover:border-sky-300 transition-all duration-200 group cursor-pointer text-left shadow-2xs"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs group-hover:border-sky-300 group-hover:bg-sky-100/50 transition-colors shrink-0">
+                    <User className="h-4 w-4 text-slate-600 group-hover:text-[#0084c7]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-slate-500 truncate">
+                      Nama Lengkap & Gelar
+                    </p>
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-[#0084c7] transition-colors truncate">
+                      {fullName || "Belum diatur"}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Field Username */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <AtSign className="h-3.5 w-3.5 text-[#0084c7]" />
-                    Username Login
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">@</span>
-                    <Input
-                      id="username"
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
-                      placeholder="nama_pengguna"
-                      className="h-9 text-xs pl-7 font-mono font-bold"
-                      required
-                    />
+                <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-[#0084c7] shrink-0 pl-2 transition-colors">
+                  <span className="hidden sm:inline">Ubah Nama</span>
+                  <div className="p-1 rounded-full group-hover:bg-sky-100 transition-colors">
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Gunakan huruf kecil, angka, dan garis bawah (_). Minimal 3 karakter.
-                  </p>
+                </div>
+              </button>
+
+              {/* ITEM 2: USERNAME LOGIN */}
+              <button
+                type="button"
+                onClick={() => setIsUsernameModalOpen(true)}
+                className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-sky-50/70 hover:border-sky-300 transition-all duration-200 group cursor-pointer text-left shadow-2xs"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs group-hover:border-sky-300 group-hover:bg-sky-100/50 transition-colors shrink-0">
+                    <AtSign className="h-4 w-4 text-slate-600 group-hover:text-[#0084c7]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-slate-500 truncate">
+                      Username Akun Login
+                    </p>
+                    <p className="text-xs font-bold font-mono text-slate-900 group-hover:text-[#0084c7] transition-colors truncate">
+                      @{username}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Tombol Simpan Profil */}
-                <div className="flex items-center justify-end pt-1">
-                  <Button
-                    type="submit"
-                    disabled={isPendingProfile}
-                    size="sm"
-                    className="font-semibold shadow-xs gap-1.5 cursor-pointer text-xs h-9 bg-[#0084c7] hover:bg-[#0073ad] text-white"
-                  >
-                    {isPendingProfile ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-3.5 w-3.5" />
-                        Simpan Perubahan Profil
-                      </>
-                    )}
-                  </Button>
+                <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-[#0084c7] shrink-0 pl-2 transition-colors">
+                  <span className="hidden sm:inline">Ubah Username</span>
+                  <div className="p-1 rounded-full group-hover:bg-sky-100 transition-colors">
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
                 </div>
-              </form>
+              </button>
 
-              {/* SEKSI GANTI PASSWORD DENGAN TOMBOL BERPANAH -> POP-UP */}
-              <div className="pt-5 border-t border-slate-100 space-y-2">
-                <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <KeyRound className="h-3.5 w-3.5 text-[#0084c7]" />
-                  Keamanan & Kata Sandi
-                </Label>
-
-                {/* Tombol dengan anak panah untuk memunculkan pop-up ganti password */}
-                <button
-                  type="button"
-                  onClick={() => setIsPasswordModalOpen(true)}
-                  className="w-full flex items-center justify-between p-3 sm:p-4 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-sky-50/70 hover:border-sky-300 transition-all duration-200 group cursor-pointer text-left shadow-2xs"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs group-hover:border-sky-300 group-hover:bg-sky-100/50 transition-colors shrink-0">
-                      <KeyRound className="h-4 w-4 text-slate-600 group-hover:text-[#0084c7]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 group-hover:text-[#0084c7] transition-colors truncate">
-                        Ganti Kata Sandi Akun
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        Perbarui kata sandi untuk melindungi keamanan akses sistem Anda
-                      </p>
-                    </div>
+              {/* ITEM 3: GANTI KATA SANDI */}
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-sky-50/70 hover:border-sky-300 transition-all duration-200 group cursor-pointer text-left shadow-2xs"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs group-hover:border-sky-300 group-hover:bg-sky-100/50 transition-colors shrink-0">
+                    <KeyRound className="h-4 w-4 text-slate-600 group-hover:text-[#0084c7]" />
                   </div>
-
-                  {/* Tombol dengan anak panah */}
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-[#0084c7] shrink-0 pl-2 transition-colors">
-                    <span className="hidden sm:inline">Ubah Sandi</span>
-                    <div className="p-1 rounded-full group-hover:bg-sky-100 transition-colors">
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-slate-500 truncate">
+                      Keamanan Akun
+                    </p>
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-[#0084c7] transition-colors truncate">
+                      Ganti Kata Sandi Akun
+                    </p>
                   </div>
-                </button>
-              </div>
+                </div>
+
+                <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-[#0084c7] shrink-0 pl-2 transition-colors">
+                  <span className="hidden sm:inline">Ubah Sandi</span>
+                  <div className="p-1 rounded-full group-hover:bg-sky-100 transition-colors">
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </button>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* MODAL POP-UP 1: CROP & EDIT FOTO PROFIL (< 1 MB) */}
+      {/* MODAL 1: UBAH NAMA LENGKAP */}
+      <ModalUbahNama
+        open={isNameModalOpen}
+        onOpenChange={setIsNameModalOpen}
+        currentFullName={fullName}
+        currentUsername={username}
+        onSuccess={(newName) => {
+          setFullName(newName);
+          router.refresh();
+        }}
+      />
+
+      {/* MODAL 2: UBAH USERNAME */}
+      <ModalUbahUsername
+        open={isUsernameModalOpen}
+        onOpenChange={setIsUsernameModalOpen}
+        currentUsername={username}
+        currentFullName={fullName}
+        onSuccess={(newUsername) => {
+          setUsername(newUsername);
+          router.refresh();
+        }}
+      />
+
+      {/* MODAL 3: CROP & EDIT FOTO PROFIL (< 1 MB) */}
       <ModalCropFoto
         open={isCropModalOpen}
         onOpenChange={setIsCropModalOpen}
         imageSrc={cropModalImage}
         onSaveCroppedImage={handleSaveCroppedPhoto}
-        onChangeImageFile={(newFile) => {
-          if (cropModalImage && cropModalImage.startsWith("blob:")) {
-            URL.revokeObjectURL(cropModalImage);
-          }
-          const localUrl = URL.createObjectURL(newFile);
-          setCropModalImage(localUrl);
-        }}
       />
 
-      {/* MODAL POP-UP 2: GANTI KATA SANDI (DIPICU OLEH TOMBOL BERPANAH) */}
+      {/* MODAL 4: GANTI KATA SANDI */}
       <ModalUbahPassword
         open={isPasswordModalOpen}
         onOpenChange={setIsPasswordModalOpen}
