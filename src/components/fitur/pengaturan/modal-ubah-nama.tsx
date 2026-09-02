@@ -45,7 +45,7 @@ export function ModalUbahNama({
 
     const cleanName = fullName.trim();
     if (!cleanName || cleanName.length < 2) {
-      toast.error("Nama lengkap minimal 2 karakter.");
+      toast.error("Nama minimal 2 karakter.");
       return;
     }
 
@@ -61,11 +61,11 @@ export function ModalUbahNama({
       });
 
       if (res.success) {
-        toast.success(res.message || "Nama lengkap berhasil diperbarui!");
+        toast.success(res.message || "Nama berhasil diperbarui!");
         onSuccess(cleanName);
         onOpenChange(false);
       } else {
-        toast.error(res.message || "Gagal memperbarui nama lengkap.");
+        toast.error(res.message || "Gagal memperbarui nama.");
       }
     });
   };
@@ -84,23 +84,23 @@ export function ModalUbahNama({
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg flex items-center gap-2 text-slate-900">
               <User className="h-5 w-5 text-[#0084c7]" />
-              Ubah Nama Lengkap
+              Ubah Nama
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Perbarui nama lengkap dan gelar yang dicantumkan pada laporan serta header aplikasi.
+              Perbarui nama akun Anda yang digunakan pada sistem.
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-2">
             <Label htmlFor="input-modal-fullName" className="text-xs font-semibold text-slate-700">
-              Nama Lengkap & Gelar
+              Nama
             </Label>
             <Input
               id="input-modal-fullName"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Contoh: Janoko, S.T."
+              placeholder="Contoh: Janoko"
               className="h-9 text-xs font-medium"
               disabled={isPending}
               required
