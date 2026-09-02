@@ -336,7 +336,7 @@ export default function PengaturanKeamananPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-medium text-slate-500 truncate">
-                      Nama Lengkap & Gelar
+                      Nama
                     </p>
                     <p className="text-xs font-bold text-slate-900 group-hover:text-[#0084c7] transition-colors truncate">
                       {fullName || "Belum diatur"}
