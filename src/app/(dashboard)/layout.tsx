@@ -19,18 +19,18 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden bg-[#F3F6F8] text-[#263238] font-sans relative selection:bg-[#0789D1]/20 selection:text-[#005B96]">
+      <div className="flex h-screen overflow-hidden bg-[#F3F6F8] text-[#263238] font-sans relative selection:bg-[#0789D1]/20 selection:text-[#005B96] print:h-auto print:overflow-visible print:bg-white print:block">
         {/* Subtle Non-Neon Ambient Glow Blobs */}
         <div
-          className="absolute -top-32 -left-32 w-96 h-96 bg-[#0789D1]/5 rounded-full blur-3xl pointer-events-none -z-10"
+          className="absolute -top-32 -left-32 w-96 h-96 bg-[#0789D1]/5 rounded-full blur-3xl pointer-events-none -z-10 print:hidden"
           aria-hidden="true"
         />
         <div
-          className="absolute top-1/3 -right-32 w-[28rem] h-[28rem] bg-[#005B96]/5 rounded-full blur-3xl pointer-events-none -z-10"
+          className="absolute top-1/3 -right-32 w-[28rem] h-[28rem] bg-[#005B96]/5 rounded-full blur-3xl pointer-events-none -z-10 print:hidden"
           aria-hidden="true"
         />
         <div
-          className="absolute bottom-10 left-1/3 w-80 h-80 bg-[#E8F5FC]/60 rounded-full blur-3xl pointer-events-none -z-10"
+          className="absolute bottom-10 left-1/3 w-80 h-80 bg-[#E8F5FC]/60 rounded-full blur-3xl pointer-events-none -z-10 print:hidden"
           aria-hidden="true"
         />
 
@@ -38,12 +38,12 @@ export default async function DashboardLayout({
         <Sidebar user={user} />
 
         {/* 2. AREA KONTEN KANAN DENGAN HEADER DI ATASNYA */}
-        <div className="flex flex-1 flex-col h-screen overflow-y-scroll min-w-0">
+        <div className="flex flex-1 flex-col h-screen overflow-y-scroll min-w-0 print:h-auto print:overflow-visible print:block">
           {/* HEADER MANDIRI DI ATAS KONTEN */}
           <Header user={user} />
 
           {/* ISI KONTEN HALAMAN (Standar Global Konsisten) */}
-          <main className="flex-1 p-4 md:p-6 lg:p-7 max-w-6xl w-full mx-auto">
+          <main className="flex-1 p-4 md:p-6 lg:p-7 max-w-6xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full print:block">
             <PageTransition>{children}</PageTransition>
           </main>
         </div>

@@ -10,8 +10,11 @@ import {
   ArrowDown,
   CalendarDays,
   AlertCircle,
+  AlertTriangle,
+  RotateCcw,
   CheckCircle2,
   Loader2,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "@/components/bersama/pemilih-tanggal";
+import { StepperHari } from "@/components/bersama/stepper-hari";
+import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 import {
   Table,
   TableHeader,
@@ -40,6 +47,7 @@ import {
   correctLeaveRequestAction,
   EmployeeLeaveHistoryItem,
 } from "@/actions/aksi-cuti";
+import { voidLeaveRequestAction } from "@/actions/aksi-koreksi";
 import { formatDateIndo } from "@/lib/utils";
 
 export interface EmployeeInfo {
@@ -161,6 +169,39 @@ export function BalanceActivityCard({
   const [editPurpose, setEditPurpose] = useState<string>("");
   const [isPendingEdit, startTransitionEdit] = useTransition();
 
+  // Void / Pembatalan Cuti Modal States
+  const [voidingLeaveItem, setVoidingLeaveItem] = useState<EmployeeLeaveHistoryItem | null>(null);
+  const [isPendingVoid, startTransitionVoid] = useTransition();
+
+  const handleConfirmVoid = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voidingLeaveItem) return;
+
+    startTransitionVoid(async () => {
+      const res = await voidLeaveRequestAction({
+        leaveRequestId: voidingLeaveItem.id,
+        reason: "Dibatalkan oleh Admin",
+      });
+
+      if (res.success && res.data) {
+        toast.success(res.message || "Permohonan cuti berhasil dibatalkan dan saldo telah dikembalikan.");
+        const restoredAnnual = (employee.balances.annual ?? 0) + (voidingLeaveItem.annualDays || 0);
+        const restoredLong = (employee.balances.longLeave ?? 0) + (voidingLeaveItem.longLeaveDays || 0);
+        const restoredInhal = (employee.balances.inhaldagen ?? 0) + (voidingLeaveItem.inhaldagenDays || 0);
+        onEmployeeBalancesUpdated({
+          annual: restoredAnnual,
+          longLeave: restoredLong,
+          inhaldagen: restoredInhal,
+          total: restoredAnnual + restoredLong + restoredInhal,
+        });
+        setVoidingLeaveItem(null);
+        onRefreshHistory(employee.id);
+      } else {
+        toast.error(res.message || "Gagal membatalkan permohonan cuti.");
+      }
+    });
+  };
+
   // Print Dialog States
   const [printingLetterItem, setPrintingLetterItem] = useState<EmployeeLeaveHistoryItem | null>(null);
   const [isPrintingHistoryModalOpen, setIsPrintingHistoryModalOpen] = useState(false);
@@ -199,28 +240,10 @@ export function BalanceActivityCard({
 
   const handleEditDatesChange = (dates: string[]) => {
     setEditSelectedDates(dates);
-    const count = dates.length;
-    if (count === 0) {
+    if (dates.length === 0) {
       setEditAnnualDays(0);
       setEditLongLeaveDays(0);
       setEditInhaldagenDays(0);
-      return;
-    }
-    if (isPelaksana) {
-      if (editAnnualDays > 0 && editLongLeaveDays === 0) {
-        setEditAnnualDays(Math.min(count, editMaxAnnual));
-      } else if (editLongLeaveDays > 0 && editAnnualDays === 0) {
-        setEditLongLeaveDays(Math.min(count, editMaxLongLeave));
-      }
-      setEditInhaldagenDays(0);
-      return;
-    }
-    if (editAnnualDays > 0 && editLongLeaveDays === 0 && editInhaldagenDays === 0) {
-      setEditAnnualDays(Math.min(count, editMaxAnnual));
-    } else if (editLongLeaveDays > 0 && editAnnualDays === 0 && editInhaldagenDays === 0) {
-      setEditLongLeaveDays(Math.min(count, editMaxLongLeave));
-    } else if (editInhaldagenDays > 0 && editAnnualDays === 0 && editLongLeaveDays === 0) {
-      setEditInhaldagenDays(Math.min(count, editMaxInhaldagen));
     }
   };
 
@@ -402,7 +425,7 @@ export function BalanceActivityCard({
                         </div>
                       </TableHead>
                     )}
-                    <TableHead className="text-center min-w-[190px]">Aksi</TableHead>
+                    <TableHead className="text-center min-w-[260px]">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-slate-100 text-xs">
@@ -470,17 +493,28 @@ export function BalanceActivityCard({
                           {isTambah ? (
                             <span className="text-slate-300 font-mono">-</span>
                           ) : (
-                            <div className="flex items-center justify-center gap-1.5">
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenEditModal(item)}
                                 className="gap-1 h-7 text-[11px] font-medium text-amber-700 bg-amber-50/60 hover:bg-amber-100/80 border-amber-200"
-                                title="Koreksi Permohonan Cuti"
+                                title="Koreksi Permohonan Cuti (Ubah Tanggal)"
                               >
                                 <Pencil className="h-3 w-3 text-amber-600" />
                                 Koreksi
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setVoidingLeaveItem(item)}
+                                className="gap-1 h-7 text-[11px] font-medium text-red-700 bg-red-50/60 hover:bg-red-100/80 border-red-200"
+                                title="Batalkan Permohonan Cuti & Pulihkan Saldo"
+                              >
+                                <RotateCcw className="h-3 w-3 text-red-600" />
+                                Batalkan
                               </Button>
                               <Button
                                 type="button"
@@ -509,15 +543,10 @@ export function BalanceActivityCard({
       {/* POPUP MODAL: KOREKSI / EDIT PERMOHONAN CUTI */}
       <Dialog open={!!editingLeaveItem} onOpenChange={(open) => !open && setEditingLeaveItem(null)}>
         <DialogContent onClose={() => setEditingLeaveItem(null)} className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between text-base font-bold text-slate-900">
-              <span className="flex items-center gap-2">
-                <Pencil className="h-5 w-5 text-amber-600" />
-                Koreksi Permohonan Cuti
-              </span>
-              <Badge variant="secondary" className="font-mono text-xs font-semibold">
-                {employee.employeeNumber} - {employee.name}
-              </Badge>
+          <DialogHeader className="pr-8">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <Pencil className="h-5 w-5 text-amber-600" />
+              Koreksi Permohonan Cuti
             </DialogTitle>
             <DialogDescription>
               Ubah tanggal cuti yang diambil atau sesuaikan alokasi saldo. Perubahan hari akan otomatis menyesuaikan saldo karyawan.
@@ -526,32 +555,6 @@ export function BalanceActivityCard({
 
           {editingLeaveItem && (
             <form onSubmit={handleSaveEdit} className="space-y-4 pt-1">
-              {/* Info Saldo Tersedia untuk Koreksi */}
-              <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded-lg flex items-center justify-between text-xs">
-                <span className="font-medium text-amber-900">
-                  Batas Saldo Maksimal untuk Koreksi Ini:
-                </span>
-                <span className="font-mono font-bold text-amber-950">
-                  Tahunan: {editMaxAnnual} hr | Besar: {editMaxLongLeave} hr | Inhaldagen: {editMaxInhaldagen} hr
-                </span>
-              </div>
-
-              {/* Tanggal Permohonan */}
-              <div className="space-y-1">
-                <Label htmlFor="editRequestDate" required className="text-xs font-semibold text-slate-700">
-                  Tanggal Permohonan Cuti:
-                </Label>
-                <Input
-                  id="editRequestDate"
-                  type="date"
-                  value={editRequestDate}
-                  onChange={(e) => setEditRequestDate(e.target.value)}
-                  disabled={isPendingEdit}
-                  required
-                  className="h-9 text-xs font-medium"
-                />
-              </div>
-
               {/* Kalender Multi Date Picker */}
               <div className="space-y-1.5">
                 <Label required className="text-xs font-semibold text-slate-700">
@@ -565,113 +568,195 @@ export function BalanceActivityCard({
               </div>
 
               {/* Alokasi Jumlah Hari per Jenis Cuti */}
-              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Alokasi Hari per Jenis Cuti:
-                  </Label>
-                  <div className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-                    <span>
-                      Total Dipilih:{" "}
-                      <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                        {editSelectedDates.length} hari
-                      </span>
-                    </span>
-                    <span>
-                      Total Alokasi:{" "}
-                      <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded border ${isEditAllocationMismatch ? "bg-red-50 text-red-600 border-red-300" : "bg-white text-emerald-700 border-slate-200"}`}>
-                        {editTotalAllocated} hari
-                      </span>
-                    </span>
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight">
+                      Alokasi Hari per Jenis Cuti
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Bagikan kuota cuti sesuai jumlah tanggal yang dipilih
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200 shadow-2xs text-[11px] font-medium text-slate-600">
+                      <span className="text-slate-400">Dipilih:</span>
+                      <span className="font-bold text-blue-600">{editSelectedDates.length} hari</span>
+                    </div>
+                    <div
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-2xs text-[11px] font-medium transition-colors",
+                        isEditAllocationMismatch
+                          ? "bg-amber-50 border-amber-300 text-amber-800"
+                          : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      )}
+                    >
+                      <span className="opacity-70">Alokasi:</span>
+                      <span className="font-bold">{editTotalAllocated} hari</span>
+                    </div>
                   </div>
                 </div>
 
                 {isEditAllocationMismatch && (
-                  <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
-                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/90 border border-amber-200/80 text-[11px] text-amber-800">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     <span>
-                      Total alokasi ({editTotalAllocated} hari) belum cocok dengan {editSelectedDates.length} tanggal yang dipilih di kalender. Sesuaikan jumlah hari di bawah.
+                      Total alokasi ({editTotalAllocated} hari) belum sesuai dengan {editSelectedDates.length} tanggal yang dipilih.
                     </span>
                   </div>
                 )}
 
-                <div className={`grid grid-cols-1 ${isPelaksana ? "sm:grid-cols-2" : "sm:grid-cols-3"} gap-3`}>
-                  {/* Tahunan Input */}
-                  <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="font-semibold text-blue-900">Cuti Tahunan</span>
-                      <span className="text-slate-400 font-mono">
-                        Maks: {editMaxAnnual}
+                {/* Dedicated Card: Sisa Saldo Setelah Cuti */}
+                <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                      Sisa Saldo Setelah Cuti
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Otomatis terpotong sesuai alokasi
+                    </span>
+                  </div>
+
+                  <div className={`grid grid-cols-1 ${isPelaksana ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
+                    {/* Tahunan Stat */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/50 border border-blue-100/70">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                        <span className="text-xs font-medium text-slate-700">Tahunan</span>
+                      </div>
+                      <div className="flex items-baseline gap-1 font-mono">
+                        <motion.span
+                          key={editRemainingAnnual}
+                          initial={{ scale: 1.25, color: "#2563eb" }}
+                          animate={{ scale: 1, color: "#1d4ed8" }}
+                          transition={{ duration: 0.2 }}
+                          className="text-sm font-bold text-blue-700"
+                        >
+                          <AnimatedNumber value={Math.max(0, editRemainingAnnual)} />
+                        </motion.span>
+                        <span className="text-[10px] text-slate-400">/ {editMaxAnnual} hr</span>
+                      </div>
+                    </div>
+
+                    {/* Besar Stat */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50/50 border border-purple-100/70">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
+                        <span className="text-xs font-medium text-slate-700">Besar</span>
+                      </div>
+                      <div className="flex items-baseline gap-1 font-mono">
+                        <motion.span
+                          key={editRemainingLongLeave}
+                          initial={{ scale: 1.25, color: "#9333ea" }}
+                          animate={{ scale: 1, color: "#7e22ce" }}
+                          transition={{ duration: 0.2 }}
+                          className="text-sm font-bold text-purple-700"
+                        >
+                          <AnimatedNumber value={Math.max(0, editRemainingLongLeave)} />
+                        </motion.span>
+                        <span className="text-[10px] text-slate-400">/ {editMaxLongLeave} hr</span>
+                      </div>
+                    </div>
+
+                    {/* Inhaldagen Stat */}
+                    {!isPelaksana && (
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/50 border border-emerald-100/70">
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="text-xs font-medium text-slate-700">Inhaldagen</span>
+                        </div>
+                        <div className="flex items-baseline gap-1 font-mono">
+                          <motion.span
+                            key={editRemainingInhaldagen}
+                            initial={{ scale: 1.25, color: "#059669" }}
+                            animate={{ scale: 1, color: "#047857" }}
+                            transition={{ duration: 0.2 }}
+                            className="text-sm font-bold text-emerald-700"
+                          >
+                            <AnimatedNumber value={Math.max(0, editRemainingInhaldagen)} />
+                          </motion.span>
+                          <span className="text-[10px] text-slate-400">/ {editMaxInhaldagen} hr</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className={`grid grid-cols-1 ${isPelaksana ? "sm:grid-cols-2" : "sm:grid-cols-3"} gap-2.5`}>
+                  {/* Tahunan Card */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                        <span className="font-semibold text-slate-800">Cuti Tahunan</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                        Maks {editMaxAnnual}
                       </span>
                     </div>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={editMaxAnnual}
-                        value={editAnnualDays || ""}
-                        placeholder="0"
-                        onChange={(e) => setEditAnnualDays(Number(e.target.value) || 0)}
-                        disabled={isPendingEdit}
-                        className={`h-8 text-xs pr-10 font-semibold ${isEditExceedingAnnual ? "border-red-500" : ""}`}
-                      />
-                      <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                    </div>
+                    <StepperHari
+                      id="editAnnualDays"
+                      min={0}
+                      max={editMaxAnnual}
+                      value={editAnnualDays}
+                      onChange={setEditAnnualDays}
+                      disabled={isPendingEdit}
+                      isError={isEditExceedingAnnual}
+                    />
                     {isEditExceedingAnnual && (
-                      <p className="text-[10px] text-red-600 font-medium">Melebihi batas!</p>
+                      <p className="text-[10px] text-red-600 font-medium">Melebihi batas saldo!</p>
                     )}
                   </div>
 
-                  {/* Cuti Besar Input */}
-                  <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="font-semibold text-purple-900">Cuti Besar</span>
-                      <span className="text-slate-400 font-mono">
-                        Maks: {editMaxLongLeave}
+                  {/* Cuti Besar Card */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
+                        <span className="font-semibold text-slate-800">Cuti Besar</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                        Maks {editMaxLongLeave}
                       </span>
                     </div>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={editMaxLongLeave}
-                        value={editLongLeaveDays || ""}
-                        placeholder="0"
-                        onChange={(e) => setEditLongLeaveDays(Number(e.target.value) || 0)}
-                        disabled={isPendingEdit}
-                        className={`h-8 text-xs pr-10 font-semibold ${isEditExceedingLongLeave ? "border-red-500" : ""}`}
-                      />
-                      <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                    </div>
+                    <StepperHari
+                      id="editLongLeaveDays"
+                      min={0}
+                      max={editMaxLongLeave}
+                      value={editLongLeaveDays}
+                      onChange={setEditLongLeaveDays}
+                      disabled={isPendingEdit}
+                      isError={isEditExceedingLongLeave}
+                    />
                     {isEditExceedingLongLeave && (
-                      <p className="text-[10px] text-red-600 font-medium">Melebihi batas!</p>
+                      <p className="text-[10px] text-red-600 font-medium">Melebihi batas saldo!</p>
                     )}
                   </div>
 
-                  {/* Inhaldagen Input (HANYA UNTUK KARYAWAN PIMPINAN) */}
+                  {/* Inhaldagen Card (HANYA UNTUK KARYAWAN PIMPINAN) */}
                   {!isPelaksana && (
-                    <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="font-semibold text-emerald-900">Inhaldagen</span>
-                        <span className="text-slate-400 font-mono">
-                          Maks: {editMaxInhaldagen}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="font-semibold text-slate-800">Inhaldagen</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                          Maks {editMaxInhaldagen}
                         </span>
                       </div>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          min="0"
-                          max={editMaxInhaldagen}
-                          value={editInhaldagenDays || ""}
-                          placeholder="0"
-                          onChange={(e) => setEditInhaldagenDays(Number(e.target.value) || 0)}
-                          disabled={isPendingEdit}
-                          className={`h-8 text-xs pr-10 font-semibold ${isEditExceedingInhaldagen ? "border-red-500" : ""}`}
-                        />
-                        <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                      </div>
+                      <StepperHari
+                        id="editInhaldagenDays"
+                        min={0}
+                        max={editMaxInhaldagen}
+                        value={editInhaldagenDays}
+                        onChange={setEditInhaldagenDays}
+                        disabled={isPendingEdit}
+                        isError={isEditExceedingInhaldagen}
+                      />
                       {isEditExceedingInhaldagen && (
-                        <p className="text-[10px] text-red-600 font-medium">Melebihi batas!</p>
+                        <p className="text-[10px] text-red-600 font-medium">Melebihi batas saldo!</p>
                       )}
                     </div>
                   )}
@@ -695,36 +780,152 @@ export function BalanceActivityCard({
                 />
               </div>
 
-              <DialogFooter className="gap-2 pt-2">
+              <DialogFooter className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2">
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const itemToVoid = editingLeaveItem;
+                      setEditingLeaveItem(null);
+                      setVoidingLeaveItem(itemToVoid);
+                    }}
+                    disabled={isPendingEdit}
+                    className="w-full sm:w-auto h-9 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 gap-1.5"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-red-600" />
+                    Batalkan Cuti Ini
+                  </Button>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingLeaveItem(null)}
+                    disabled={isPendingEdit}
+                    className="h-9 text-xs"
+                  >
+                    Tutup
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={
+                      isPendingEdit ||
+                      hasInvalidEditAllocation ||
+                      isEditAllocationMismatch ||
+                      editTotalAllocated <= 0 ||
+                      editSelectedDates.length === 0
+                    }
+                    className="h-9 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {isPendingEdit ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Menyimpan Koreksi...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Simpan Perubahan Cuti
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* POPUP MODAL: BATALKAN PERMOHONAN CUTI */}
+      <Dialog open={!!voidingLeaveItem} onOpenChange={(open) => !open && !isPendingVoid && setVoidingLeaveItem(null)}>
+        <DialogContent onClose={() => setVoidingLeaveItem(null)} className="max-w-lg p-5 sm:p-6">
+          <DialogHeader className="space-y-1.5 pb-2 border-b border-slate-100 pr-8">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-red-700">
+              <span className="p-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              Batalkan Permohonan Cuti
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Tindakan ini akan membatalkan permohonan cuti dan mengembalikan seluruh kuota hari cuti ke saldo karyawan.
+            </DialogDescription>
+          </DialogHeader>
+
+          {voidingLeaveItem && (
+            <form onSubmit={handleConfirmVoid} className="space-y-4 mt-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                  <span className="text-slate-500 font-medium">Karyawan:</span>
+                  <span className="font-bold text-slate-900">{employee.name} ({employee.department.name})</span>
+                </div>
+                <div className="flex items-start justify-between border-b border-slate-200/80 pb-2 gap-2">
+                  <span className="text-slate-500 font-medium shrink-0">Tanggal Cuti:</span>
+                  <span className="font-mono text-slate-800 text-right font-semibold">
+                    {voidingLeaveItem.selectedDates && voidingLeaveItem.selectedDates.length > 0
+                      ? voidingLeaveItem.selectedDates.join(", ")
+                      : `${formatDateIndo(voidingLeaveItem.startDate)} s/d ${formatDateIndo(voidingLeaveItem.endDate)}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Keperluan:</span>
+                  <span className="text-slate-800 italic">{voidingLeaveItem.purpose || "-"}</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
+                  <RotateCcw className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>Saldo yang akan Dipulihkan:</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div className="bg-white/90 p-2 rounded-lg border border-emerald-100 text-center">
+                    <span className="text-[10px] text-slate-500 block">Tahunan</span>
+                    <span className="font-mono font-bold text-emerald-700 text-sm">+{voidingLeaveItem.annualDays} hr</span>
+                  </div>
+                  <div className="bg-white/90 p-2 rounded-lg border border-emerald-100 text-center">
+                    <span className="text-[10px] text-slate-500 block">Cuti Besar</span>
+                    <span className="font-mono font-bold text-purple-700 text-sm">+{voidingLeaveItem.longLeaveDays} hr</span>
+                  </div>
+                  <div className="bg-white/90 p-2 rounded-lg border border-emerald-100 text-center">
+                    <span className="text-[10px] text-slate-500 block">Inhaldagen</span>
+                    <span className="font-mono font-bold text-blue-700 text-sm">+{voidingLeaveItem.inhaldagenDays} hr</span>
+                  </div>
+                </div>
+                <div className="text-right pt-0.5">
+                  <span className="text-[11px] text-emerald-800 font-medium">
+                    Total dikembalikan: <strong className="font-mono font-bold text-emerald-900">+{voidingLeaveItem.totalDays} hari</strong>
+                  </span>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setEditingLeaveItem(null)}
-                  disabled={isPendingEdit}
+                  size="sm"
+                  onClick={() => setVoidingLeaveItem(null)}
+                  disabled={isPendingVoid}
                   className="h-9 text-xs"
                 >
                   Batal
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    isPendingEdit ||
-                    hasInvalidEditAllocation ||
-                    isEditAllocationMismatch ||
-                    editTotalAllocated <= 0 ||
-                    editSelectedDates.length === 0
-                  }
-                  className="h-9 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                  size="sm"
+                  disabled={isPendingVoid}
+                  className="gap-1.5 h-9 text-xs bg-red-600 hover:bg-red-700 text-white font-medium"
                 >
-                  {isPendingEdit ? (
+                  {isPendingVoid ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Menyimpan Koreksi...
+                      Membatalkan Cuti...
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Simpan Perubahan Cuti
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Konfirmasi Pembatalan Cuti
                     </>
                   )}
                 </Button>

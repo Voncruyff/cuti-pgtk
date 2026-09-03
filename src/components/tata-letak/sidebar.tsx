@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
+  CalendarCog,
   PlusCircle,
   FileSpreadsheet,
   Users,
@@ -64,6 +65,12 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
           name: "Tambah Saldo",
           href: "/tambah-saldo-cuti",
           icon: PlusCircle,
+          roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
+        },
+        {
+          name: "Koreksi Cuti",
+          href: "/koreksi-cuti",
+          icon: CalendarCog,
           roles: ["ADMIN_UTAMA", "ADMIN_BAGIAN"],
         },
       ],
@@ -151,7 +158,7 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
       {/* Sidebar Container (Full-Height) */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#E8F5FC] bg-white transition-[width,transform] duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#E8F5FC] bg-white transition-[width,transform] duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none print:hidden",
           // Mobile state
           isOpen ? "translate-x-0 w-64 shadow-xl" : "-translate-x-full lg:translate-x-0",
           // Desktop state (Collapsed vs Expanded)

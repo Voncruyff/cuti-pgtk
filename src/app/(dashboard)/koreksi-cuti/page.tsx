@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Building2,
   Briefcase,
@@ -8,29 +8,16 @@ import {
   Factory,
   Search,
   X,
-  PlusCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { StepperHari } from "@/components/bersama/stepper-hari";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   getEmployeesForLeaveAction,
   getEmployeeLeaveRequestsAction,
   EmployeeLeaveHistoryItem,
 } from "@/actions/aksi-cuti";
-import { addMultipleLeaveBalanceAction } from "@/actions/aksi-saldo";
 import { BalanceActivityCard } from "@/components/fitur/cuti/kartu-aktivitas-saldo";
 
 interface EmployeeOption {
@@ -38,8 +25,8 @@ interface EmployeeOption {
   employeeNumber: string;
   name: string;
   position: string;
-  category?: string;
   stasiun?: string;
+  category?: string;
   department: {
     id: string;
     code: string;
@@ -53,27 +40,15 @@ interface EmployeeOption {
   };
 }
 
-export default function HalamanTambahSaldoCuti() {
+export default function HalamanKoreksiCuti() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
-  const [isPending, startTransition] = useTransition();
-
-  // Search & Selected Employee
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // History State
   const [employeeHistory, setEmployeeHistory] = useState<EmployeeLeaveHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-
-  // Form Modal Tambah Saldo
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [transactionDate, setTransactionDate] = useState<string>("");
-  const [annualAmount, setAnnualAmount] = useState<number>(0);
-  const [longLeaveAmount, setLongLeaveAmount] = useState<number>(0);
-  const [inhaldagenAmount, setInhaldagenAmount] = useState<number>(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Close search dropdown on click outside
   useEffect(() => {
@@ -89,7 +64,7 @@ export default function HalamanTambahSaldoCuti() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch employees
+  // Fetch all employees on mount
   useEffect(() => {
     async function loadEmployees() {
       setIsLoadingEmployees(true);
@@ -125,7 +100,7 @@ export default function HalamanTambahSaldoCuti() {
     }
   }, []);
 
-  // Filter employees
+  // Filter employees for autocomplete
   const filteredEmployees = employees.filter((emp) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -137,83 +112,18 @@ export default function HalamanTambahSaldoCuti() {
     );
   });
 
-  // Handle selecting an employee from search results
   const handleSelectEmployee = (emp: EmployeeOption) => {
     setSelectedEmployee(emp);
     setSearchQuery(`${emp.employeeNumber} - ${emp.name}`);
     setIsSearchOpen(false);
-
-    setAnnualAmount(0);
-    setLongLeaveAmount(0);
-    setInhaldagenAmount(0);
-
     loadEmployeeHistory(emp.id);
   };
 
-  // Handle clearing selected employee
   const handleClearEmployee = () => {
     setSelectedEmployee(null);
     setSearchQuery("");
     setIsSearchOpen(false);
     setEmployeeHistory([]);
-  };
-
-  // Open modal without auto-input
-  const handleOpenAddModal = () => {
-    if (!selectedEmployee) {
-      toast.error("Silakan pilih karyawan terlebih dahulu.");
-      return;
-    }
-    setTransactionDate(new Date().toISOString().split("T")[0]);
-    setAnnualAmount(0);
-    setLongLeaveAmount(0);
-    setInhaldagenAmount(0);
-    setIsModalOpen(true);
-  };
-
-  // Handle Submit Tambah Saldo
-  const handleSubmitAddBalance = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedEmployee) {
-      toast.error("Silakan pilih karyawan terlebih dahulu.");
-      return;
-    }
-
-    const totalToAdd = annualAmount + longLeaveAmount + inhaldagenAmount;
-    if (totalToAdd <= 0) {
-      toast.error("Masukkan jumlah hari penambahan minimal 1 hari.");
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await addMultipleLeaveBalanceAction({
-        employeeId: selectedEmployee.id,
-        annualAmount: Number(annualAmount) || 0,
-        longLeaveAmount: Number(longLeaveAmount) || 0,
-        inhaldagenAmount: Number(inhaldagenAmount) || 0,
-        transactionDate,
-        description: "Penambahan Saldo",
-      });
-
-      if (res.success && res.data) {
-        toast.success(res.message || "Penambahan saldo cuti berhasil disimpan!");
-        setIsModalOpen(false);
-
-        const updatedEmp: EmployeeOption = {
-          ...selectedEmployee,
-          balances: res.data.newBalances,
-        };
-        setSelectedEmployee(updatedEmp);
-        setEmployees((prev) =>
-          prev.map((e) => (e.id === updatedEmp.id ? updatedEmp : e))
-        );
-
-        loadEmployeeHistory(selectedEmployee.id);
-      } else {
-        toast.error(res.message || "Gagal menambah saldo cuti.");
-      }
-    });
   };
 
   return (
@@ -236,7 +146,10 @@ export default function HalamanTambahSaldoCuti() {
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setIsSearchOpen(true);
-                    if (selectedEmployee && e.target.value !== `${selectedEmployee.employeeNumber} - ${selectedEmployee.name}`) {
+                    if (
+                      selectedEmployee &&
+                      e.target.value !== `${selectedEmployee.employeeNumber} - ${selectedEmployee.name}`
+                    ) {
                       setSelectedEmployee(null);
                       setEmployeeHistory([]);
                     }
@@ -281,7 +194,7 @@ export default function HalamanTambahSaldoCuti() {
               <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-slate-200 shadow-lg max-h-60 overflow-y-auto divide-y divide-slate-100">
                 {isLoadingEmployees ? (
                   <div className="p-3 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0084c7]" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
                     Memuat data karyawan...
                   </div>
                 ) : filteredEmployees.length === 0 ? (
@@ -404,7 +317,7 @@ export default function HalamanTambahSaldoCuti() {
         </CardContent>
       </Card>
 
-      {/* SECTION 2: KOMPONEN REUSABLE RIWAYAT AKTIVITAS SALDO */}
+      {/* SECTION 2: KOMPONEN REUSABLE RIWAYAT AKTIVITAS SALDO (DENGAN TOMBOL KOREKSI & BATALKAN CUTI) */}
       {selectedEmployee && (
         <BalanceActivityCard
           employee={selectedEmployee}
@@ -421,154 +334,8 @@ export default function HalamanTambahSaldoCuti() {
               prev.map((e) => (e.id === updatedEmp.id ? updatedEmp : e))
             );
           }}
-          actionButton={
-            <Button
-              type="button"
-              size="default"
-              onClick={handleOpenAddModal}
-              className="font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Tambah Saldo
-            </Button>
-          }
         />
       )}
-
-      {/* POPUP MODAL DIALOG: TAMBAH SALDO CUTI */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent onClose={() => setIsModalOpen(false)} className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-              <PlusCircle className="h-5 w-5 text-emerald-600" />
-              Tambah Saldo Cuti
-            </DialogTitle>
-            <DialogDescription>
-              Karyawan: <span className="font-semibold text-slate-900">{selectedEmployee?.name}</span> (NIP: {selectedEmployee?.employeeNumber})
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmitAddBalance} className="space-y-4 pt-2">
-            {/* Input 3 Jenis Saldo */}
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 tracking-tight">
-                  Jumlah Hari yang Ditambahkan
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  Tentukan jumlah penambahan kuota per jenis cuti
-                </p>
-              </div>
-
-              <div className="space-y-2.5">
-                {/* Tahunan */}
-                <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all">
-                  <div className="text-xs space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                      <span className="font-semibold text-slate-800">Cuti Tahunan</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block pl-3.5">
-                      Saldo saat ini: {selectedEmployee?.balances.annual} hari
-                    </span>
-                  </div>
-                  <div className="w-32">
-                    <StepperHari
-                      id="annualAmount"
-                      min={0}
-                      value={annualAmount}
-                      onChange={setAnnualAmount}
-                      disabled={isPending}
-                    />
-                  </div>
-                </div>
-
-                {/* Cuti Besar */}
-                <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all">
-                  <div className="text-xs space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
-                      <span className="font-semibold text-slate-800">Cuti Besar</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block pl-3.5">
-                      Saldo saat ini: {selectedEmployee?.balances.longLeave} hari
-                    </span>
-                  </div>
-                  <div className="w-32">
-                    <StepperHari
-                      id="longLeaveAmount"
-                      min={0}
-                      value={longLeaveAmount}
-                      onChange={setLongLeaveAmount}
-                      disabled={isPending}
-                    />
-                  </div>
-                </div>
-
-                {/* Inhaldagen (HANYA UNTUK KARYAWAN PIMPINAN) */}
-                {selectedEmployee?.category?.toUpperCase() !== "PELAKSANA" && (
-                  <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all">
-                    <div className="text-xs space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="font-semibold text-slate-800">Inhaldagen</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 block pl-3.5">
-                        Saldo saat ini: {selectedEmployee?.balances.inhaldagen} hari
-                      </span>
-                    </div>
-                    <div className="w-32">
-                      <StepperHari
-                        id="inhaldagenAmount"
-                        min={0}
-                        value={inhaldagenAmount}
-                        onChange={setInhaldagenAmount}
-                        disabled={isPending}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Total Ditambahkan */}
-              <div className="flex justify-between items-center pt-2.5 border-t border-slate-200/70 text-xs font-semibold">
-                <span className="text-slate-600">Total Ditambahkan:</span>
-                <span className="font-mono text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  +{annualAmount + longLeaveAmount + (selectedEmployee?.category?.toUpperCase() === "PELAKSANA" ? 0 : inhaldagenAmount)} Hari
-                </span>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 pt-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isPending}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                disabled={isPending || annualAmount + longLeaveAmount + inhaldagenAmount <= 0}
-                className="font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    Simpan Penambahan Saldo
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
