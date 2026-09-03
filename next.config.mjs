@@ -32,6 +32,9 @@ const nextConfig = {
       { source: "/leave/details", destination: "/rincian-cuti", permanent: true },
       { source: "/cuti/rincian", destination: "/rincian-cuti", permanent: true },
       { source: "/rinciancuti", destination: "/rincian-cuti", permanent: true },
+      { source: "/pengaturan/kebijakan", destination: "/pengaturan/automasi-saldo", permanent: true },
+      { source: "/pengaturan/profil", destination: "/pengaturan/profil-perusahaan", permanent: true },
+      { source: "/pengaturan/keamanan", destination: "/pengaturan/keamanan-akun", permanent: true },
     ];
   },
 };

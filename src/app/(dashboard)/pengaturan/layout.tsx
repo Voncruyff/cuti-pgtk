@@ -19,23 +19,23 @@ interface TabItem {
 
 const TABS: TabItem[] = [
   {
-    id: "kebijakan",
-    name: "Ketentuan Saldo Otomatis",
-    href: "/pengaturan/kebijakan",
+    id: "automasi-saldo",
+    name: "Automasi Saldo",
+    href: "/pengaturan/automasi-saldo",
     icon: CalendarDays,
     description: "Aturan penambahan hak cuti tahunan & besar",
   },
   {
-    id: "profil",
+    id: "profil-perusahaan",
     name: "Profil Perusahaan",
-    href: "/pengaturan/profil",
+    href: "/pengaturan/profil-perusahaan",
     icon: Building2,
     description: "Identitas instansi & pejabat penandatangan",
   },
   {
-    id: "keamanan",
+    id: "keamanan-akun",
     name: "Keamanan Akun",
-    href: "/pengaturan/keamanan",
+    href: "/pengaturan/keamanan-akun",
     icon: ShieldCheck,
     description: "Kredensial login & ubah kata sandi",
   },
@@ -56,17 +56,17 @@ export default function PengaturanLayout({
           Pengaturan Sistem
         </h1>
         <p className="text-xs text-slate-500">
-          Kelola ketentuan saldo otomatis, profil unit PG Trangkil, serta keamanan akun Anda.
+          Kelola automasi saldo, profil perusahaan PG Trangkil, serta keamanan akun Anda.
         </p>
       </div>
 
-      {/* Navigation Tab Bar (4 Pages) */}
+      {/* Navigation Tab Bar (3 Pages) */}
       <div className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 flex flex-wrap gap-1">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive =
             pathname === tab.href ||
-            (tab.href === "/pengaturan/kebijakan" && pathname === "/pengaturan");
+            (tab.href === "/pengaturan/automasi-saldo" && pathname === "/pengaturan");
 
           return (
             <Link

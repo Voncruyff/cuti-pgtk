@@ -37,7 +37,7 @@ import { ModalUbahPassword } from "@/components/fitur/pengaturan/modal-ubah-pass
 import { ModalUbahNama } from "@/components/fitur/pengaturan/modal-ubah-nama";
 import { ModalUbahUsername } from "@/components/fitur/pengaturan/modal-ubah-username";
 
-export default function PengaturanKeamananPage() {
+export default function PengaturanKeamananAkunPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<SystemSettingsData["currentUser"] | null>(null);

@@ -143,7 +143,7 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
       {/* Sidebar Container (Full-Height) */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#E8F5FC] bg-white transition-all duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none",
           // Mobile state
           isOpen ? "translate-x-0 w-64 shadow-xl" : "-translate-x-full lg:translate-x-0",
           // Desktop state (Collapsed vs Expanded)
@@ -153,7 +153,7 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
         {/* Header / Brand (Tinggi h-16 Presisi Selaras dengan Top Navbar) */}
         <div
           className={cn(
-            "flex h-16 items-center border-b border-slate-200/80 transition-all shrink-0",
+            "flex h-16 items-center border-b border-[#E8F5FC] transition-all shrink-0",
             isCollapsed ? "justify-center px-2" : "justify-between px-5"
           )}
         >
@@ -161,7 +161,7 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
             /* BRAND KETIKA SIDEBAR DITUTUP (LOGO KEBON AGUNG - LINK KE DASHBOARD) */
             <Link
               href="/dashboard"
-              className="group relative flex h-11 w-11 items-center justify-center rounded-full p-1.5 hover:bg-sky-50 transition-all cursor-pointer"
+              className="group relative flex h-11 w-11 items-center justify-center rounded-full p-1.5 hover:bg-[#E8F5FC] transition-all cursor-pointer"
               title="Dashboard - PT Kebon Agung"
             >
               <Image
@@ -221,9 +221,9 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
             return (
               <div key={section.title} className="space-y-1">
                 {isCollapsed ? (
-                  sIdx > 0 && <div className="my-2 border-t border-slate-100 w-8 mx-auto" />
+                  sIdx > 0 && <div className="my-2 border-t border-[#E8F5FC] w-8 mx-auto" />
                 ) : (
-                  <div className="px-3.5 pt-1 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none">
+                  <div className="px-3.5 pt-1 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#6B7280] select-none">
                     {section.title}
                   </div>
                 )}
@@ -245,8 +245,8 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
                         className={cn(
                           "group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 mx-auto my-1 cursor-pointer",
                           isActive
-                            ? "bg-[#0084c7] text-white shadow-xs shadow-sky-500/25 scale-105"
-                            : "text-slate-600 hover:bg-sky-50/70 hover:text-[#0077b6]"
+                            ? "bg-[#0789D1] text-white shadow-xs shadow-[#0789D1]/20 scale-105"
+                            : "text-[#263238] hover:bg-[#E8F5FC] hover:text-[#005B96]"
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
@@ -267,14 +267,14 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
                       className={cn(
                         "group flex items-center gap-3 rounded-full px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 cursor-pointer",
                         isActive
-                          ? "bg-[#0084c7] text-white font-bold shadow-xs shadow-sky-500/20"
-                          : "text-slate-600 hover:bg-sky-50/70 hover:text-[#0077b6]"
+                          ? "bg-[#0789D1] text-white font-bold shadow-xs shadow-[#0789D1]/20"
+                          : "text-[#263238] hover:bg-[#E8F5FC] hover:text-[#005B96]"
                       )}
                     >
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0 transition-colors",
-                          isActive ? "text-white" : "text-slate-400 group-hover:text-[#0084c7]"
+                          isActive ? "text-white" : "text-[#6B7280] group-hover:text-[#005B96]"
                         )}
                       />
                       <span className="truncate">{item.name}</span>

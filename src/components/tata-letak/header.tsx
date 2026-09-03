@@ -105,14 +105,14 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/85 backdrop-blur-md px-4 md:px-6 shadow-2xs transition-colors shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8F5FC] bg-white/85 backdrop-blur-xl px-4 md:px-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-colors shrink-0">
       {/* Sisi Kiri: Toggle Menu (Mobile & Desktop) & Judul Halaman Bersih */}
       <div className="flex items-center gap-2.5 sm:gap-3">
         {/* Tombol Hamburger Mobile */}
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="rounded-full p-1.5 text-slate-600 hover:bg-sky-50 hover:text-[#0084c7] lg:hidden cursor-pointer"
+          className="rounded-full p-1.5 text-[#263238] hover:bg-[#E8F5FC] hover:text-[#005B96] lg:hidden cursor-pointer transition-colors"
           aria-label="Buka menu navigasi"
         >
           <Menu className="h-5 w-5" />
@@ -122,7 +122,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
         <button
           type="button"
           onClick={toggleCollapse}
-          className="hidden lg:flex rounded-full p-2 text-slate-500 hover:bg-sky-50 hover:text-[#0084c7] transition-colors cursor-pointer"
+          className="hidden lg:flex rounded-full p-2 text-[#6B7280] hover:bg-[#E8F5FC] hover:text-[#005B96] transition-colors cursor-pointer"
           title={isCollapsed ? "Buka Sidebar (Ctrl+B)" : "Tutup Sidebar (Ctrl+B)"}
           aria-label="Toggle sidebar"
         >
@@ -131,7 +131,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
 
         {/* Info Judul Halaman Dinamis (Minimalis & Elegan) */}
         <div>
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+          <h1 className="text-base sm:text-lg font-bold text-[#263238] tracking-tight">
             {pageTitle}
           </h1>
         </div>
@@ -142,7 +142,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
         <button
           type="button"
           onClick={() => setIsDropdownOpen((prev) => !prev)}
-          className="flex items-center gap-2.5 p-1.5 pl-2 pr-3 rounded-full hover:bg-sky-50/70 border border-slate-200/70 bg-white/90 shadow-2xs transition-all focus:outline-none focus:ring-2 focus:ring-sky-500/20 group cursor-pointer"
+          className="flex items-center gap-2.5 p-1.5 pl-2 pr-3 rounded-full hover:bg-[#E8F5FC] border border-[#E8F5FC] bg-white/90 shadow-2xs transition-all focus:outline-none focus:ring-2 focus:ring-[#0789D1]/20 group cursor-pointer"
           aria-expanded={isDropdownOpen}
           aria-label="Menu Pengguna"
         >
@@ -151,17 +151,17 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
             <img
               src={user.fotoProfil}
               alt={user.fullName || user.username}
-              className="h-8 w-8 rounded-full object-cover border border-slate-200 shadow-xs select-none shrink-0"
+              className="h-8 w-8 rounded-full object-cover border border-[#E8F5FC] shadow-xs select-none shrink-0"
             />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-xs font-bold shadow-xs select-none shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#0789D1] to-[#005B96] text-white text-xs font-bold shadow-xs select-none shrink-0">
               {getInitials(user.fullName || user.username)}
             </div>
           )}
 
           {/* Nama & Role */}
           <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-bold text-slate-900 leading-tight">
+            <span className="text-xs font-bold text-[#263238] leading-tight">
               {user.fullName || user.username}
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -176,38 +176,38 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
 
           {/* Anak Panah ke Bawah (ChevronDown) */}
           <ChevronDown
-            className={`h-4 w-4 text-slate-400 group-hover:text-slate-700 transition-transform duration-200 ${
-              isDropdownOpen ? "rotate-180 text-[#0084c7]" : ""
+            className={`h-4 w-4 text-[#6B7280] group-hover:text-[#263238] transition-transform duration-200 ${
+              isDropdownOpen ? "rotate-180 text-[#0789D1]" : ""
             }`}
           />
         </button>
 
         {/* Dropdown Menu Popup */}
         {isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl border border-slate-200/90 shadow-xl py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+          <div className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] shadow-xl py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
             {/* Header User Detail di dalam dropdown */}
-            <div className="px-3.5 py-3 border-b border-slate-100 flex items-center gap-3">
+            <div className="px-3.5 py-3 border-b border-[#E8F5FC] flex items-center gap-3">
               {user.fotoProfil ? (
                 <img
                   src={user.fotoProfil}
                   alt={user.fullName || user.username}
-                  className="h-10 w-10 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
+                  className="h-10 w-10 rounded-full object-cover border border-[#E8F5FC] shadow-2xs shrink-0"
                 />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-xs font-bold shadow-2xs shrink-0 select-none">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#0789D1] to-[#005B96] text-white text-xs font-bold shadow-2xs shrink-0 select-none">
                   {getInitials(user.fullName || user.username)}
                 </div>
               )}
               <div className="overflow-hidden min-w-0">
-                <p className="text-xs font-bold text-slate-900 truncate">
+                <p className="text-xs font-bold text-[#263238] truncate">
                   {user.fullName || user.username}
                 </p>
-                <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+                <p className="text-[11px] text-[#6B7280] font-mono mt-0.5 truncate">
                   @{user.username}
                 </p>
                 <div className="mt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                    <Shield className="h-2.5 w-2.5 text-blue-600" />
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#005B96] bg-[#E8F5FC] px-2 py-0.5 rounded border border-[#0789D1]/20">
+                    <Shield className="h-2.5 w-2.5 text-[#0789D1]" />
                     {getRoleLabel()}
                   </span>
                 </div>
@@ -217,15 +217,15 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
             {/* Menu Navigasi & Aksi */}
             <div className="p-1 space-y-0.5">
               <Link
-                href="/pengaturan/keamanan"
+                href="/pengaturan/keamanan-akun"
                 onClick={() => setIsDropdownOpen(false)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-[#0084c7] hover:bg-sky-50/70 rounded-lg transition-colors group text-left"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-[#263238] hover:text-[#005B96] hover:bg-[#E8F5FC] rounded-lg transition-colors group text-left"
               >
-                <User className="h-4 w-4 text-slate-400 group-hover:text-[#0084c7] transition-colors" />
+                <User className="h-4 w-4 text-[#6B7280] group-hover:text-[#0789D1] transition-colors" />
                 <span>Pengaturan Akun</span>
               </Link>
 
-              <div className="my-1 border-t border-slate-100" />
+              <div className="my-1 border-t border-[#E8F5FC]" />
 
               <button
                 type="button"

@@ -23,7 +23,7 @@ import {
   updateLeavePolicySettingsAction,
 } from "@/actions/aksi-pengaturan";
 
-export default function PengaturanKebijakanPage() {
+export default function PengaturanAutomasiSaldoPage() {
   const [isPending, startTransition] = useTransition();
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 

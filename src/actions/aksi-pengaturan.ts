@@ -458,7 +458,7 @@ export async function updateLeavePolicySettingsAction(payload: {
 
     revalidatePath("/settings");
     revalidatePath("/pengaturan");
-    revalidatePath("/pengaturan/kebijakan");
+    revalidatePath("/pengaturan/automasi-saldo");
     revalidatePath("/dashboard");
 
     return {
@@ -519,7 +519,7 @@ export async function updateCompanyProfileSettingsAction(payload: {
 
     revalidatePath("/settings");
     revalidatePath("/pengaturan");
-    revalidatePath("/pengaturan/profil");
+    revalidatePath("/pengaturan/profil-perusahaan");
 
     return {
       success: true,
@@ -669,7 +669,7 @@ export async function updateUserProfileInfoAction(payload: {
     });
 
     revalidatePath("/pengaturan");
-    revalidatePath("/pengaturan/keamanan");
+    revalidatePath("/pengaturan/keamanan-akun");
     revalidatePath("/dashboard");
 
     return {
@@ -780,7 +780,7 @@ export async function updateUserProfilePhotoAction(
     });
 
     revalidatePath("/pengaturan");
-    revalidatePath("/pengaturan/keamanan");
+    revalidatePath("/pengaturan/keamanan-akun");
     revalidatePath("/dashboard");
 
     return {
@@ -843,7 +843,7 @@ export async function deleteUserProfilePhotoAction(): Promise<ActionResult> {
     });
 
     revalidatePath("/pengaturan");
-    revalidatePath("/pengaturan/keamanan");
+    revalidatePath("/pengaturan/keamanan-akun");
     revalidatePath("/dashboard");
 
     return {

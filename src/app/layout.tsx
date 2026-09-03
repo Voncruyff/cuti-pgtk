@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { IndikatorLoadingHalaman } from "@/components/bersama/indikator-loading-halaman";
+import { PenyesuaiJudulHalaman } from "@/components/bersama/penyesuai-judul";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -13,7 +14,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Sistem Cuti Karyawan Pimpinan & Pelaksana - PG Trangkil",
+  title: {
+    default: "Dashboard | Cuti PG Trangkil",
+    template: "%s | Cuti PG Trangkil",
+  },
   description: "Aplikasi internal pengelolaan cuti karyawan PG Trangkil Pati",
 };
 
@@ -34,6 +38,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased selection:bg-[#0084c7] selection:text-white">
         <Suspense fallback={null}>
           <IndikatorLoadingHalaman />
+          <PenyesuaiJudulHalaman />
         </Suspense>
         {children}
         <Toaster position="top-right" richColors closeButton />
