@@ -250,11 +250,10 @@ export default function HalamanKoreksiCuti() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-600">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-medium ${
-                      isPelaksana
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-medium ${isPelaksana
                         ? "bg-amber-50 text-amber-900 border-amber-200 font-semibold"
                         : "bg-indigo-50 text-indigo-900 border-indigo-200 font-semibold"
-                    }`}>
+                      }`}>
                       Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
                     </span>
                     <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 px-2 py-0.5 rounded-md border border-sky-200/80 font-medium">
