@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { SessionUser } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
 import { logoutAction } from "@/actions/aksi-autentikasi";
+import { motion, AnimatePresence } from "motion/react";
+import { dropdownVariants } from "@/lib/motion";
 import { useSidebar } from "./konteks-sidebar";
 
 export interface HeaderProps {
@@ -182,11 +184,18 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
           />
         </button>
 
-        {/* Dropdown Menu Popup */}
-        {isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] shadow-xl py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-            {/* Header User Detail di dalam dropdown */}
-            <div className="px-3.5 py-3 border-b border-[#E8F5FC] flex items-center gap-3">
+        {/* Dropdown Menu Popup with Smooth Motion */}
+        <AnimatePresence>
+          {isDropdownOpen && (
+            <motion.div
+              variants={dropdownVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] shadow-xl py-1.5 z-50 origin-top-right"
+            >
+              {/* Header User Detail di dalam dropdown */}
+              <div className="px-3.5 py-3 border-b border-[#E8F5FC] flex items-center gap-3">
               {user.fotoProfil ? (
                 <img
                   src={user.fotoProfil}
@@ -238,12 +247,13 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
                 ) : (
                   <LogOut className="h-4 w-4 text-rose-500 group-hover:text-rose-700 transition-transform group-hover:translate-x-0.5" />
                 )}
-                <span>Keluar dari Akun</span>
+                <span>Keluar</span>
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
-    </header>
-  );
+      </AnimatePresence>
+    </div>
+  </header>
+);
 }

@@ -72,10 +72,10 @@ export default function PengaturanLayout({
             <Link
               key={tab.id}
               href={tab.href}
-              className={`flex-1 min-w-[170px] flex items-center justify-center sm:justify-start gap-2.5 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer select-none ${
+              className={`flex-1 min-w-[170px] flex items-center justify-center sm:justify-start gap-2.5 px-4 py-2.5 rounded-lg text-xs font-semibold transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer select-none ${
                 isActive
-                  ? "bg-white text-[#0084c7] shadow-2xs font-bold border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                  ? "bg-white text-[#0789D1] shadow-2xs font-bold border border-[#E8F5FC]"
+                  : "text-[#6B7280] hover:text-[#263238] hover:bg-white/60"
               }`}
             >
               <Icon

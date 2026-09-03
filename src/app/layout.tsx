@@ -13,12 +13,17 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700", "800"],
 });
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "CUTI PGTK";
+const appDesc =
+  process.env.NEXT_PUBLIC_APP_DESCRIPTION ||
+  "Sistem Informasi Manajemen Cuti PG Trangkil Pati";
+
 export const metadata: Metadata = {
   title: {
-    default: "Dashboard | Cuti PG Trangkil",
-    template: "%s | Cuti PG Trangkil",
+    default: `Dashboard | ${appName}`,
+    template: `%s | ${appName}`,
   },
-  description: "Aplikasi internal pengelolaan cuti karyawan PG Trangkil Pati",
+  description: appDesc,
 };
 
 export default function RootLayout({

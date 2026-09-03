@@ -3,23 +3,25 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-const TITLES: Record<string, string> = {
-  "/": "Karyawan Cuti Hari Ini | Cuti PG Trangkil",
-  "/landingpage": "Karyawan Cuti Hari Ini | Cuti PG Trangkil",
-  "/dashboard": "Dashboard | Cuti PG Trangkil",
-  "/master-karyawan": "Master Karyawan | Cuti PG Trangkil",
-  "/master-bagian": "Master Bagian | Cuti PG Trangkil",
-  "/master-stasiun": "Master Stasiun | Cuti PG Trangkil",
-  "/ambil-cuti": "Pengambilan Cuti | Cuti PG Trangkil",
-  "/tambah-saldo-cuti": "Tambah Saldo Cuti | Cuti PG Trangkil",
-  "/rincian-cuti": "Rincian Cuti | Cuti PG Trangkil",
-  "/laporan-cuti": "Laporan Cuti | Cuti PG Trangkil",
-  "/kelola-user": "Kelola User | Cuti PG Trangkil",
-  "/pengaturan": "Automasi Saldo | Cuti PG Trangkil",
-  "/pengaturan/automasi-saldo": "Automasi Saldo | Cuti PG Trangkil",
-  "/pengaturan/profil-perusahaan": "Profil Perusahaan | Cuti PG Trangkil",
-  "/pengaturan/keamanan-akun": "Keamanan Akun | Cuti PG Trangkil",
-  "/login": "Login | Cuti PG Trangkil",
+const APP_SUFFIX = process.env.NEXT_PUBLIC_APP_NAME || "CUTI PGTK";
+
+const PAGE_NAMES: Record<string, string> = {
+  "/": "Karyawan Cuti Hari Ini",
+  "/landingpage": "Karyawan Cuti Hari Ini",
+  "/dashboard": "Dashboard",
+  "/master-karyawan": "Master Karyawan",
+  "/master-bagian": "Master Bagian",
+  "/master-stasiun": "Master Stasiun",
+  "/ambil-cuti": "Pengambilan Cuti",
+  "/tambah-saldo-cuti": "Tambah Saldo Cuti",
+  "/rincian-cuti": "Rincian Cuti",
+  "/laporan-cuti": "Laporan Cuti",
+  "/kelola-user": "Kelola User",
+  "/pengaturan": "Automasi Saldo",
+  "/pengaturan/automasi-saldo": "Automasi Saldo",
+  "/pengaturan/profil-perusahaan": "Profil Perusahaan",
+  "/pengaturan/keamanan-akun": "Keamanan Akun",
+  "/login": "Login",
 };
 
 export function PenyesuaiJudulHalaman() {
@@ -29,8 +31,8 @@ export function PenyesuaiJudulHalaman() {
     if (!pathname) return;
 
     // Cek exact match
-    if (TITLES[pathname]) {
-      document.title = TITLES[pathname];
+    if (PAGE_NAMES[pathname]) {
+      document.title = `${PAGE_NAMES[pathname]} | ${APP_SUFFIX}`;
       return;
     }
 
@@ -41,7 +43,7 @@ export function PenyesuaiJudulHalaman() {
       const formatted = lastSegment
         .replace(/-/g, " ")
         .replace(/\b\w/g, (c) => c.toUpperCase());
-      document.title = `${formatted} | Cuti PG Trangkil`;
+      document.title = `${formatted} | ${APP_SUFFIX}`;
     }
   }, [pathname]);
 

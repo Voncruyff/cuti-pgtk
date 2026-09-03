@@ -231,7 +231,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterKategori("SEMUA")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterKategori === "SEMUA"
                     ? "bg-white text-[#263238] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -242,7 +242,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterKategori("PIMPINAN")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterKategori === "PIMPINAN"
                     ? "bg-white text-[#005B96] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -253,7 +253,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterKategori("PELAKSANA")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterKategori === "PELAKSANA"
                     ? "bg-white text-[#0789D1] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -268,9 +268,9 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterJenis("SEMUA")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterJenis === "SEMUA"
-                    ? "bg-white text-[#263238] shadow-2xs font-semibold"
+                    ? "bg-[#0789D1] text-white shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
                 }`}
               >
@@ -279,9 +279,9 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterJenis("TAHUNAN")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterJenis === "TAHUNAN"
-                    ? "bg-white text-[#0789D1] shadow-2xs font-semibold"
+                    ? "bg-white text-[#0789D1] border border-[#0789D1]/30 shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
                 }`}
               >
@@ -290,20 +290,20 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterJenis("BESAR")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterJenis === "BESAR"
-                    ? "bg-white text-[#005B96] shadow-2xs font-semibold"
+                    ? "bg-white text-[#005B96] border border-[#005B96]/30 shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
                 }`}
               >
-                Besar
+                Cuti Besar
               </button>
               <button
                 type="button"
                 onClick={() => setFilterJenis("INHALDAGEN")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
                   filterJenis === "INHALDAGEN"
-                    ? "bg-white text-[#0789D1] shadow-2xs font-semibold"
+                    ? "bg-white text-[#005B96] border border-[#005B96]/30 shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
                 }`}
               >
@@ -488,7 +488,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedKaryawan(item)}
-                          className="h-7 px-2.5 text-xs font-semibold text-[#005B96] hover:text-[#0789D1] hover:bg-[#E8F5FC] cursor-pointer rounded-lg gap-1 border-[#E8F5FC] bg-white shadow-2xs transition-all"
+                          className="h-7 px-2.5 text-xs font-semibold text-[#005B96] hover:text-[#0789D1] hover:bg-[#E8F5FC] cursor-pointer rounded-lg gap-1 border-[#E8F5FC] bg-white shadow-2xs transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.98]"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           <span>Detail</span>

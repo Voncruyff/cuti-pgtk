@@ -5,7 +5,9 @@ import { SessionUser, UserRole } from "@/types/auth";
 
 const COOKIE_NAME = "cuti_pgtk_session";
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET || "default_super_secret_dev_key_32_characters_long"
+  process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "default_super_secret_dev_key_32_characters_long"
 );
 const EXPIRES_IN = "8h";
 
@@ -47,9 +49,14 @@ export async function verifySessionToken(
 export async function setSessionCookie(user: SessionUser) {
   const token = await createSessionToken(user);
   const cookieStore = await cookies();
+  const isHttps = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://") ?? false;
+  const isSecure =
+    process.env.COOKIE_SECURE === "true" ||
+    (process.env.NODE_ENV === "production" && isHttps && process.env.COOKIE_SECURE !== "false");
+
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 8, // 8 hours

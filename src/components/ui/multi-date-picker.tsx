@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Check,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -96,12 +97,16 @@ export function MultiDatePicker({
     return new Date().getMonth();
   });
 
+  const [slideDirection, setSlideDirection] = useState<number>(0);
+
   const today = new Date();
   const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
 
   // Navigate months
   const handlePrevMonth = () => {
+    if (disabled) return;
+    setSlideDirection(-1);
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear((y) => y - 1);
@@ -111,6 +116,8 @@ export function MultiDatePicker({
   };
 
   const handleNextMonth = () => {
+    if (disabled) return;
+    setSlideDirection(1);
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear((y) => y + 1);
@@ -268,50 +275,58 @@ export function MultiDatePicker({
         ))}
       </div>
 
-      {/* Calendar Days Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((item, idx) => {
-          if (!item.isCurrentMonth) {
+      {/* Calendar Days Grid with subtle direction-aware slide */}
+      <div className="overflow-hidden">
+        <motion.div
+          key={`${currentYear}-${currentMonth}`}
+          initial={{ opacity: 0, x: slideDirection * 6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-7 gap-1"
+        >
+          {calendarDays.map((item, idx) => {
+            if (!item.isCurrentMonth) {
+              return (
+                <div
+                  key={`empty-${idx}`}
+                  className="h-8.5 flex items-center justify-center text-xs text-slate-300 select-none"
+                >
+                  {item.day}
+                </div>
+              );
+            }
+
+            const isSunday = idx % 7 === 0;
+
             return (
-              <div
-                key={`empty-${idx}`}
-                className="h-8.5 flex items-center justify-center text-xs text-slate-300 select-none"
+              <button
+                key={item.dateKey}
+                type="button"
+                onClick={() => handleToggleDate(item.day)}
+                disabled={disabled}
+                className={`
+                  h-8.5 text-xs font-semibold rounded-lg transition-[color,background-color,border-color,transform,box-shadow] duration-150 active:scale-95 flex items-center justify-center relative select-none cursor-pointer
+                  ${
+                    item.isSelected
+                      ? "bg-[#0789D1] text-white font-bold shadow-xs hover:bg-[#005B96] ring-2 ring-[#0789D1]/30"
+                      : item.isToday
+                      ? "border border-[#0789D1] text-[#005B96] font-bold bg-[#E8F5FC]/70 hover:bg-[#E8F5FC]"
+                      : isSunday
+                      ? "text-rose-600 hover:bg-rose-50 font-bold"
+                      : "text-[#263238] hover:bg-[#F3F6F8]"
+                  }
+                `}
               >
-                {item.day}
-              </div>
+                <span>{item.day}</span>
+                {item.isSelected && (
+                  <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 bg-white text-[#0789D1] rounded-full flex items-center justify-center shadow-2xs">
+                    <Check className="h-2.5 w-2.5 stroke-[3]" />
+                  </span>
+                )}
+              </button>
             );
-          }
-
-          const isSunday = idx % 7 === 0;
-
-          return (
-            <button
-              key={item.dateKey}
-              type="button"
-              onClick={() => handleToggleDate(item.day)}
-              disabled={disabled}
-              className={`
-                h-8.5 text-xs font-semibold rounded-md transition-all flex items-center justify-center relative select-none cursor-pointer
-                ${
-                  item.isSelected
-                    ? "bg-[#0084c7] text-white font-bold shadow-xs hover:bg-[#0072ad] scale-100 ring-2 ring-sky-300"
-                    : item.isToday
-                    ? "border border-[#0084c7] text-[#0077b6] font-bold bg-sky-50/70 hover:bg-sky-100"
-                    : isSunday
-                    ? "text-rose-600 hover:bg-rose-50 font-bold"
-                    : "text-slate-800 hover:bg-slate-100"
-                }
-              `}
-            >
-              <span>{item.day}</span>
-              {item.isSelected && (
-                <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 bg-white text-[#0084c7] rounded-full flex items-center justify-center shadow-2xs">
-                  <Check className="h-2.5 w-2.5 stroke-[3]" />
-                </span>
-              )}
-            </button>
-          );
-        })}
+          })}
+        </motion.div>
       </div>
 
       {/* Selected Dates Display & Quick Actions */}
@@ -352,28 +367,38 @@ export function MultiDatePicker({
 
         {/* Selected Date Badges List */}
         {selectedDates.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 p-2.5 text-center text-xs text-slate-500">
+          <div className="rounded-xl border border-dashed border-[#E8F5FC] bg-[#F3F6F8] p-2.5 text-center text-xs text-[#6B7280]">
             Belum ada tanggal yang dipilih. Klik tanggal di atas untuk menentukan hari cuti.
           </div>
         ) : (
-          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 rounded-lg bg-slate-50 border border-slate-200">
-            {selectedDates.map((dateKey) => (
-              <Badge
-                key={dateKey}
-                variant="outline"
-                className="gap-1 bg-white pl-2 pr-1.5 py-1 text-[11px] font-medium text-slate-800 border-slate-200 shadow-2xs hover:border-blue-400 group"
-              >
-                <span>{formatChipDate(dateKey)}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveDate(dateKey)}
-                  disabled={disabled}
-                  className="rounded-full p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 rounded-xl bg-[#F3F6F8] border border-[#E8F5FC]">
+            <AnimatePresence mode="popLayout">
+              {selectedDates.map((dateKey) => (
+                <motion.div
+                  key={dateKey}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.14 }}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
+                  <Badge
+                    variant="outline"
+                    className="gap-1 bg-white pl-2 pr-1.5 py-1 text-[11px] font-medium text-[#263238] border-[#E8F5FC] shadow-2xs hover:border-[#0789D1]/30 group"
+                  >
+                    <span>{formatChipDate(dateKey)}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDate(dateKey)}
+                      disabled={disabled}
+                      className="rounded-full p-0.5 text-[#6B7280] hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>

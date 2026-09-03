@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { Sidebar } from "@/components/tata-letak/sidebar";
 import { Header } from "@/components/tata-letak/header";
 import { SidebarProvider } from "@/components/tata-letak/konteks-sidebar";
+import { PageTransition } from "@/components/motion/page-transition";
 
 /**
  * Layout Induk Halaman Dashboard:
@@ -43,7 +44,7 @@ export default async function DashboardLayout({
 
           {/* ISI KONTEN HALAMAN (Standar Global Konsisten) */}
           <main className="flex-1 p-4 md:p-6 lg:p-7 max-w-6xl w-full mx-auto">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </main>
         </div>
       </div>
