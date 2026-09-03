@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Users,
   Search,
@@ -13,6 +14,10 @@ import {
   HardHat,
   RefreshCw,
   Calendar,
+  UserPlus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/bersama/kartu-statistik";
@@ -107,6 +112,28 @@ export function TabelKaryawan({
   onEdit,
   onHapus,
 }: PropsTabelKaryawan) {
+  const [sortField, setSortField] = useState<string>("employeeNumber");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    );
+  };
   const stasiunUntukFilterBagian = stasiun.filter((s) => {
     if (filterBagian === "ALL") return true;
     const targetBagian = bagian.find(
@@ -150,6 +177,26 @@ export function TabelKaryawan({
       if (!cocokSearch) return false;
     }
     return true;
+  });
+
+  const sortedKaryawan = [...karyawanFiltered].sort((a, b) => {
+    let aVal: any;
+    let bVal: any;
+
+    if (sortField === "department") {
+      aVal = a.department?.name || "";
+      bVal = b.department?.name || "";
+    } else {
+      aVal = a[sortField as keyof typeof a] ?? "";
+      bVal = b[sortField as keyof typeof b] ?? "";
+    }
+
+    if (typeof aVal === "string") {
+      const res = aVal.localeCompare(bVal, "id", { sensitivity: "base", numeric: true });
+      return sortDirection === "asc" ? res : -res;
+    }
+
+    return sortDirection === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
   });
 
   const jumlahPimpinan = karyawan.filter((e) => !e.category || e.category === "PIMPINAN").length;
@@ -238,13 +285,6 @@ export function TabelKaryawan({
             </span>
           </button>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <Button onClick={onTambah} size="default" className="font-semibold shadow-xs">
-            <Users className="h-4 w-4" />
-            Tambah Karyawan
-          </Button>
-        </div>
       </div>
 
       {/* Kartu Statistik */}
@@ -280,30 +320,47 @@ export function TabelKaryawan({
       </div>
 
       {/* Tabel Utama */}
-      <Card className="border-slate-200 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card className="border-slate-200 shadow-xs overflow-hidden">
+        {/* Card Header: Title & Action Button */}
+        <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50/40 via-slate-50/20 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#0093dc]" />
+              <Users className="h-4 w-4 text-[#0789D1]" />
               Tabel Master Karyawan PG Trangkil
             </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
+            <CardDescription className="text-xs text-slate-500 mt-0.5">
               Menampilkan {karyawanFiltered.length} dari {karyawan.length} karyawan terdata di sistem
             </CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-44 sm:w-52">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+          <Button
+            onClick={onTambah}
+            size="default"
+            className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-xs bg-[#0789D1] hover:bg-[#005B96] text-white cursor-pointer shrink-0 self-start sm:self-center"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Tambah Karyawan</span>
+          </Button>
+        </div>
+
+        {/* Toolbar: Search & Filters (Uniform h-9, rounded-xl) */}
+        <div className="px-5 py-3 bg-[#F8FAFC]/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative w-48 sm:w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 type="text"
                 placeholder="Cari NIP / nama..."
                 value={searchQuery}
                 onChange={(e) => onUbahSearch(e.target.value)}
-                className="pl-8 pr-8 h-8 text-xs bg-white focus-visible:ring-[#0093dc]"
+                className="pl-9 pr-8 h-9 text-xs bg-white rounded-xl border-slate-200 focus-visible:ring-[#0789D1]"
               />
               {searchQuery && (
-                <button type="button" onClick={() => onUbahSearch("")} className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                <button
+                  type="button"
+                  onClick={() => onUbahSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -311,27 +368,45 @@ export function TabelKaryawan({
 
             <select
               value={filterBagian}
-              onChange={(e) => { onUbahFilterBagian(e.target.value); onUbahFilterStasiun("ALL"); }}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 font-medium focus:border-[#0093dc] focus:outline-none"
+              onChange={(e) => {
+                onUbahFilterBagian(e.target.value);
+                onUbahFilterStasiun("ALL");
+              }}
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0789D1] focus:ring-1 focus:ring-[#0789D1] focus:outline-none cursor-pointer"
             >
               <option value="ALL">Semua Bagian</option>
-              {bagian.map((d) => (<option key={d.id} value={d.id}>{d.code} - {d.name}</option>))}
+              {bagian.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.code} - {d.name}
+                </option>
+              ))}
             </select>
 
             <select
               value={filterStasiun}
               onChange={(e) => onUbahFilterStasiun(e.target.value)}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 font-medium focus:border-[#0093dc] focus:outline-none max-w-[180px]"
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0789D1] focus:ring-1 focus:ring-[#0789D1] focus:outline-none cursor-pointer max-w-[190px]"
             >
               <option value="ALL">Semua Stasiun</option>
-              {stasiunUntukFilterBagian.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}
+              {stasiunUntukFilterBagian.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
             </select>
-
-            <Button variant="outline" size="sm" onClick={onMuatUlang} disabled={isLoading} title="Muat ulang data" className="h-8 w-8 p-0 text-slate-500">
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            </Button>
           </div>
-        </CardHeader>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMuatUlang}
+            disabled={isLoading}
+            title="Muat ulang data"
+            className="h-9 w-9 p-0 text-slate-500 rounded-xl border-slate-200 hover:bg-white hover:text-slate-700 shrink-0"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -387,17 +462,65 @@ export function TabelKaryawan({
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 text-[11px]">
                     <TableHead className="w-12 text-center font-bold">NO</TableHead>
-                    <TableHead className="w-24 font-bold">NIP</TableHead>
-                    <TableHead className="font-bold">NAMA KARYAWAN</TableHead>
-                    <TableHead className="font-bold">JABATAN</TableHead>
-                    <TableHead className="font-bold">JENIS</TableHead>
-                    <TableHead className="font-bold">BAGIAN</TableHead>
-                    <TableHead className="font-bold">STASIUN</TableHead>
+                    <TableHead
+                      onClick={() => handleSort("employeeNumber")}
+                      className="w-24 font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>NIP</span>
+                        {renderSortIcon("employeeNumber")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("name")}
+                      className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>NAMA KARYAWAN</span>
+                        {renderSortIcon("name")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("position")}
+                      className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>JABATAN</span>
+                        {renderSortIcon("position")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("category")}
+                      className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>JENIS</span>
+                        {renderSortIcon("category")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("department")}
+                      className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>BAGIAN</span>
+                        {renderSortIcon("department")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("stasiun")}
+                      className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>STASIUN</span>
+                        {renderSortIcon("stasiun")}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-right font-bold w-20">AKSI</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {karyawanFiltered.map((emp, index) => (
+                  {sortedKaryawan.map((emp, index) => (
                     <TableRow key={emp.id} className="hover:bg-slate-50/60 transition-colors">
                       <TableCell className="text-center text-xs font-medium text-slate-400 font-mono">{index + 1}</TableCell>
                       <TableCell>
@@ -407,8 +530,7 @@ export function TabelKaryawan({
                       <TableCell className="text-xs text-slate-600">
                         <div className="font-medium">{emp.position || "-"}</div>
                         {emp.appointmentDate && (
-                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                            <Calendar className="h-2.5 w-2.5 text-slate-400" />
+                          <div className="text-[10px] text-slate-400 mt-0.5">
                             SK: {formatTanggal(emp.appointmentDate)}
                           </div>
                         )}
@@ -422,14 +544,12 @@ export function TabelKaryawan({
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-bold text-[11px] bg-slate-50 border-slate-200 text-slate-700" title={emp.department.name}>
-                          <Building2 className="h-3 w-3 mr-1 text-slate-400" />
                           {emp.department.code || formatSingkatanBagian(emp.department.name)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-slate-700">
                         {emp.stasiun && emp.stasiun !== "-" ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-800 text-[11px]">
-                            <Factory className="h-3 w-3 text-slate-400" />
+                          <span className="font-semibold text-slate-800 text-[11px]">
                             {emp.stasiun}
                           </span>
                         ) : (

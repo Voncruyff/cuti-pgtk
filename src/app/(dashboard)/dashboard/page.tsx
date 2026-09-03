@@ -1,41 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Users,
-  CheckCircle2,
-  CalendarOff,
-  ArrowUpRight,
-  CalendarDays,
-  Clock,
-  FileSpreadsheet,
-} from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { StatCard } from "@/components/bersama/kartu-statistik";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 import { formatDateIndo, formatSingkatanBagian } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Dasbor Sistem Pengelolaan Cuti Karyawan PG Trangkil",
 };
-
-function getInitials(name: string): string {
-  if (!name) return "K";
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
 
 export default async function HalamanDashboard() {
   const user = await requireAuth();
@@ -52,8 +25,11 @@ export default async function HalamanDashboard() {
   const searchFormats = [todayDMY, todayDMYShort, todayYMD];
 
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const namaBulanSekarang = now.toLocaleDateString("id-ID", { month: "long" });
 
   let totalKaryawanAktif = 0;
+  let totalPimpinan = 0;
+  let totalPelaksana = 0;
   let transaksiBuilanIni = 0;
   let daftarTransaksiTerbaru: Record<string, unknown>[] = [];
   let daftarKaryawanCutiHariIni: Array<{
@@ -76,6 +52,17 @@ export default async function HalamanDashboard() {
     totalKaryawanAktif = await prisma.employee.count({
       where: { isActive: true },
     });
+
+    const [pimpinanCount, pelaksanaCount] = await Promise.all([
+      prisma.employee.count({
+        where: { isActive: true, category: "PIMPINAN" },
+      }),
+      prisma.employee.count({
+        where: { isActive: true, category: "PELAKSANA" },
+      }),
+    ]);
+    totalPimpinan = pimpinanCount;
+    totalPelaksana = pelaksanaCount;
 
     // 1. Ambil Karyawan yang sedang Cuti Hari Ini
     const rawCutiHariIni = await prisma.balanceActivity.findMany({
@@ -130,7 +117,7 @@ export default async function HalamanDashboard() {
       FROM aktivitas_saldo a
       LEFT JOIN karyawan k ON a.nip = k.nip
       ORDER BY a.tgl_transaksi DESC
-      LIMIT 8
+      LIMIT 7
     `;
 
     transaksiBuilanIni = baris.filter(
@@ -140,240 +127,242 @@ export default async function HalamanDashboard() {
     daftarTransaksiTerbaru = baris;
   } catch {
     totalKaryawanAktif = 0;
+    totalPimpinan = 0;
+    totalPelaksana = 0;
     transaksiBuilanIni = 0;
     daftarKaryawanCutiHariIni = [];
   }
 
   return (
     <div className="space-y-6 w-full pb-12">
-      {/* Hero Welcome Banner */}
-      <div className="flex flex-col items-center text-center pt-2 pb-1 space-y-1.5">
-        <h2 className="text-xl sm:text-2xl font-black text-[#263238] tracking-tight">
-          Sistem Informasi Pengelolaan Cuti
-        </h2>
-        <p className="text-xs text-[#6B7280] max-w-lg">
-          Layanan terpadu pengelolaan kuota cuti tahunan, cuti besar, dan inhaldagen karyawan pimpinan & pelaksana secara akurat dan realtime.
-        </p>
-      </div>
+      {/* Header Dashboard Minimalis */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Dashboard
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {formatDateIndo(now)} &bull; PG Trangkil
+          </p>
+        </div>
 
-      {/* Kartu Statistik Operasional */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-        <StatCard
-          title="Total Karyawan Aktif"
-          value={totalKaryawanAktif}
-          badgeText="Pimpinan & Pelaksana"
-          icon={Users}
-          variant="sky"
-        />
-        <StatCard
-          title="Transaksi Bulan Ini"
-          value={transaksiBuilanIni}
-          badgeText="Mutasi Ledger Aktif"
-          icon={CheckCircle2}
-          variant="emerald"
-        />
-        <StatCard
-          title="Karyawan Cuti Hari Ini"
-          value={daftarKaryawanCutiHariIni.length}
-          badgeText="Sedang Izin / Cuti"
-          icon={CalendarOff}
-          variant={daftarKaryawanCutiHariIni.length > 0 ? "amber" : "indigo"}
-        />
-      </div>
-
-      {/* Bagian: Karyawan Cuti Hari Ini */}
-      <Card className="border-[#E8F5FC] shadow-[0_4px_20px_rgb(0,0,0,0.02)] overflow-hidden bg-white">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-3.5 bg-gradient-to-r from-[#E8F5FC]/35 via-white to-transparent border-b border-[#E8F5FC]">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F5FC] text-[#0789D1] border border-[#0789D1]/20 shrink-0">
-              <CalendarOff className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-bold text-[#263238]">
-                  Karyawan Cuti Hari Ini
-                </CardTitle>
-                <Badge
-                  variant="outline"
-                  className={
-                    daftarKaryawanCutiHariIni.length > 0
-                      ? "bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]"
-                      : "bg-[#E8F5FC] text-[#005B96] border-[#0789D1]/30 font-bold text-[10px]"
-                  }
-                >
-                  {daftarKaryawanCutiHariIni.length > 0
-                    ? `${daftarKaryawanCutiHariIni.length} Karyawan`
-                    : "0 Karyawan"}
-                </Badge>
-              </div>
-              <CardDescription className="text-[11px] text-[#6B7280]">
-                Daftar karyawan yang sedang mengambil hak cuti aktif pada {formatDateIndo(now)}
-              </CardDescription>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 self-start sm:self-center">
           <Link href="/laporan-cuti">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs font-semibold text-[#005B96] hover:text-[#0789D1] hover:bg-[#E8F5FC] h-8 gap-1.5"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>Buka Laporan Cuti</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent className="p-0">
-          {daftarKaryawanCutiHariIni.length === 0 ? (
-            <div className="py-10 px-4 text-center flex flex-col items-center justify-center">
-              <div className="h-12 w-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 border border-emerald-100">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-              <p className="text-xs font-bold text-slate-800">
-                Tidak ada karyawan yang sedang cuti hari ini
-              </p>
-              <p className="text-[11px] text-slate-500 max-w-sm mt-0.5">
-                Seluruh karyawan aktif pimpinan dan pelaksana tercatat hadir bertugas.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12 text-center">No</TableHead>
-                    <TableHead>Karyawan & NIP</TableHead>
-                    <TableHead>Bagian & Stasiun</TableHead>
-                    <TableHead>Jenis Cuti</TableHead>
-                    <TableHead>Jadwal Cuti</TableHead>
-                    <TableHead>Keperluan</TableHead>
-                    <TableHead className="text-right w-24">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {daftarKaryawanCutiHariIni.map((item, idx) => (
-                    <TableRow key={item.id} className="hover:bg-[#E8F5FC]/30 transition-colors">
-                      <TableCell className="text-center font-mono text-xs text-[#6B7280]">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          <div className="font-semibold text-xs text-[#263238] leading-snug">
-                            {item.nama}
-                          </div>
-                          <div className="text-[10px] text-[#6B7280] font-mono">
-                            NIP: {item.nip}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-bold px-1.5 py-0.5 bg-[#F3F6F8] border-[#E8F5FC] text-[#263238]"
-                          title={item.bagian}
-                        >
-                          {formatSingkatanBagian(item.bagian || "-")}
-                        </Badge>
-                        {item.stasiun && item.stasiun !== "-" && (
-                          <span className="text-[10px] text-[#6B7280] block mt-0.5">
-                            {item.stasiun}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {item.cutiTahunan > 0 && (
-                            <Badge variant="default" className="text-[10px]">
-                              Tahunan ({item.cutiTahunan}h)
-                            </Badge>
-                          )}
-                          {item.cutiBesar > 0 && (
-                            <Badge variant="longLeave" className="text-[10px]">
-                              Besar ({item.cutiBesar}h)
-                            </Badge>
-                          )}
-                          {item.inhaldagen > 0 && (
-                            <Badge variant="inhaldagen" className="text-[10px]">
-                              Inhaldagen ({item.inhaldagen}h)
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div
-                          className="text-xs font-medium text-[#263238] line-clamp-2"
-                          title={item.tglCuti}
-                        >
-                          {item.tglCuti}
-                        </div>
-                        <span className="text-[10px] text-[#6B7280] font-mono">
-                          Total {item.totalHari} hari
-                        </span>
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate text-xs text-[#6B7280]">
-                        {item.keperluan || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/rincian-cuti?nip=${item.nip}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2.5 text-[11px] font-semibold text-[#005B96] hover:text-[#0789D1] hover:bg-[#E8F5FC] border-[#E8F5FC] cursor-pointer"
-                          >
-                            Rincian
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tabel Transaksi Terbaru */}
-      <Card className="border-[#E8F5FC] shadow-[0_4px_20px_rgb(0,0,0,0.02)] bg-white">
-        <CardHeader className="flex flex-row items-center justify-between py-3.5 border-b border-[#E8F5FC] bg-gradient-to-r from-[#E8F5FC]/35 via-white to-transparent">
-          <div>
-            <CardTitle className="text-sm font-bold text-[#263238]">
-              Transaksi Terbaru
-            </CardTitle>
-            <CardDescription className="text-[11px] text-[#6B7280]">
-              Mutasi ledger saldo cuti terakhir
-            </CardDescription>
-          </div>
-          <Link href="/rincian-cuti">
             <Button
               variant="outline"
               size="sm"
-              className="font-semibold text-[#005B96] hover:text-[#0789D1] hover:bg-[#E8F5FC] border-[#E8F5FC] cursor-pointer"
+              className="h-9 px-3 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border-slate-200/80 rounded-xl cursor-pointer shadow-2xs"
             >
-              Lihat Semua
+              Laporan Cuti
             </Button>
           </Link>
-        </CardHeader>
-        <CardContent className="p-0">
+          <Link href="/ambil-cuti">
+            <Button
+              size="sm"
+              className="h-9 px-3.5 text-xs font-semibold bg-[#0093dc] hover:bg-[#0084c7] text-white rounded-xl shadow-2xs cursor-pointer"
+            >
+              + Ambil Cuti
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* BENTO GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* BENTO 1 (Point Utama): Karyawan Cuti Hari Ini */}
+        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-[22px] p-6 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Cuti Hari Ini
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Daftar karyawan yang sedang izin cuti
+                </p>
+              </div>
+
+              {daftarKaryawanCutiHariIni.length > 0 ? (
+                <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200/70 text-amber-800 text-xs font-semibold">
+                  {daftarKaryawanCutiHariIni.length} orang cuti
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-xs font-semibold">
+                  Semua Masuk
+                </span>
+              )}
+            </div>
+
+            {/* List atau Status Kosong */}
+            {daftarKaryawanCutiHariIni.length === 0 ? (
+              <div className="py-10 text-center">
+                <div className="text-4xl font-black text-slate-900 font-mono tracking-tight">
+                  0
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Tidak ada karyawan yang cuti hari ini
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto mt-4">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[11px] text-slate-400 font-medium">
+                      <th className="pb-2">Karyawan</th>
+                      <th className="pb-2">Bagian</th>
+                      <th className="pb-2">Jenis Cuti</th>
+                      <th className="pb-2">Jadwal</th>
+                      <th className="pb-2 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {daftarKaryawanCutiHariIni.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3">
+                          <div className="font-semibold text-slate-900">{item.nama}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">NIP {item.nip}</div>
+                        </td>
+                        <td className="py-3 text-slate-600">
+                          <div>{formatSingkatanBagian(item.bagian || "-")}</div>
+                          {item.stasiun && item.stasiun !== "-" && (
+                            <span className="text-[10px] text-slate-400">{item.stasiun}</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-medium border border-blue-100">
+                            {item.cutiTahunan > 0
+                              ? "Tahunan"
+                              : item.cutiBesar > 0
+                              ? "Besar"
+                              : "Inhaldagen"}
+                          </span>
+                        </td>
+                        <td className="py-3 font-mono text-[11px] text-slate-600">
+                          {item.tglCuti}
+                        </td>
+                        <td className="py-3 text-right">
+                          <Link
+                            href={`/rincian-cuti?nip=${item.nip}`}
+                            className="text-xs font-semibold text-[#0093dc] hover:text-sky-800"
+                          >
+                            Detail &rarr;
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100 text-xs text-slate-400 mt-2">
+            <span>{totalKaryawanAktif} total karyawan aktif</span>
+            <Link
+              href="/laporan-cuti"
+              className="text-slate-600 hover:text-slate-900 font-medium"
+            >
+              Lihat laporan lengkap &rarr;
+            </Link>
+          </div>
+        </div>
+
+        {/* BENTO 2: Ringkasan Samping (Total Karyawan & Aktivitas Bulan Ini) */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          {/* Bento Card: Total Karyawan */}
+          <div className="bg-white border border-slate-200/80 rounded-[22px] p-5 shadow-2xs flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">Total Karyawan</span>
+              <span className="text-[10px] text-slate-400">Aktif</span>
+            </div>
+
+            <div className="my-3">
+              <div className="text-3xl font-black text-slate-900 font-mono tracking-tight">
+                {totalKaryawanAktif}
+              </div>
+              <div className="flex items-center gap-1.5 mt-2 text-xs">
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
+                  {totalPimpinan} Pimpinan
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
+                  {totalPelaksana} Pelaksana
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/kelola-user"
+              className="text-xs font-medium text-slate-500 hover:text-slate-900 pt-2 border-t border-slate-100 inline-flex items-center justify-between"
+            >
+              <span>Data Karyawan</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+
+          {/* Bento Card: Cuti Bulan Ini */}
+          <div className="bg-white border border-slate-200/80 rounded-[22px] p-5 shadow-2xs flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">Cuti Bulan Ini</span>
+              <span className="text-[10px] text-slate-400">{namaBulanSekarang}</span>
+            </div>
+
+            <div className="my-3">
+              <div className="text-3xl font-black text-slate-900 font-mono tracking-tight">
+                {transaksiBuilanIni}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Pengambilan & penambahan cuti
+              </p>
+            </div>
+
+            <Link
+              href="/laporan-cuti"
+              className="text-xs font-medium text-slate-500 hover:text-slate-900 pt-2 border-t border-slate-100 inline-flex items-center justify-between"
+            >
+              <span>Rekapitulasi Cuti</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* BENTO 3: Aktivitas Terkini (Full Width) */}
+        <div className="lg:col-span-12 bg-white border border-slate-200/80 rounded-[22px] p-6 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Aktivitas Terbaru
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Catatan mutasi cuti terakhir
+              </p>
+            </div>
+            <Link
+              href="/laporan-cuti"
+              className="text-xs font-semibold text-[#0093dc] hover:text-sky-800"
+            >
+              Lihat Semua &rarr;
+            </Link>
+          </div>
+
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-28">Tanggal</TableHead>
-                  <TableHead>Karyawan & NIP</TableHead>
-                  <TableHead>Bagian & Stasiun</TableHead>
-                  <TableHead>Jenis Transaksi</TableHead>
-                  <TableHead>Uraian / Keperluan</TableHead>
-                  <TableHead className="text-right">Jumlah Hari</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-100 text-[11px] text-slate-400 font-medium">
+                  <th className="py-3">Tanggal</th>
+                  <th className="py-3">Karyawan</th>
+                  <th className="py-3">Bagian</th>
+                  <th className="py-3">Jenis</th>
+                  <th className="py-3">Keterangan</th>
+                  <th className="py-3 text-right">Hari</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
                 {daftarTransaksiTerbaru.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-slate-500 text-xs">
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
                       Belum ada transaksi cuti tercatat.
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : (
                   daftarTransaksiTerbaru.map((tx) => {
                     const isAmbil = tx.jenis_transaksi === "AMBIL_CUTI";
@@ -385,60 +374,60 @@ export default async function HalamanDashboard() {
                     );
                     const txDate = tx.tgl_transaksi || tx.created_at || new Date();
                     return (
-                      <TableRow key={String(tx.id)} className="hover:bg-slate-50/70">
-                        <TableCell className="font-mono text-xs text-slate-600">
+                      <tr key={String(tx.id)} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
                           {formatDateIndo(new Date(String(txDate)))}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-slate-900 text-xs">
+                        </td>
+                        <td className="py-3">
+                          <div className="font-semibold text-slate-900">
                             {String(tx.nama || "Karyawan")}
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            NIP: {String(tx.nip)}
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            NIP {String(tx.nip)}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-50 border-slate-200 text-slate-700"
-                            title={String(tx.bagian || "-")}
-                          >
-                            {formatSingkatanBagian(String(tx.bagian || "-"))}
-                          </Badge>
+                        </td>
+                        <td className="py-3 text-slate-600">
+                          <div>{formatSingkatanBagian(String(tx.bagian || "-"))}</div>
                           {!!tx.stasiun && String(tx.stasiun) !== "-" && (
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                            <span className="text-[10px] text-slate-400">
                               {String(tx.stasiun)}
                             </span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={isAmbil ? "default" : "secondary"}>
+                        </td>
+                        <td className="py-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                              isAmbil
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
                             {isAmbil ? "Ambil Cuti" : "Tambah Saldo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-700 max-w-[220px] truncate">
+                          </span>
+                        </td>
+                        <td className="py-3 text-slate-600 max-w-[260px] truncate">
                           {String(
                             tx.uraian ||
                               tx.keperluan ||
                               (isAmbil ? "Pengambilan Cuti" : "Penambahan Saldo")
                           )}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-mono font-bold text-xs tabular-nums ${
-                            isAmbil ? "text-red-700" : "text-emerald-700"
+                        </td>
+                        <td
+                          className={`py-3 text-right font-mono font-semibold text-xs whitespace-nowrap ${
+                            isAmbil ? "text-slate-900" : "text-emerald-700"
                           }`}
                         >
                           {isAmbil ? `-${totalHari}` : `+${totalHari}`} hari
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ const PAGE_NAMES: Record<string, string> = {
   "/master-stasiun": "Master Stasiun",
   "/ambil-cuti": "Pengambilan Cuti",
   "/tambah-saldo-cuti": "Tambah Saldo Cuti",
+  "/koreksi-cuti": "Koreksi Cuti",
   "/rincian-cuti": "Rincian Cuti",
   "/laporan-cuti": "Laporan Cuti",
   "/kelola-user": "Kelola User",

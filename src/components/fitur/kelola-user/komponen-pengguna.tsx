@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import {
   UserCog,
   ShieldCheck,
@@ -14,6 +15,9 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/bersama/kartu-statistik";
@@ -93,6 +97,29 @@ export function TabelPengguna({
   onHapus,
   onToggleBlokir,
 }: PropsTabelPengguna) {
+  const [sortField, setSortField] = useState<string>("username");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    );
+  };
+
   const filteredUsers = pengguna.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
@@ -111,6 +138,32 @@ export function TabelPengguna({
     return matchesSearch && matchesRole && matchesDept;
   });
 
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let aVal: any = a[sortField as keyof typeof a];
+    let bVal: any = b[sortField as keyof typeof b];
+
+    if (aVal === null || aVal === undefined) aVal = "";
+    if (bVal === null || bVal === undefined) bVal = "";
+
+    if (sortField === "lastLoginAt") {
+      const aTime = aVal ? new Date(aVal).getTime() : 0;
+      const bTime = bVal ? new Date(bVal).getTime() : 0;
+      return sortDirection === "asc" ? aTime - bTime : bTime - aTime;
+    }
+
+    if (typeof aVal === "boolean") {
+      const res = aVal === bVal ? 0 : aVal ? -1 : 1;
+      return sortDirection === "asc" ? res : -res;
+    }
+
+    if (typeof aVal === "string") {
+      const res = aVal.localeCompare(bVal, "id", { sensitivity: "base" });
+      return sortDirection === "asc" ? res : -res;
+    }
+
+    return sortDirection === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+  });
+
   const totalAdminUtama = pengguna.filter((u) => u.role === "ADMIN_UTAMA").length;
   const totalAdminBagian = pengguna.filter((u) => u.role === "ADMIN_BAGIAN").length;
   const totalActive = pengguna.filter((u) => u.isActive).length;
@@ -127,7 +180,7 @@ export function TabelPengguna({
   return (
     <div className="space-y-6 w-full pb-12">
       {/* Top Banner Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
+      <div className="border-b border-slate-200/80 pb-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             Kelola Pengguna Sistem
@@ -136,15 +189,6 @@ export function TabelPengguna({
             Daftar akun operator aplikasi cuti PG Trangkil (Admin Utama & Admin Bagian)
           </p>
         </div>
-
-        <Button
-          onClick={onTambah}
-          size="default"
-          className="font-semibold shadow-xs self-start sm:self-center"
-        >
-          <UserPlus className="h-4 w-4" />
-          Tambah User
-        </Button>
       </div>
 
       {/* Stats Summary Cards */}
@@ -183,34 +227,46 @@ export function TabelPengguna({
       </div>
 
       {/* Main Table Card */}
-      <Card className="border-slate-200/90 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card className="border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Card Header: Title & Action Button */}
+        <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50/40 via-slate-50/20 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <UserCog className="h-4 w-4 text-[#0093dc]" />
+              <UserCog className="h-4 w-4 text-[#0789D1]" />
               Tabel Data Pengguna (Users)
             </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
+            <CardDescription className="text-xs text-slate-500 mt-0.5">
               Daftar akun login dan hak akses operator sistem cuti PG Trangkil
             </CardDescription>
           </div>
 
-          {/* Search & Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-48 sm:w-56">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+          <Button
+            onClick={onTambah}
+            size="default"
+            className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-xs bg-[#0789D1] hover:bg-[#005B96] text-white cursor-pointer shrink-0 self-start sm:self-center"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Tambah User</span>
+          </Button>
+        </div>
+
+        {/* Toolbar: Search & Filters (Uniform h-9, rounded-xl) */}
+        <div className="px-5 py-3 bg-[#F8FAFC]/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative w-48 sm:w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 type="text"
                 placeholder="Cari username / nama..."
                 value={searchQuery}
                 onChange={(e) => onUbahSearch(e.target.value)}
-                className="pl-8 pr-8 h-8.5 text-xs bg-white rounded-full focus-visible:ring-[#0084c7]"
+                className="pl-9 pr-8 h-9 text-xs bg-white rounded-xl border-slate-200 focus-visible:ring-[#0789D1]"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => onUbahSearch("")}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -220,7 +276,7 @@ export function TabelPengguna({
             <select
               value={filterRole}
               onChange={(e) => onUbahFilterRole(e.target.value)}
-              className="h-8.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0084c7] focus:outline-none"
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0789D1] focus:ring-1 focus:ring-[#0789D1] focus:outline-none cursor-pointer"
             >
               <option value="ALL">Semua Role</option>
               <option value="ADMIN_UTAMA">Admin Utama</option>
@@ -230,7 +286,7 @@ export function TabelPengguna({
             <select
               value={filterBagian}
               onChange={(e) => onUbahFilterBagian(e.target.value)}
-              className="h-8.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0084c7] focus:outline-none"
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-[#0789D1] focus:ring-1 focus:ring-[#0789D1] focus:outline-none cursor-pointer"
             >
               <option value="ALL">Semua Bagian</option>
               {bagian.map((d) => (
@@ -240,7 +296,7 @@ export function TabelPengguna({
               ))}
             </select>
           </div>
-        </CardHeader>
+        </div>
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -257,17 +313,65 @@ export function TabelPengguna({
               <TableHeader className="bg-slate-50/80">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-12 text-center text-xs font-semibold">NO</TableHead>
-                  <TableHead className="text-xs font-semibold">USERNAME</TableHead>
-                  <TableHead className="text-xs font-semibold">NAMA LENGKAP</TableHead>
-                  <TableHead className="text-xs font-semibold">ROLE / HAK AKSES</TableHead>
-                  <TableHead className="text-xs font-semibold">BAGIAN</TableHead>
-                  <TableHead className="text-xs font-semibold">STATUS</TableHead>
-                  <TableHead className="text-xs font-semibold">LOGIN TERAKHIR</TableHead>
+                  <TableHead
+                    onClick={() => handleSort("username")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>USERNAME</span>
+                      {renderSortIcon("username")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("fullName")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>NAMA LENGKAP</span>
+                      {renderSortIcon("fullName")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("role")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>ROLE / HAK AKSES</span>
+                      {renderSortIcon("role")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("department")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>BAGIAN</span>
+                      {renderSortIcon("department")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("isActive")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>STATUS</span>
+                      {renderSortIcon("isActive")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("lastLoginAt")}
+                    className="text-xs font-semibold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>LOGIN TERAKHIR</span>
+                      {renderSortIcon("lastLoginAt")}
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right text-xs font-semibold w-28">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((u, idx) => (
+                {sortedUsers.map((u, idx) => (
                   <TableRow key={u.id} className="hover:bg-slate-50/50">
                     <TableCell className="text-center text-xs text-slate-500 font-mono">
                       {idx + 1}
@@ -298,13 +402,11 @@ export function TabelPengguna({
 
                     <TableCell>
                       {u.role === "ADMIN_UTAMA" ? (
-                        <Badge variant="default" className="text-[10px] gap-1">
-                          <ShieldCheck className="h-3 w-3" />
+                        <Badge variant="default" className="text-[10px]">
                           Admin Utama
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-slate-700 border-slate-300 text-[10px] gap-1">
-                          <Building2 className="h-3 w-3 text-slate-500" />
+                        <Badge variant="outline" className="text-slate-700 border-slate-300 text-[10px]">
                           Admin Bagian
                         </Badge>
                       )}
@@ -322,13 +424,11 @@ export function TabelPengguna({
 
                     <TableCell>
                       {u.isActive ? (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] gap-1">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
                           Aktif
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold gap-1">
-                          <Ban className="h-3 w-3 text-red-600" />
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold">
                           Diblokir
                         </Badge>
                       )}

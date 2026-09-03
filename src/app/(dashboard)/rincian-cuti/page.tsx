@@ -8,6 +8,7 @@ import {
   Briefcase,
   Loader2,
   CalendarDays,
+  CalendarOff,
   PlusCircle,
   Factory,
   Search,
@@ -21,9 +22,12 @@ import { Input } from "@/components/ui/input";
 import {
   getEmployeesForLeaveAction,
   getEmployeeLeaveRequestsAction,
+  getEmployeesOnLeaveTodayAction,
   EmployeeLeaveHistoryItem,
+  EmployeeOnLeaveToday,
 } from "@/actions/aksi-cuti";
 import { BalanceActivityCard } from "@/components/fitur/cuti/kartu-aktivitas-saldo";
+import { formatDateIndo, formatSingkatanBagian } from "@/lib/utils";
 
 interface EmployeeOption {
   id: string;
@@ -91,6 +95,10 @@ export default function HalamanRincianCuti() {
     }
   }, []);
 
+  // Karyawan Cuti Hari Ini
+  const [employeesOnLeaveToday, setEmployeesOnLeaveToday] = useState<EmployeeOnLeaveToday[]>([]);
+  const [isLoadingOnLeave, setIsLoadingOnLeave] = useState(true);
+
   // Fetch employees on mount
   useEffect(() => {
     async function loadEmployees() {
@@ -111,6 +119,46 @@ export default function HalamanRincianCuti() {
     loadEmployees();
   }, []);
 
+  // Fetch karyawan yang cuti hari ini
+  useEffect(() => {
+    async function loadLeaveToday() {
+      setIsLoadingOnLeave(true);
+      try {
+        const res = await getEmployeesOnLeaveTodayAction();
+        if (res.success && res.data) {
+          setEmployeesOnLeaveToday(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load employees on leave today:", err);
+      } finally {
+        setIsLoadingOnLeave(false);
+      }
+    }
+    loadLeaveToday();
+  }, []);
+
+  // Handle selecting an employee from search results
+  const handleSelectEmployee = useCallback((emp: EmployeeOption) => {
+    setSelectedEmployee(emp);
+    setSearchQuery(`${emp.employeeNumber} - ${emp.name}`);
+    setIsSearchOpen(false);
+    loadEmployeeHistory(emp.id);
+  }, [loadEmployeeHistory]);
+
+  // Auto-select if URL has ?nip=... parameter
+  useEffect(() => {
+    if (typeof window !== "undefined" && employees.length > 0 && !selectedEmployee) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const nip = urlParams.get("nip");
+      if (nip) {
+        const found = employees.find((e) => e.employeeNumber === nip);
+        if (found) {
+          handleSelectEmployee(found);
+        }
+      }
+    }
+  }, [employees, selectedEmployee, handleSelectEmployee]);
+
   // Filter employees by search query
   const filteredEmployees = employees.filter((emp) => {
     const q = searchQuery.toLowerCase();
@@ -122,14 +170,6 @@ export default function HalamanRincianCuti() {
       emp.position.toLowerCase().includes(q)
     );
   });
-
-  // Handle selecting an employee from search results
-  const handleSelectEmployee = (emp: EmployeeOption) => {
-    setSelectedEmployee(emp);
-    setSearchQuery(`${emp.employeeNumber} - ${emp.name}`);
-    setIsSearchOpen(false);
-    loadEmployeeHistory(emp.id);
-  };
 
   // Handle clearing selected employee
   const handleClearEmployee = () => {
@@ -330,21 +370,140 @@ export default function HalamanRincianCuti() {
         </CardContent>
       </Card>
 
-      {/* SECTION 2: EMPTY STATE JIKA BELUM ADA KARYAWAN DIPILIH */}
+      {/* SECTION 2: CARD KARYAWAN CUTI HARI INI (Otomatis ter-hide saat karyawan dipilih) */}
       {!selectedEmployee && (
-        <Card className="border-dashed border-slate-300 bg-slate-50/50">
-          <CardContent className="p-8 text-center space-y-2.5">
-            <div className="mx-auto w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Search className="h-5 w-5" />
-            </div>
+        <Card className="border-slate-200/80 shadow-2xs rounded-[22px] overflow-hidden bg-white">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-semibold text-slate-800">
-                Pilih Karyawan Terlebih Dahulu
-              </h4>
-              <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
-                Ketik nama, NIP, atau bagian pada kolom pencarian di atas untuk melihat profil lengkap, sisa saldo, dan riwayat mutasi aktivitas cuti.
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">
+                  Cuti Hari Ini
+                </h3>
+                <span className="text-xs text-slate-400">&bull; {formatDateIndo(new Date())}</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Karyawan yang sedang izin cuti hari ini. Klik untuk langsung membuka rincian saldo.
               </p>
             </div>
+
+            {isLoadingOnLeave ? (
+              <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Memuat...
+              </span>
+            ) : employeesOnLeaveToday.length > 0 ? (
+              <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200/70 text-amber-800 text-xs font-semibold">
+                {employeesOnLeaveToday.length} orang cuti
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-xs font-semibold">
+                Semua Masuk
+              </span>
+            )}
+          </div>
+
+          <CardContent className="p-0">
+            {isLoadingOnLeave ? (
+              <div className="py-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-[#0093dc]" />
+                Memeriksa data cuti hari ini...
+              </div>
+            ) : employeesOnLeaveToday.length === 0 ? (
+              <div className="py-12 px-4 text-center">
+                <div className="text-3xl font-black text-slate-900 font-mono tracking-tight mb-1">
+                  0
+                </div>
+                <h4 className="text-xs font-semibold text-slate-700">
+                  Tidak Ada Karyawan yang Cuti Hari Ini
+                </h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                  Seluruh staf dan karyawan tercatat hadir bertugas. Gunakan kolom pencarian di atas untuk melihat rincian saldo karyawan.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[11px] text-slate-400 font-medium bg-slate-50/50">
+                      <th className="py-3 px-5">Karyawan</th>
+                      <th className="py-3 px-3">Bagian & Stasiun</th>
+                      <th className="py-3 px-3">Jenis Cuti</th>
+                      <th className="py-3 px-3">Jadwal & Keperluan</th>
+                      <th className="py-3 px-5 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {employeesOnLeaveToday.map((item) => {
+                      const matchedEmp = employees.find(
+                        (e) => e.employeeNumber === item.nip || e.id === item.employeeId
+                      );
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-50/60 transition-colors cursor-pointer group"
+                          onClick={() => {
+                            if (matchedEmp) {
+                              handleSelectEmployee(matchedEmp);
+                            }
+                          }}
+                        >
+                          <td className="py-3 px-5">
+                            <div className="font-semibold text-slate-900 group-hover:text-[#0093dc] transition-colors">
+                              {item.nama}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              NIP {item.nip}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-slate-600">
+                            <div>{formatSingkatanBagian(item.bagian || "-")}</div>
+                            {item.stasiun && item.stasiun !== "-" && (
+                              <span className="text-[10px] text-slate-400 block">
+                                {item.stasiun}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-medium border border-blue-100">
+                              {item.cutiTahunan > 0
+                                ? "Tahunan"
+                                : item.cutiBesar > 0
+                                ? "Besar"
+                                : "Inhaldagen"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 max-w-[240px]">
+                            <div className="font-mono text-[11px] text-slate-600 truncate" title={item.tglCuti}>
+                              {item.tglCuti}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate mt-0.5" title={item.keperluan}>
+                              {item.keperluan || "Keperluan pribadi"}
+                            </div>
+                          </td>
+                          <td className="py-3 px-5 text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (matchedEmp) {
+                                  handleSelectEmployee(matchedEmp);
+                                }
+                              }}
+                              className="h-7 px-3 text-xs font-semibold text-[#0093dc] hover:text-sky-900 hover:bg-sky-50 border-sky-200 rounded-lg cursor-pointer"
+                            >
+                              Lihat Rincian &rarr;
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

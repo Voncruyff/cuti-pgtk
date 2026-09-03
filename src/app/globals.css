@@ -167,18 +167,32 @@
 
 /* Print CSS */
 @media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
   .no-print {
     display: none !important;
   }
 
+  html,
   body {
     background: white !important;
-    font-size: 11pt !important;
+    color: black !important;
+    font-size: 10pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
-  @page {
-    margin: 1cm;
-    size: auto;
+  .print-page-wrapper {
+    padding: 12mm 15mm !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: white !important;
   }
 
   .print-container {

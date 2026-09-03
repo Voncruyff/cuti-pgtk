@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useTransition, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FileText,
   Printer,
@@ -20,6 +21,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -35,6 +38,14 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   getLeaveBalanceReportAction,
   getLeaveUsageReportAction,
   EmployeeBalanceReportItem,
@@ -42,6 +53,35 @@ import {
 } from "@/actions/aksi-laporan";
 import { getDepartmentsAction, getStationsForDepartmentAction } from "@/actions/aksi-karyawan";
 import { formatDateIndo, formatSingkatanBagian } from "@/lib/utils";
+
+function parseDatesList(tglCutiStr?: string, startDate?: string, endDate?: string): string[] {
+  if (tglCutiStr && tglCutiStr.trim().length > 0) {
+    return tglCutiStr
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (startDate && startDate !== "-") {
+    if (endDate && endDate !== "-" && endDate !== startDate) {
+      return [`${formatDateIndo(startDate)} s/d ${formatDateIndo(endDate)}`];
+    }
+    return [formatDateIndo(startDate)];
+  }
+  return [];
+}
+
+function parseDateToTimestamp(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const dmyMatch = dateStr.trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    return new Date(year, month, day).getTime();
+  }
+  const timestamp = new Date(dateStr).getTime();
+  return isNaN(timestamp) ? 0 : timestamp;
+}
 
 const MONTH_OPTIONS = [
   { value: 0, label: "Semua Bulan (Jan - Des)" },
@@ -83,8 +123,11 @@ export default function HalamanLaporan() {
   const [balanceSortField, setBalanceSortField] = useState<BalanceSortField>("nip");
   const [balanceSortOrder, setBalanceSortOrder] = useState<SortOrder>("asc");
 
-  const [usageSortField, setUsageSortField] = useState<UsageSortField>("nip");
-  const [usageSortOrder, setUsageSortOrder] = useState<SortOrder>("asc");
+  const [usageSortField, setUsageSortField] = useState<UsageSortField>("tglTransaksi");
+  const [usageSortOrder, setUsageSortOrder] = useState<SortOrder>("desc");
+
+  // Modal Detail Rincian Tanggal Cuti
+  const [selectedDetailItem, setSelectedDetailItem] = useState<LeaveUsageReportItem | null>(null);
 
   const handleBalanceSort = (field: BalanceSortField) => {
     if (balanceSortField === field) {
@@ -100,18 +143,22 @@ export default function HalamanLaporan() {
       setUsageSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setUsageSortField(field);
-      setUsageSortOrder("asc");
+      if (field === "tglTransaksi" || field === "tglCuti") {
+        setUsageSortOrder("desc");
+      } else {
+        setUsageSortOrder("asc");
+      }
     }
   };
 
   const renderSortIcon = (currentField: string, field: string, order: "asc" | "desc") => {
     if (currentField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors" />;
+      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors print:hidden" />;
     }
     return order === "asc" ? (
-      <ArrowUp className="h-3 w-3 text-blue-600 font-bold" />
+      <ArrowUp className="h-3 w-3 text-blue-600 font-bold print:hidden" />
     ) : (
-      <ArrowDown className="h-3 w-3 text-blue-600 font-bold" />
+      <ArrowDown className="h-3 w-3 text-blue-600 font-bold print:hidden" />
     );
   };
 
@@ -363,11 +410,17 @@ export default function HalamanLaporan() {
       } else if (usageSortField === "stasiun") {
         comparison = (a.stasiun || "").localeCompare(b.stasiun || "");
       } else if (usageSortField === "tglTransaksi") {
-        comparison = new Date(a.tglTransaksi || a.requestDate).getTime() - new Date(b.tglTransaksi || b.requestDate).getTime();
+        const timeA = parseDateToTimestamp(a.tglTransaksi || a.requestDate);
+        const timeB = parseDateToTimestamp(b.tglTransaksi || b.requestDate);
+        comparison = timeA - timeB;
       } else if (usageSortField === "uraian") {
         comparison = (a.uraian || a.purpose || "").localeCompare(b.uraian || b.purpose || "");
       } else if (usageSortField === "tglCuti") {
-        comparison = (a.tglCuti || a.startDate || "").localeCompare(b.tglCuti || b.startDate || "");
+        const firstDateA = (a.tglCuti ? a.tglCuti.split(",")[0] : a.startDate) || "";
+        const firstDateB = (b.tglCuti ? b.tglCuti.split(",")[0] : b.startDate) || "";
+        const timeA = parseDateToTimestamp(firstDateA);
+        const timeB = parseDateToTimestamp(firstDateB);
+        comparison = timeA - timeB;
       } else if (usageSortField === "annualDays") {
         comparison = a.annualDays - b.annualDays;
       } else if (usageSortField === "longLeaveDays") {
@@ -457,7 +510,7 @@ export default function HalamanLaporan() {
   };
 
   return (
-    <div className="space-y-6 w-full pb-12 print:p-0 print:m-0 print:max-w-none">
+    <div className="space-y-6 w-full pb-12 print-page-wrapper print:p-0 print:m-0 print:space-y-0 print:max-w-none">
       {/* Top Header (Print: Hidden) */}
       <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
         <div>
@@ -492,26 +545,66 @@ export default function HalamanLaporan() {
         </div>
       </div>
 
-      {/* PRINT-ONLY OFFICIAL HEADER (Dinas PG Trangkil) */}
-      <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold tracking-tight uppercase">
-              PT KEBON AGUNG — PABRIK GULA TRANGKIL PATI
-            </h2>
-            <h3 className="text-sm font-semibold text-slate-800">
-              {activeTab === "BALANCES"
-                ? "LAPORAN REKAPITULASI SALDO CUTI KARYAWAN PIMPINAN"
-                : "LAPORAN REKAPITULASI PEMAKAIAN CUTI KARYAWAN PIMPINAN"}
-            </h3>
-            <p className="text-xs text-slate-600">
-              Periode Tahun: {selectedYear} {selectedMonth > 0 ? `• Bulan: ${MONTH_OPTIONS.find((m) => m.value === selectedMonth)?.label}` : ""}
-            </p>
+      {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN */}
+      <div className="hidden print:block mb-4">
+        {/* Header Kop: Logo Kiri, Teks Tengah/Kiri, Logo Kanan */}
+        <div className="flex items-center justify-between border-b-2 border-black pb-2.5">
+          {/* Logo PT Kebon Agung */}
+          <div className="flex items-center gap-3">
+            <Image
+              src="/assets/KebonAgungLogo.png"
+              alt="Logo PT Kebon Agung"
+              width={48}
+              height={48}
+              priority
+              className="h-12 w-12 object-contain"
+            />
+            <div>
+              <div className="text-[13px] font-black tracking-wider uppercase text-black font-serif">
+                PT KEBON AGUNG
+              </div>
+              <div className="text-[11px] font-extrabold uppercase text-black">
+                PABRIK GULA TRANGKIL PATI
+              </div>
+              <div className="text-[9px] text-black leading-tight">
+                Jl. Raya Trangkil No. 1, Kec. Trangkil, Kab. Pati, Jawa Tengah 59153
+              </div>
+            </div>
           </div>
-          <div className="text-right text-xs font-mono">
-            <div>Klasifikasi: Internal SDM</div>
-            <div>Dicetak: {formatDateIndo(new Date())}</div>
+
+          {/* Logo PG Trangkil & Info Dokumen */}
+          <div className="flex flex-col items-end">
+            <Image
+              src="/assets/PGTrangkilLogo.png"
+              alt="Logo PG Trangkil"
+              width={160}
+              height={32}
+              priority
+              className="h-8 w-auto object-contain mb-1"
+            />
+            <div className="text-right text-[9px] text-black font-mono">
+              <div>Klasifikasi: Internal SDM</div>
+              <div>Tanggal Cetak: {formatDateIndo(new Date())}</div>
+            </div>
           </div>
+        </div>
+
+        {/* Judul Dokumen Resmi Laporan Cuti */}
+        <div className="text-center mt-3 mb-2">
+          <h1 className="text-sm font-black uppercase text-black tracking-wide">
+            {activeTab === "BALANCES"
+              ? "LAPORAN REKAPITULASI POSISI SALDO CUTI KARYAWAN"
+              : "LAPORAN REKAPITULASI PENGAMBILAN CUTI KARYAWAN"}
+          </h1>
+          <p className="text-[11px] text-black mt-0.5">
+            Periode: Tahun {selectedYear}
+            {selectedMonth > 0
+              ? ` • Bulan ${MONTH_OPTIONS.find((m) => m.value === selectedMonth)?.label}`
+              : ""}
+            {categoryFilter !== "ALL" ? ` • Kategori: ${categoryFilter}` : ""}
+            {departmentFilter !== "ALL" ? ` • Bagian: ${departmentFilter}` : ""}
+            {stationFilter !== "ALL" ? ` • Stasiun: ${stationFilter}` : ""}
+          </p>
         </div>
       </div>
 
@@ -543,153 +636,147 @@ export default function HalamanLaporan() {
         </button>
       </div>
 
-      {/* DUA CARD FILTER: KIRI (Pencarian Cepat) & KANAN (Jenis Karyawan, Bagian, Stasiun) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 print:hidden">
-        {/* CARD 1: PENCARIAN CEPAT (KIRI) */}
-        <Card className="lg:col-span-5 border-slate-200/90 shadow-2xs">
-          <CardHeader className="py-2.5 px-3.5 border-b border-slate-100 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent">
-            <CardTitle className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Search className="h-3.5 w-3.5 text-[#0093dc]" />
-              Pencarian Cepat
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                CARI CEPAT:
-              </label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <Input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Ketik NIP, Nama karyawan, dll..."
-                  className="h-8.5 pl-8 pr-2 text-xs focus-visible:ring-[#0093dc]"
-                />
-              </div>
+      {/* 1 CARD TUNGGAL UNTUK FILTER, PENCARIAN & TABEL DATA */}
+      <Card className="border-slate-200/90 shadow-2xs overflow-hidden print:border-none print:shadow-none print:rounded-none print:bg-transparent print:p-0">
+        {/* Header & Integrated Filter Bar */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-white space-y-3.5 print:hidden">
+          {/* Header Title & Info */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                {activeTab === "BALANCES" ? (
+                  <>
+                    <span className="p-1.5 rounded-lg bg-blue-50 text-[#0093dc] border border-blue-100">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    Tabel Rekapitulasi Posisi Saldo Cuti
+                  </>
+                ) : (
+                  <>
+                    <span className="p-1.5 rounded-lg bg-blue-50 text-[#0093dc] border border-blue-100">
+                      <CalendarDays className="h-4 w-4" />
+                    </span>
+                    Tabel Riwayat Pengambilan Cuti Periode Terpilih
+                  </>
+                )}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Menampilkan <strong className="font-semibold text-slate-800 font-mono">{activeTab === "BALANCES" ? sortedBalanceItems.length : sortedUsageItems.length}</strong> baris data
+              </p>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* CARD 2: FILTER KATEGORI & ORGANISASI (KANAN) */}
-        <Card className="lg:col-span-7 border-slate-200/90 shadow-2xs">
-          <CardHeader className="py-2.5 px-3.5 border-b border-slate-100 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Filter className="h-3.5 w-3.5 text-[#0093dc]" />
-              Filter Jenis Karyawan, Bagian & Stasiun
-            </CardTitle>
-            {(categoryFilter !== "ALL" || departmentFilter !== "ALL" || stationFilter !== "ALL") && (
-              <button
+            {(categoryFilter !== "ALL" || departmentFilter !== "ALL" || stationFilter !== "ALL" || searchQuery) && (
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
+                  setSearchQuery("");
                   setCategoryFilter("ALL");
                   setDepartmentFilter("ALL");
                   setStationFilter("ALL");
                 }}
-                className="text-[10px] text-[#0093dc] hover:text-sky-800 font-bold hover:underline cursor-pointer"
+                className="h-8 px-2.5 text-xs text-[#0093dc] hover:text-sky-800 hover:bg-sky-50 font-semibold gap-1.5 self-start sm:self-center cursor-pointer"
               >
+                <RotateCcw className="h-3.5 w-3.5" />
                 Reset Filter
-              </button>
+              </Button>
             )}
-          </CardHeader>
-          <CardContent className="p-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {/* 1. Jenis Karyawan */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  JENIS KARYAWAN:
-                </label>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className={`w-full h-8.5 rounded-lg border px-2.5 text-xs font-medium focus:border-[#0093dc] focus:outline-none transition-colors ${
-                    categoryFilter === "PIMPINAN"
-                      ? "border-sky-400 bg-sky-50/60 text-sky-950 font-bold"
-                      : categoryFilter === "PELAKSANA"
-                      ? "border-emerald-400 bg-emerald-50/60 text-emerald-950 font-bold"
-                      : "border-slate-200 bg-white text-slate-800"
-                  }`}
-                >
-                  <option value="ALL">Semua Jenis</option>
-                  <option value="PIMPINAN">Pimpinan</option>
-                  <option value="PELAKSANA">Pelaksana</option>
-                </select>
-              </div>
-
-              {/* 2. Bagian */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  BAGIAN:
-                </label>
-                <select
-                  value={departmentFilter}
-                  onChange={(e) => {
-                    setDepartmentFilter(e.target.value);
-                    setStationFilter("ALL");
-                  }}
-                  className={`w-full h-8.5 rounded-md border px-2.5 text-xs font-medium focus:border-blue-500 focus:outline-none transition-colors ${
-                    departmentFilter !== "ALL"
-                      ? "border-blue-400 bg-blue-50/30 text-blue-900 font-bold"
-                      : "border-slate-200 bg-white text-slate-800"
-                  }`}
-                >
-                  <option value="ALL">Semua Bagian</option>
-                  {departmentsList.length > 0
-                    ? departmentsList.map((d) => (
-                        <option key={d.id} value={d.name}>
-                          {d.name}
-                        </option>
-                      ))
-                    : ["Tanaman", "Pabrikasi", "Teknik", "Tata Usaha & Keuangan (TUK)", "Pimpinan"].map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                </select>
-              </div>
-
-              {/* 3. Stasiun */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  STASIUN:
-                </label>
-                <select
-                  value={stationFilter}
-                  onChange={(e) => setStationFilter(e.target.value)}
-                  className={`w-full h-8.5 rounded-md border px-2.5 text-xs font-medium focus:border-blue-500 focus:outline-none transition-colors ${
-                    stationFilter !== "ALL"
-                      ? "border-blue-400 bg-blue-50/30 text-blue-900 font-bold"
-                      : "border-slate-200 bg-white text-slate-800"
-                  }`}
-                >
-                  <option value="ALL">Semua Stasiun</option>
-                  {availableStations.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Table Card */}
-      <Card className="border-slate-200 shadow-2xs print:border-none print:shadow-none">
-        <CardHeader className="py-3 px-4 border-b border-slate-100 print:hidden flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-bold text-slate-900">
-              {activeTab === "BALANCES"
-                ? "Tabel Rekapitulasi Posisi Saldo Cuti"
-                : "Tabel Riwayat Pengambilan Cuti Periode Terpilih"}
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Menampilkan {activeTab === "BALANCES" ? sortedBalanceItems.length : sortedUsageItems.length} baris data
-            </CardDescription>
           </div>
-        </CardHeader>
+
+          {/* Integrated Filter Bar: Search + Dropdowns in 1 cohesive row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-1">
+            {/* 1. Search Box */}
+            <div className="lg:col-span-4 relative">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ketik NIP, Nama karyawan, dll..."
+                className="h-9 pl-9 pr-3 text-xs bg-slate-50/60 border-slate-200/90 focus:bg-white focus-visible:ring-[#0093dc] rounded-lg transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Hapus pencarian"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* 2. Jenis Karyawan */}
+            <div className="lg:col-span-2 sm:col-span-1">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className={`w-full h-9 rounded-lg border px-2.5 text-xs font-medium focus:border-[#0093dc] focus:outline-none transition-colors ${
+                  categoryFilter === "PIMPINAN"
+                    ? "border-sky-400 bg-sky-50/60 text-sky-950 font-bold"
+                    : categoryFilter === "PELAKSANA"
+                    ? "border-emerald-400 bg-emerald-50/60 text-emerald-950 font-bold"
+                    : "border-slate-200/90 bg-slate-50/60 text-slate-700"
+                }`}
+              >
+                <option value="ALL">Semua Jenis</option>
+                <option value="PIMPINAN">Pimpinan</option>
+                <option value="PELAKSANA">Pelaksana</option>
+              </select>
+            </div>
+
+            {/* 3. Bagian */}
+            <div className="lg:col-span-3 sm:col-span-1">
+              <select
+                value={departmentFilter}
+                onChange={(e) => {
+                  setDepartmentFilter(e.target.value);
+                  setStationFilter("ALL");
+                }}
+                className={`w-full h-9 rounded-lg border px-2.5 text-xs font-medium focus:border-[#0093dc] focus:outline-none transition-colors ${
+                  departmentFilter !== "ALL"
+                    ? "border-blue-400 bg-blue-50/50 text-blue-900 font-bold"
+                    : "border-slate-200/90 bg-slate-50/60 text-slate-700"
+                }`}
+              >
+                <option value="ALL">Semua Bagian</option>
+                {departmentsList.length > 0
+                  ? departmentsList.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))
+                  : ["Tanaman", "Pabrikasi", "Teknik", "Tata Usaha & Keuangan (TUK)", "Pimpinan"].map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+              </select>
+            </div>
+
+            {/* 4. Stasiun */}
+            <div className="lg:col-span-3 sm:col-span-2">
+              <select
+                value={stationFilter}
+                onChange={(e) => setStationFilter(e.target.value)}
+                className={`w-full h-9 rounded-lg border px-2.5 text-xs font-medium focus:border-[#0093dc] focus:outline-none transition-colors ${
+                  stationFilter !== "ALL"
+                    ? "border-blue-400 bg-blue-50/50 text-blue-900 font-bold"
+                    : "border-slate-200/90 bg-slate-50/60 text-slate-700"
+                }`}
+              >
+                <option value="ALL">Semua Stasiun</option>
+                {availableStations.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -699,12 +786,12 @@ export default function HalamanLaporan() {
             </div>
           ) : activeTab === "BALANCES" ? (
             /* TAB 1: TABEL REKAP SALDO DENGAN ATRIBUT STASIUN & SORTER */
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto print:overflow-visible">
+              <Table className="print:w-full print:border-collapse print:border print:border-black print:text-black">
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 text-[11px]">
+                  <TableRow className="bg-slate-50/80 text-[11px] print:bg-slate-100 print:text-black print:border-b print:border-black">
                     <TableHead
-                      className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("no")}
                       title="Urutkan No"
                     >
@@ -714,7 +801,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="w-28 font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="w-28 font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("nip")}
                       title="Urutkan NIP (Sorter Utama)"
                     >
@@ -724,7 +811,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("nama")}
                       title="Urutkan Nama Karyawan"
                     >
@@ -734,7 +821,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("bagian")}
                       title="Urutkan Bagian"
                     >
@@ -744,7 +831,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("stasiun")}
                       title="Urutkan Stasiun"
                     >
@@ -754,7 +841,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("cutiTahunan")}
                       title="Urutkan Cuti Tahunan"
                     >
@@ -764,7 +851,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("cutiBesar")}
                       title="Urutkan Cuti Besar"
                     >
@@ -774,7 +861,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("inhaldagen")}
                       title="Urutkan Inhaldagen"
                     >
@@ -784,7 +871,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="text-center font-bold bg-blue-50/50 cursor-pointer select-none hover:bg-blue-100/70 transition-colors group"
+                      className="text-center font-bold bg-blue-50/50 cursor-pointer select-none hover:bg-blue-100/70 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleBalanceSort("totalSaldo")}
                       title="Urutkan Total Saldo"
                     >
@@ -798,47 +885,46 @@ export default function HalamanLaporan() {
                 <TableBody>
                   {sortedBalanceItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-slate-500 text-xs">
+                      <TableCell colSpan={9} className="h-24 text-center text-slate-500 text-xs print:border print:border-black print:text-black">
                         Tidak ada data saldo karyawan yang sesuai filter.
                       </TableCell>
                     </TableRow>
                   ) : (
                     sortedBalanceItems.map((emp, idx) => (
-                      <TableRow key={emp.id} className="hover:bg-slate-50/50">
-                        <TableCell className="text-center text-xs font-mono text-slate-400">
+                      <TableRow key={emp.id} className="hover:bg-slate-50/50 print:border-b print:border-black">
+                        <TableCell className="text-center text-xs font-mono text-slate-400 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {idx + 1}
                         </TableCell>
-                        <TableCell className="font-mono text-xs font-bold text-slate-900">
+                        <TableCell className="font-mono text-xs font-bold text-slate-900 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.nip}
                         </TableCell>
-                        <TableCell className="font-semibold text-xs text-slate-900">
+                        <TableCell className="font-semibold text-xs text-slate-900 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.nama}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-800" title={emp.bagian}>
-                          <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-50 border-slate-200 text-slate-700">
+                        <TableCell className="text-xs font-semibold text-slate-800 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]" title={emp.bagian}>
+                          <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-50 border-slate-200 text-slate-700 print:border-none print:bg-transparent print:p-0 print:text-black print:font-normal">
                             {formatSingkatanBagian(emp.bagian)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-700">
+                        <TableCell className="text-xs text-slate-700 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.stasiun && emp.stasiun !== "-" ? (
-                            <span className="inline-flex items-center gap-1 font-medium text-slate-800 text-xs">
-                              <Factory className="h-3 w-3 text-slate-400" />
+                            <span className="font-medium text-slate-800 text-xs print:text-black">
                               {emp.stasiun}
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-xs italic">-</span>
+                            <span className="text-slate-400 text-xs italic print:text-black">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-xs font-bold text-blue-700 tabular-nums">
+                        <TableCell className="text-center font-mono text-xs font-bold text-blue-700 tabular-nums print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.cutiTahunan}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-xs font-bold text-purple-700 tabular-nums">
+                        <TableCell className="text-center font-mono text-xs font-bold text-purple-700 tabular-nums print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.cutiBesar}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-xs font-bold text-amber-700 tabular-nums">
+                        <TableCell className="text-center font-mono text-xs font-bold text-amber-700 tabular-nums print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {emp.inhaldagen}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-xs font-black text-slate-900 bg-blue-50/30 tabular-nums">
+                        <TableCell className="text-center font-mono text-xs font-black text-slate-900 bg-blue-50/30 tabular-nums print:border print:border-black print:text-black print:bg-transparent print:p-1.5 print:text-[10px]">
                           {emp.totalSaldo} hari
                         </TableCell>
                       </TableRow>
@@ -849,12 +935,12 @@ export default function HalamanLaporan() {
             </div>
           ) : (
             /* TAB 2: TABEL REKAP PENGAMBILAN CUTI DENGAN STRUKTUR AKTIVITAS SALDO */
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto print:overflow-visible">
+              <Table className="print:w-full print:border-collapse print:border print:border-black print:text-black">
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 text-[11px]">
+                  <TableRow className="bg-slate-50/80 text-[11px] print:bg-slate-100 print:text-black print:border-b print:border-black">
                     <TableHead
-                      className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("no")}
                       title="Urutkan No"
                     >
@@ -864,7 +950,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="w-24 font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="w-24 font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("nip")}
                       title="Urutkan NIP"
                     >
@@ -874,7 +960,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("nama")}
                       title="Urutkan Nama Karyawan"
                     >
@@ -884,7 +970,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("bagian")}
                       title="Urutkan Bagian & Stasiun"
                     >
@@ -894,7 +980,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("tglTransaksi")}
                       title="Urutkan Tgl Transaksi"
                     >
@@ -904,7 +990,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("uraian")}
                       title="Urutkan Uraian / Keperluan"
                     >
@@ -914,7 +1000,7 @@ export default function HalamanLaporan() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group"
+                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("tglCuti")}
                       title="Urutkan Tanggal Cuti"
                     >
@@ -923,102 +1009,106 @@ export default function HalamanLaporan() {
                         {renderSortIcon(usageSortField, "tglCuti", usageSortOrder)}
                       </div>
                     </TableHead>
-                    <TableHead
-                      className="text-center font-bold bg-blue-50/50 cursor-pointer select-none hover:bg-blue-100/70 transition-colors group"
-                      onClick={() => handleUsageSort("totalDays")}
-                      title="Urutkan Total Hari"
-                    >
-                      <div className="inline-flex items-center justify-center gap-1">
-                        <span>Jumlah Cuti</span>
-                        {renderSortIcon(usageSortField, "totalDays", usageSortOrder)}
-                      </div>
+                    <TableHead className="text-center font-bold w-24 print:hidden">
+                      Aksi
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedUsageItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-slate-500 text-xs">
+                      <TableCell colSpan={8} className="h-24 text-center text-slate-500 text-xs print:border print:border-black print:text-black">
                         Belum ada aktivitas mutasi/pengambilan cuti yang sesuai filter.
                       </TableCell>
                     </TableRow>
                   ) : (
                     sortedUsageItems.map((item, idx) => (
-                      <TableRow key={item.id} className="hover:bg-slate-50/50">
+                      <TableRow key={item.id} className="hover:bg-slate-50/50 print:border-b print:border-black">
                         {/* No */}
-                        <TableCell className="text-center text-xs font-mono text-slate-400">
+                        <TableCell className="text-center text-xs font-mono text-slate-400 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {idx + 1}
                         </TableCell>
 
                         {/* NIP */}
-                        <TableCell className="font-mono text-xs font-bold text-slate-900">
+                        <TableCell className="font-mono text-xs font-bold text-slate-900 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {item.nip}
                         </TableCell>
 
                         {/* Nama Karyawan */}
-                        <TableCell className="font-semibold text-xs text-slate-900">
+                        <TableCell className="font-semibold text-xs text-slate-900 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {item.nama}
                         </TableCell>
 
                         {/* Bagian / Stasiun */}
-                        <TableCell className="text-xs text-slate-800">
-                          <div className="font-semibold text-slate-800 flex items-center gap-1" title={item.bagian}>
-                            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-50 border-slate-200 text-slate-700">
+                        <TableCell className="text-xs text-slate-800 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
+                          <div className="font-semibold text-slate-800 flex items-center gap-1 print:text-black" title={item.bagian}>
+                            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-50 border-slate-200 text-slate-700 print:border-none print:bg-transparent print:p-0 print:text-black print:font-normal">
                               {formatSingkatanBagian(item.bagian)}
                             </Badge>
                           </div>
                           {item.stasiun && item.stasiun !== "-" && (
-                            <div className="text-[10px] text-slate-500 font-normal flex items-center gap-1 mt-0.5">
-                              <Factory className="h-2.5 w-2.5 text-slate-400" />
+                            <div className="text-[10px] text-slate-500 font-normal mt-0.5 print:text-black">
                               {item.stasiun}
                             </div>
                           )}
                         </TableCell>
 
                         {/* Tgl Transaksi */}
-                        <TableCell className="text-xs font-mono text-slate-700">
+                        <TableCell className="text-xs font-mono text-slate-700 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {formatDateIndo(item.tglTransaksi || item.requestDate)}
                         </TableCell>
 
                         {/* Uraian */}
-                        <TableCell className="text-xs text-slate-800 max-w-xs">
+                        <TableCell className="text-xs text-slate-800 max-w-xs print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
                           {item.uraian || item.purpose || "-"}
                         </TableCell>
 
                         {/* Tanggal Cuti */}
-                        <TableCell className="text-xs font-mono text-slate-700">
-                          {item.tglCuti && item.tglCuti.length > 0 ? (
-                            <span>{item.tglCuti}</span>
-                          ) : item.startDate && item.startDate !== "-" ? (
-                            <span>
-                              {formatDateIndo(item.startDate)}
-                              {item.startDate !== item.endDate && ` s/d ${formatDateIndo(item.endDate)}`}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 italic">-</span>
-                          )}
+                        <TableCell className="text-xs font-mono text-slate-700 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
+                          {(() => {
+                            const dates = parseDatesList(item.tglCuti, item.startDate, item.endDate);
+                            if (dates.length === 0) {
+                              return <span className="text-slate-400 italic print:text-black">-</span>;
+                            }
+                            const firstDate = dates[0];
+                            const hasMultiple = dates.length > 1;
+
+                            return (
+                              <div>
+                                {/* Versi Cetak Dokumen */}
+                                <span className="hidden print:inline font-mono text-[10px] print:text-black">
+                                  {item.tglCuti || dates.join(", ")}
+                                </span>
+
+                                {/* Tampilan Layar Ringkas */}
+                                <div className="flex flex-col leading-tight print:hidden">
+                                  <span className="font-semibold text-slate-800 text-xs font-mono">
+                                    {firstDate}
+                                  </span>
+                                  {hasMultiple && (
+                                    <span className="text-[10px] text-blue-600 font-sans font-medium">
+                                      +{dates.length - 1} tgl lainnya
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </TableCell>
 
-                        {/* Jumlah Cuti */}
-                        <TableCell className="text-center">
-                          <div className="inline-flex items-center justify-center gap-1.5 font-mono text-xs font-bold text-slate-900">
-                            <span>{item.totalDays} hari</span>
-                            {item.annualDays > 0 && (
-                              <Badge variant="outline" className="text-[10px] font-sans px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
-                                Tahunan
-                              </Badge>
-                            )}
-                            {item.longLeaveDays > 0 && (
-                              <Badge variant="outline" className="text-[10px] font-sans px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
-                                Besar
-                              </Badge>
-                            )}
-                            {item.inhaldagenDays > 0 && (
-                              <Badge variant="outline" className="text-[10px] font-sans px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
-                                Inhaldagen
-                              </Badge>
-                            )}
-                          </div>
+                        {/* Aksi: Tombol Detail Modal */}
+                        <TableCell className="text-center print:hidden">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedDetailItem(item)}
+                            className="h-7 px-2.5 text-xs font-medium text-blue-700 bg-blue-50/70 hover:bg-blue-100 hover:text-blue-900 border-blue-200/80 rounded-lg transition-all shadow-2xs gap-1.5 cursor-pointer inline-flex items-center"
+                            title="Klik untuk melihat rincian permohonan & tanggal cuti"
+                          >
+                            <CalendarDays className="h-3.5 w-3.5 text-blue-600" />
+                            Detail
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1030,25 +1120,144 @@ export default function HalamanLaporan() {
         </CardContent>
       </Card>
 
-      {/* PRINT-ONLY SIGNATURE BLOCK (Tanda Tangan Pejabat PG Trangkil) */}
-      <div className="hidden print:block mt-12 pt-6">
-        <div className="grid grid-cols-2 text-center text-xs">
-          <div>
-            <p className="text-slate-600">Mengetahui,</p>
-            <p className="font-bold text-slate-900">KEPALA BAGIAN SDM & UMUM</p>
-            <div className="h-20" />
-            <p className="font-bold underline text-slate-900">( .................................................... )</p>
-            <p className="text-[10px] text-slate-500 font-mono">NIP: ..............................</p>
-          </div>
-          <div>
-            <p className="text-slate-600">Pati, {formatDateIndo(new Date())}</p>
-            <p className="font-bold text-slate-900">PENGELOLA ADMINISTRASI CUTI</p>
-            <div className="h-20" />
-            <p className="font-bold underline text-slate-900">( {balanceData?.generatedBy || "Administrator"} )</p>
-            <p className="text-[10px] text-slate-500 font-mono">Seksi Kepegawaian & Tata Usaha</p>
-          </div>
-        </div>
-      </div>
+      {/* MODAL POPUP: RINCIAN TANGGAL CUTI */}
+      <Dialog
+        open={!!selectedDetailItem}
+        onOpenChange={(open) => !open && setSelectedDetailItem(null)}
+      >
+        <DialogContent
+          onClose={() => setSelectedDetailItem(null)}
+          className="max-w-lg p-5 sm:p-6"
+        >
+          <DialogHeader className="space-y-1 pb-3 border-b border-slate-100 pr-8">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200">
+                <CalendarDays className="h-4 w-4" />
+              </span>
+              Rincian Tanggal & Permohonan Cuti
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Informasi lengkap permohonan, alokasi kuota hari, dan daftar tanggal cuti.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDetailItem && (
+            <div className="space-y-4 mt-3">
+              {/* Info Karyawan & Transaksi */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                  <span className="text-slate-500 font-medium">Karyawan:</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedDetailItem.nama}{" "}
+                    <span className="font-mono text-slate-500 font-normal">
+                      ({selectedDetailItem.nip})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                  <span className="text-slate-500 font-medium">Bagian / Stasiun:</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedDetailItem.bagian}
+                    {selectedDetailItem.stasiun && selectedDetailItem.stasiun !== "-" && ` • ${selectedDetailItem.stasiun}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                  <span className="text-slate-500 font-medium">Tgl Transaksi:</span>
+                  <span className="font-mono text-slate-800 font-semibold">
+                    {formatDateIndo(selectedDetailItem.tglTransaksi || selectedDetailItem.requestDate)}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-slate-500 font-medium shrink-0">Keperluan / Uraian:</span>
+                  <span className="text-slate-800 text-right italic font-medium">
+                    {selectedDetailItem.uraian || selectedDetailItem.purpose || "-"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Distribusi Kuota Cuti */}
+              <div className="bg-blue-50/40 border border-blue-100 rounded-xl p-3 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+                    Distribusi Kuota Cuti:
+                  </span>
+                  <span className="font-mono font-bold text-blue-700">
+                    Total {selectedDetailItem.totalDays} hari
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white p-2 rounded-lg border border-blue-100/80 text-center shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block">Tahunan</span>
+                    <span className="font-mono font-bold text-blue-700 text-sm">
+                      {selectedDetailItem.annualDays} hr
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-purple-100/80 text-center shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block">Cuti Besar</span>
+                    <span className="font-mono font-bold text-purple-700 text-sm">
+                      {selectedDetailItem.longLeaveDays} hr
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-emerald-100/80 text-center shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block">Inhaldagen</span>
+                    <span className="font-mono font-bold text-emerald-700 text-sm">
+                      {selectedDetailItem.inhaldagenDays} hr
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daftar Lengkap Tanggal Cuti */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 text-slate-600" />
+                    Daftar Tanggal yang Diambil:
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium font-mono">
+                    {parseDatesList(selectedDetailItem.tglCuti, selectedDetailItem.startDate, selectedDetailItem.endDate).length} hari
+                  </span>
+                </div>
+
+                <div className="max-h-52 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {parseDatesList(
+                      selectedDetailItem.tglCuti,
+                      selectedDetailItem.startDate,
+                      selectedDetailItem.endDate
+                    ).map((tgl, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200/90 shadow-2xs hover:border-blue-300 transition-colors"
+                      >
+                        <span className="h-5 w-5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center shrink-0 border border-blue-100">
+                          {i + 1}
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-slate-800">
+                          {tgl}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedDetailItem(null)}
+                  className="h-9 text-xs w-full sm:w-auto"
+                >
+                  Tutup
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

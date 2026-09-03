@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Building2,
   PlusCircle,
@@ -11,6 +12,9 @@ import {
   X,
   Users,
   AlertTriangle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/bersama/kartu-statistik";
@@ -50,9 +54,50 @@ export function TabelBagian({
   bagian, isLoading, isPending, searchQuery,
   onUbahSearch, onTambah, onEdit, onHapus,
 }: PropsTabelBagian) {
+  const [sortField, setSortField] = useState<string>("code");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    );
+  };
+
   const bagianFiltered = bagian.filter((d) => {
     const q = searchQuery.toLowerCase().trim();
     return q === "" || d.code.toLowerCase().includes(q) || d.name.toLowerCase().includes(q);
+  });
+
+  const sortedBagian = [...bagianFiltered].sort((a, b) => {
+    let aVal: any = a[sortField as keyof typeof a] ?? "";
+    let bVal: any = b[sortField as keyof typeof b] ?? "";
+
+    if (sortField === "createdAt") {
+      const aTime = new Date(aVal).getTime() || 0;
+      const bTime = new Date(bVal).getTime() || 0;
+      return sortDirection === "asc" ? aTime - bTime : bTime - aTime;
+    }
+
+    if (typeof aVal === "string") {
+      const res = aVal.localeCompare(bVal, "id", { sensitivity: "base", numeric: true });
+      return sortDirection === "asc" ? res : -res;
+    }
+
+    return sortDirection === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
   });
 
   const totalAktif = bagian.filter((d) => d.isActive).length;
@@ -65,15 +110,6 @@ export function TabelBagian({
 
   return (
     <div className="space-y-6 w-full pb-12">
-      {/* Tombol Aksi */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
-        <div />
-        <Button onClick={onTambah} size="default" className="font-semibold shadow-xs self-start sm:self-center">
-          <PlusCircle className="h-4 w-4" />
-          Tambah Bagian
-        </Button>
-      </div>
-
       {/* Kartu Statistik */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <StatCard title="Total Master Bagian" value={`${bagian.length} Bagian`} subtitle="Unit kerja terdaftar" icon={Building2} variant="sky" />
@@ -82,25 +118,51 @@ export function TabelBagian({
       </div>
 
       {/* Tabel Utama */}
-      <Card className="border-slate-200/90 shadow-xs">
-        <CardHeader className="py-3.5 border-b border-slate-100/90 bg-gradient-to-r from-sky-50/50 via-slate-50/30 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card className="border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Card Header: Title & Action Button */}
+        <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50/40 via-slate-50/20 to-transparent flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-[#0084c7]" />
+              <Building2 className="h-4 w-4 text-[#0789D1]" />
               Tabel Master Bagian PG Trangkil
             </CardTitle>
-            <CardDescription className="text-xs text-slate-500">Daftar unit kerja operasional resmi PG Trangkil</CardDescription>
+            <CardDescription className="text-xs text-slate-500 mt-0.5">
+              Daftar unit kerja operasional resmi PG Trangkil
+            </CardDescription>
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-            <Input type="text" placeholder="Cari kode / nama bagian..." value={searchQuery} onChange={(e) => onUbahSearch(e.target.value)} className="pl-8 pr-8 h-8.5 text-xs bg-white rounded-full focus-visible:ring-[#0084c7]" />
+
+          <Button
+            onClick={onTambah}
+            size="default"
+            className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-xs bg-[#0789D1] hover:bg-[#005B96] text-white cursor-pointer shrink-0 self-start sm:self-center"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Tambah Bagian</span>
+          </Button>
+        </div>
+
+        {/* Toolbar: Search (Uniform h-9, rounded-xl) */}
+        <div className="px-5 py-3 bg-[#F8FAFC]/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Cari kode / nama bagian..."
+              value={searchQuery}
+              onChange={(e) => onUbahSearch(e.target.value)}
+              className="pl-9 pr-8 h-9 text-xs bg-white rounded-xl border-slate-200 focus-visible:ring-[#0789D1]"
+            />
             {searchQuery && (
-              <button type="button" onClick={() => onUbahSearch("")} className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button
+                type="button"
+                onClick={() => onUbahSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-        </CardHeader>
+        </div>
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -126,14 +188,38 @@ export function TabelBagian({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 text-[11px]">
-                  <TableHead className="w-32 font-bold">KODE BAGIAN</TableHead>
-                  <TableHead className="font-bold">NAMA BAGIAN / UNIT KERJA</TableHead>
-                  <TableHead className="font-bold w-44">TANGGAL DIBUAT</TableHead>
+                  <TableHead
+                    onClick={() => handleSort("code")}
+                    className="w-32 font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>KODE BAGIAN</span>
+                      {renderSortIcon("code")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("name")}
+                    className="font-bold cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>NAMA BAGIAN / UNIT KERJA</span>
+                      {renderSortIcon("name")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("createdAt")}
+                    className="font-bold w-44 cursor-pointer select-none group hover:text-slate-900 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>TANGGAL DIBUAT</span>
+                      {renderSortIcon("createdAt")}
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right font-bold w-24">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bagianFiltered.map((d) => (
+                {sortedBagian.map((d) => (
                   <TableRow key={d.id} className="hover:bg-slate-50/60 transition-colors">
                     <TableCell><Badge variant="code" className="text-xs px-2.5 py-0.5">{d.code}</Badge></TableCell>
                     <TableCell className="text-xs font-bold text-slate-900">{d.name}</TableCell>

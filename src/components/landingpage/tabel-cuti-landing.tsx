@@ -12,6 +12,9 @@ import {
   X,
   Eye,
   FileText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +74,28 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
   const [filterKategori, setFilterKategori] = useState<"SEMUA" | "PIMPINAN" | "PELAKSANA">("SEMUA");
   const [filterJenis, setFilterJenis] = useState<"SEMUA" | "TAHUNAN" | "BESAR" | "INHALDAGEN">("SEMUA");
   const [selectedKaryawan, setSelectedKaryawan] = useState<KaryawanCutiItem | null>(null);
+  const [sortField, setSortField] = useState<string>("nama");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    );
+  };
 
   // Summary metrics
   const totalCount = data.length;
@@ -111,6 +136,26 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
       return true;
     });
   }, [data, query, filterKategori, filterJenis]);
+
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      let aVal: any = a[sortField as keyof typeof a] ?? "";
+      let bVal: any = b[sortField as keyof typeof b] ?? "";
+
+      if (sortField === "totalHari") {
+        const aNum = Number(aVal) || 0;
+        const bNum = Number(bVal) || 0;
+        return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
+      }
+
+      if (typeof aVal === "string") {
+        const res = aVal.localeCompare(bVal, "id", { sensitivity: "base", numeric: true });
+        return sortDirection === "asc" ? res : -res;
+      }
+
+      return sortDirection === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredData, sortField, sortDirection]);
 
   const hasActiveFilters = query.trim() !== "" || filterKategori !== "SEMUA" || filterJenis !== "SEMUA";
 
@@ -379,16 +424,40 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <thead className="bg-[#F3F6F8]/80 text-[#6B7280] font-semibold border-b border-[#E8F5FC] text-[11px]">
                 <tr>
                   <th className="py-3 px-4 w-12 text-center">No</th>
-                  <th className="py-3 px-4 min-w-[200px]">Karyawan</th>
-                  <th className="py-3 px-4 min-w-[170px]">Unit Penugasan</th>
+                  <th
+                    onClick={() => handleSort("nama")}
+                    className="py-3 px-4 min-w-[200px] cursor-pointer select-none group hover:text-[#263238] transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Karyawan</span>
+                      {renderSortIcon("nama")}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort("bagian")}
+                    className="py-3 px-4 min-w-[170px] cursor-pointer select-none group hover:text-[#263238] transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Unit Penugasan</span>
+                      {renderSortIcon("bagian")}
+                    </div>
+                  </th>
                   <th className="py-3 px-4 min-w-[130px]">Jenis Cuti</th>
-                  <th className="py-3 px-4 min-w-[100px]">Durasi</th>
+                  <th
+                    onClick={() => handleSort("totalHari")}
+                    className="py-3 px-4 min-w-[100px] cursor-pointer select-none group hover:text-[#263238] transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Durasi</span>
+                      {renderSortIcon("totalHari")}
+                    </div>
+                  </th>
                   <th className="py-3 px-4 min-w-[180px]">Keperluan</th>
                   <th className="py-3 px-4 w-24 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E8F5FC]/60">
-                {filteredData.map((item, idx) => {
+                {sortedData.map((item, idx) => {
                   const isPimpinan = (item.category || "").toUpperCase() === "PIMPINAN";
 
                   const hasTahunan = item.cutiTahunan !== null && Number(item.cutiTahunan) !== 0;
@@ -469,8 +538,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
 
                       {/* Durasi */}
                       <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#263238] bg-[#F3F6F8] px-2 py-0.5 rounded-md text-[11px] border border-[#E8F5FC]">
-                          <Clock className="h-3 w-3 text-[#6B7280]" />
+                        <span className="font-semibold text-[#263238] bg-[#F3F6F8] px-2 py-0.5 rounded-md text-[11px] border border-[#E8F5FC]">
                           {Math.abs(Number(item.totalHari) || 1)} Hari
                         </span>
                       </td>

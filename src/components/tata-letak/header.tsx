@@ -66,6 +66,9 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
     if (pathname === "/tambah-saldo-cuti" || pathname === "/tambahsaldocuti" || pathname === "/tambah-saldo" || pathname === "/saldo/tambah" || pathname === "/balances/add") {
       return "Tambah Saldo";
     }
+    if (pathname === "/koreksi-cuti" || pathname === "/koreksicuti") {
+      return "Koreksi Cuti";
+    }
     if (pathname === "/rincian-cuti" || pathname === "/rinciancuti" || pathname === "/cuti/rincian" || pathname === "/leave/details") {
       return "Rincian Cuti";
     }
@@ -107,7 +110,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8F5FC] bg-white/85 backdrop-blur-xl px-4 md:px-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-colors shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8F5FC] bg-white/85 backdrop-blur-xl px-4 md:px-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-colors shrink-0 print:hidden">
       {/* Sisi Kiri: Toggle Menu (Mobile & Desktop) & Judul Halaman Bersih */}
       <div className="flex items-center gap-2.5 sm:gap-3">
         {/* Tombol Hamburger Mobile */}

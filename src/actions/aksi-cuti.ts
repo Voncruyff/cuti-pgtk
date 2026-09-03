@@ -308,8 +308,10 @@ export async function getEmployeeLeaveRequestsAction(
   await requireAuth();
 
   try {
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [{ id: employeeId }, { nip: employeeId }],
+      },
     });
 
     if (employee) {
@@ -464,8 +466,10 @@ export async function correctLeaveRequestAction(
     } = input;
 
     // Fetch employee & leave balance from MySQL
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [{ id: employeeId }, { nip: employeeId }],
+      },
       include: {
         leaveBalance: true,
       },
@@ -659,3 +663,95 @@ export async function correctLeaveRequestAction(
     };
   }
 }
+
+export interface EmployeeOnLeaveToday {
+  id: string;
+  nip: string;
+  nama: string;
+  bagian: string;
+  stasiun: string;
+  category: string;
+  jabatan: string;
+  tglCuti: string;
+  cutiTahunan: number;
+  cutiBesar: number;
+  inhaldagen: number;
+  totalHari: number;
+  keperluan: string;
+  employeeId?: string;
+}
+
+export async function getEmployeesOnLeaveTodayAction(): Promise<ActionResult<EmployeeOnLeaveToday[]>> {
+  const user = await requireAuth();
+
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const d2 = pad(now.getDate());
+  const m2 = pad(now.getMonth() + 1);
+  const y4 = now.getFullYear();
+
+  const todayDMY = `${d2}/${m2}/${y4}`;
+  const todayDMYShort = `${now.getDate()}/${now.getMonth() + 1}/${y4}`;
+  const todayYMD = `${y4}-${m2}-${d2}`;
+  const searchFormats = [todayDMY, todayDMYShort, todayYMD];
+
+  try {
+    const rawCutiHariIni = await prisma.balanceActivity.findMany({
+      where: {
+        jenisTransaksi: "AMBIL_CUTI",
+        OR: searchFormats.map((tf) => ({
+          tglCuti: { contains: tf },
+        })),
+      },
+      include: {
+        employee: true,
+      },
+      orderBy: {
+        tglTransaksi: "desc",
+      },
+    });
+
+    const filtered = rawCutiHariIni.filter((row) => {
+      const dates = (row.tglCuti || "").split(",").map((s) => s.trim());
+      const isToday = dates.some((d) => searchFormats.includes(d));
+      if (!isToday) return false;
+
+      if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
+        const empDept = (row.employee?.bagian || "").toLowerCase();
+        const userDept = user.department.toLowerCase();
+        return empDept.includes(userDept) || userDept.includes(empDept);
+      }
+      return true;
+    });
+
+    const data: EmployeeOnLeaveToday[] = filtered.map((row) => ({
+      id: row.id,
+      nip: row.nip,
+      nama: row.employee?.nama || row.nama || "Karyawan",
+      bagian: row.employee?.bagian || "-",
+      stasiun: row.employee?.stasiun || "-",
+      category: row.employee?.category || "PIMPINAN",
+      jabatan: row.employee?.jabatan || "-",
+      tglCuti: row.tglCuti || todayDMY,
+      cutiTahunan: row.cutiTahunan,
+      cutiBesar: row.cutiBesar,
+      inhaldagen: row.inhaldagen,
+      totalHari: row.totalHari,
+      keperluan: row.keperluan || row.uraian || "-",
+      employeeId: row.employee?.id,
+    }));
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    console.error("getEmployeesOnLeaveTodayAction error:", error);
+    return {
+      success: false,
+      message: "Gagal memuat data karyawan yang sedang cuti.",
+      data: [],
+    };
+  }
+}
+

@@ -11,6 +11,7 @@ import {
   Factory,
   Search,
   X,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "@/components/bersama/pemilih-tanggal";
+import { StepperHari } from "@/components/bersama/stepper-hari";
+import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 import {
   Dialog,
   DialogContent,
@@ -189,52 +194,10 @@ export default function HalamanAmbilCuti() {
 
   const handleDatesChange = (dates: string[]) => {
     setSelectedDates(dates);
-    const count = dates.length;
-
-    if (!selectedEmployee) return;
-
-    const isPelaksana = selectedEmployee.category?.toUpperCase() === "PELAKSANA";
-    const annualBal = selectedEmployee.balances.annual;
-    const longBal = selectedEmployee.balances.longLeave;
-    const inhalBal = isPelaksana ? 0 : selectedEmployee.balances.inhaldagen;
-
-    if (isPelaksana) {
-      if (count <= annualBal) {
-        setAnnualDays(count);
-        setLongLeaveDays(0);
-        setInhaldagenDays(0);
-      } else {
-        const takeAnnual = annualBal;
-        const remAfterAnnual = count - takeAnnual;
-        const takeLong = Math.min(remAfterAnnual, longBal);
-        setAnnualDays(takeAnnual);
-        setLongLeaveDays(takeLong);
-        setInhaldagenDays(0);
-      }
-      return;
-    }
-
-    if (count <= annualBal) {
-      setAnnualDays(count);
+    if (dates.length === 0) {
+      setAnnualDays(0);
       setLongLeaveDays(0);
       setInhaldagenDays(0);
-    } else {
-      const takeAnnual = annualBal;
-      const remAfterAnnual = count - takeAnnual;
-
-      if (remAfterAnnual <= longBal) {
-        setAnnualDays(takeAnnual);
-        setLongLeaveDays(remAfterAnnual);
-        setInhaldagenDays(0);
-      } else {
-        const takeLong = longBal;
-        const remAfterLong = remAfterAnnual - takeLong;
-        const takeInhal = Math.min(remAfterLong, inhalBal);
-
-        setAnnualDays(takeAnnual);
-        setLongLeaveDays(takeLong);
-        setInhaldagenDays(takeInhal);
-      }
     }
   };
 
@@ -570,111 +533,193 @@ export default function HalamanAmbilCuti() {
             </div>
 
             {/* Alokasi Jumlah Hari per Jenis Cuti */}
-            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Alokasi Hari per Jenis Cuti:
-                </Label>
-                <div className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-                  <span>
-                    Total Dipilih:{" "}
-                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      {selectedDates.length} hari
-                    </span>
-                  </span>
-                  <span>
-                    Total Alokasi:{" "}
-                    <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded border ${isAllocationMismatch ? "bg-red-50 text-red-600 border-red-300" : "bg-white text-emerald-700 border-slate-200"}`}>
-                      {totalRequestedDays} hari
-                    </span>
-                  </span>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 tracking-tight">
+                    Alokasi Hari per Jenis Cuti
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Bagikan kuota cuti sesuai jumlah tanggal yang dipilih
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200 shadow-2xs text-[11px] font-medium text-slate-600">
+                    <span className="text-slate-400">Dipilih:</span>
+                    <span className="font-bold text-blue-600">{selectedDates.length} hari</span>
+                  </div>
+                  <div
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-2xs text-[11px] font-medium transition-colors",
+                      isAllocationMismatch
+                        ? "bg-amber-50 border-amber-300 text-amber-800"
+                        : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    )}
+                  >
+                    <span className="opacity-70">Alokasi:</span>
+                    <span className="font-bold">{totalRequestedDays} hari</span>
+                  </div>
                 </div>
               </div>
 
               {isAllocationMismatch && (
-                <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
-                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/90 border border-amber-200/80 text-[11px] text-amber-800">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                   <span>
-                    Total alokasi ({totalRequestedDays} hari) belum cocok dengan {selectedDates.length} tanggal yang dipilih di kalender. Sesuaikan jumlah hari di bawah.
+                    Total alokasi ({totalRequestedDays} hari) belum sesuai dengan {selectedDates.length} tanggal yang dipilih.
                   </span>
                 </div>
               )}
 
-              <div className={`grid grid-cols-1 ${selectedEmployee?.category?.toUpperCase() === "PELAKSANA" ? "sm:grid-cols-2" : "sm:grid-cols-3"} gap-3`}>
-                {/* Tahunan Input */}
-                <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="font-semibold text-blue-900">Cuti Tahunan</span>
-                    <span className="text-slate-400 font-mono">
-                      Maks: {selectedEmployee?.balances.annual ?? 0}
+              {/* Dedicated Card: Sisa Saldo Setelah Cuti */}
+              <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                    Sisa Saldo Setelah Cuti
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Otomatis terpotong sesuai alokasi
+                  </span>
+                </div>
+
+                <div className={`grid grid-cols-1 ${selectedEmployee?.category?.toUpperCase() === "PELAKSANA" ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
+                  {/* Tahunan Stat */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/50 border border-blue-100/70">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                      <span className="text-xs font-medium text-slate-700">Tahunan</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 font-mono">
+                      <motion.span
+                        key={remainingAnnual}
+                        initial={{ scale: 1.25, color: "#2563eb" }}
+                        animate={{ scale: 1, color: "#1d4ed8" }}
+                        transition={{ duration: 0.2 }}
+                        className="text-sm font-bold text-blue-700"
+                      >
+                        <AnimatedNumber value={Math.max(0, remainingAnnual)} />
+                      </motion.span>
+                      <span className="text-[10px] text-slate-400">/ {selectedEmployee?.balances.annual ?? 0} hr</span>
+                    </div>
+                  </div>
+
+                  {/* Besar Stat */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50/50 border border-purple-100/70">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
+                      <span className="text-xs font-medium text-slate-700">Besar</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 font-mono">
+                      <motion.span
+                        key={remainingLongLeave}
+                        initial={{ scale: 1.25, color: "#9333ea" }}
+                        animate={{ scale: 1, color: "#7e22ce" }}
+                        transition={{ duration: 0.2 }}
+                        className="text-sm font-bold text-purple-700"
+                      >
+                        <AnimatedNumber value={Math.max(0, remainingLongLeave)} />
+                      </motion.span>
+                      <span className="text-[10px] text-slate-400">/ {selectedEmployee?.balances.longLeave ?? 0} hr</span>
+                    </div>
+                  </div>
+
+                  {/* Inhaldagen Stat */}
+                  {selectedEmployee?.category?.toUpperCase() !== "PELAKSANA" && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/50 border border-emerald-100/70">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-xs font-medium text-slate-700">Inhaldagen</span>
+                      </div>
+                      <div className="flex items-baseline gap-1 font-mono">
+                        <motion.span
+                          key={remainingInhaldagen}
+                          initial={{ scale: 1.25, color: "#059669" }}
+                          animate={{ scale: 1, color: "#047857" }}
+                          transition={{ duration: 0.2 }}
+                          className="text-sm font-bold text-emerald-700"
+                        >
+                          <AnimatedNumber value={Math.max(0, remainingInhaldagen)} />
+                        </motion.span>
+                        <span className="text-[10px] text-slate-400">/ {selectedEmployee?.balances.inhaldagen ?? 0} hr</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={`grid grid-cols-1 ${selectedEmployee?.category?.toUpperCase() === "PELAKSANA" ? "sm:grid-cols-2" : "sm:grid-cols-3"} gap-2.5`}>
+                {/* Tahunan Card */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                      <span className="font-semibold text-slate-800">Cuti Tahunan</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                      Maks {selectedEmployee?.balances.annual ?? 0}
                     </span>
                   </div>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="0"
-                      max={selectedEmployee?.balances.annual ?? 0}
-                      value={annualDays || ""}
-                      placeholder="0"
-                      onChange={(e) => setAnnualDays(Number(e.target.value) || 0)}
-                      disabled={isPending}
-                      className={`h-8 text-xs pr-10 font-semibold ${isExceedingAnnual ? "border-red-500" : ""}`}
-                    />
-                    <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                  </div>
+                  <StepperHari
+                    id="annualDays"
+                    min={0}
+                    max={selectedEmployee?.balances.annual ?? 0}
+                    value={annualDays}
+                    onChange={setAnnualDays}
+                    disabled={isPending}
+                    isError={isExceedingAnnual}
+                  />
                   {isExceedingAnnual && (
                     <p className="text-[10px] text-red-600 font-medium">Melebihi saldo!</p>
                   )}
                 </div>
 
-                {/* Cuti Besar Input */}
-                <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="font-semibold text-purple-900">Cuti Besar</span>
-                    <span className="text-slate-400 font-mono">
-                      Maks: {selectedEmployee?.balances.longLeave ?? 0}
+                {/* Cuti Besar Card */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
+                      <span className="font-semibold text-slate-800">Cuti Besar</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                      Maks {selectedEmployee?.balances.longLeave ?? 0}
                     </span>
                   </div>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="0"
-                      max={selectedEmployee?.balances.longLeave ?? 0}
-                      value={longLeaveDays || ""}
-                      placeholder="0"
-                      onChange={(e) => setLongLeaveDays(Number(e.target.value) || 0)}
-                      disabled={isPending}
-                      className={`h-8 text-xs pr-10 font-semibold ${isExceedingLongLeave ? "border-red-500" : ""}`}
-                    />
-                    <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                  </div>
+                  <StepperHari
+                    id="longLeaveDays"
+                    min={0}
+                    max={selectedEmployee?.balances.longLeave ?? 0}
+                    value={longLeaveDays}
+                    onChange={setLongLeaveDays}
+                    disabled={isPending}
+                    isError={isExceedingLongLeave}
+                  />
                   {isExceedingLongLeave && (
                     <p className="text-[10px] text-red-600 font-medium">Melebihi saldo!</p>
                   )}
                 </div>
 
-                {/* Inhaldagen Input (HANYA UNTUK KARYAWAN PIMPINAN) */}
+                {/* Inhaldagen Card (HANYA UNTUK KARYAWAN PIMPINAN) */}
                 {selectedEmployee?.category?.toUpperCase() !== "PELAKSANA" && (
-                  <div className="space-y-1 bg-white p-2.5 rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="font-semibold text-amber-900">Inhaldagen</span>
-                      <span className="text-slate-400 font-mono">
-                        Maks: {selectedEmployee?.balances.inhaldagen ?? 0}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5 hover:border-slate-300 transition-all">
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-semibold text-slate-800">Inhaldagen</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                        Maks {selectedEmployee?.balances.inhaldagen ?? 0}
                       </span>
                     </div>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={selectedEmployee?.balances.inhaldagen ?? 0}
-                        value={inhaldagenDays || ""}
-                        placeholder="0"
-                        onChange={(e) => setInhaldagenDays(Number(e.target.value) || 0)}
-                        disabled={isPending}
-                        className={`h-8 text-xs pr-10 font-semibold ${isExceedingInhaldagen ? "border-red-500" : ""}`}
-                      />
-                      <span className="absolute right-2.5 top-2 text-[11px] text-slate-400">hari</span>
-                    </div>
+                    <StepperHari
+                      id="inhaldagenDays"
+                      min={0}
+                      max={selectedEmployee?.balances.inhaldagen ?? 0}
+                      value={inhaldagenDays}
+                      onChange={setInhaldagenDays}
+                      disabled={isPending}
+                      isError={isExceedingInhaldagen}
+                    />
                     {isExceedingInhaldagen && (
                       <p className="text-[10px] text-red-600 font-medium">Melebihi saldo!</p>
                     )}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
@@ -14,6 +15,11 @@ interface DialogProps {
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,10 +55,12 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
       }
     : modalContentVariants;
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           {/* Backdrop with Smooth Motion */}
           <motion.div
             key="dialog-backdrop"
@@ -71,13 +79,16 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="relative z-50 w-full max-w-2xl my-auto"
+            className="relative z-50 w-full max-w-2xl my-auto mx-auto flex items-center justify-center pointer-events-none"
           >
-            {children}
+            <div className="w-full flex items-center justify-center pointer-events-auto">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -93,7 +104,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        "relative w-full rounded-2xl border border-[#E8F5FC] bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto",
+        "relative w-full mx-auto rounded-2xl border border-[#E8F5FC] bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto",
         className
       )}
     >
@@ -101,9 +112,10 @@ export function DialogContent({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-[#E8F5FC] hover:text-[#263238] transition-colors duration-150 cursor-pointer"
+          aria-label="Tutup dialog"
+          className="absolute right-4 top-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs group active:scale-95 z-10"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 transition-transform group-hover:scale-110" />
           <span className="sr-only">Tutup</span>
         </button>
       )}
