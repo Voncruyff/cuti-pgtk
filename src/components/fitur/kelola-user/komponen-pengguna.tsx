@@ -244,9 +244,9 @@ export function TabelPengguna({
 
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12 gap-2 text-xs text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin text-[#0084c7]" />
-              Memuat data pengguna dari database...
+            <div className="flex items-center justify-center p-12 gap-2 text-xs font-medium text-[#6B7280]">
+              <Loader2 className="h-5 w-5 animate-spin text-[#0789D1]" />
+              <span>Memuat data pengguna...</span>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="p-12 text-center text-slate-400 text-xs">

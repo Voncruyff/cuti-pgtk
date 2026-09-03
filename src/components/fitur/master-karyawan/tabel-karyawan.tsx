@@ -320,9 +320,9 @@ export function TabelKaryawan({
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6 space-y-4 select-none">
-              <div className="flex items-center justify-center p-4 gap-3 text-xs font-semibold text-sky-800 bg-sky-50/70 rounded-xl border border-sky-100/90 shadow-2xs">
-                <Loader2 className="h-4 w-4 animate-spin text-[#0084c7]" />
-                <span>Sedang mengambil dan menyinkronkan data karyawan dari MySQL...</span>
+              <div className="flex items-center justify-center py-4 gap-2 text-xs font-medium text-[#6B7280]">
+                <Loader2 className="h-4 w-4 animate-spin text-[#0789D1]" />
+                <span>Memuat data...</span>
               </div>
               <div className="space-y-2.5">
                 {[1, 2, 3, 4, 5].map((i) => (

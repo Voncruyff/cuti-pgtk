@@ -103,7 +103,7 @@ export function IndikatorLoadingHalaman() {
       {/* Top Navigation Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-transparent pointer-events-none">
         <div
-          className="h-full bg-gradient-to-r from-sky-400 via-[#0084c7] to-indigo-600 transition-all duration-300 ease-out shadow-sm shadow-sky-500/50"
+          className="h-full bg-gradient-to-r from-[#0789D1] to-[#005B96] transition-all duration-300 ease-out shadow-sm shadow-[#0789D1]/30"
           style={{
             width: `${progress}%`,
             opacity: progress === 100 ? 0 : 1,
@@ -113,9 +113,9 @@ export function IndikatorLoadingHalaman() {
 
       {/* Floating Animated Badge saat render memakan waktu */}
       {showFloatingBadge && (
-        <div className="fixed top-3 right-4 z-[99999] pointer-events-none flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-semibold shadow-xl border border-slate-700/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
-          <span>Memuat Halaman...</span>
+        <div className="fixed top-3 right-4 z-[99999] pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#263238]/95 text-white text-xs font-semibold shadow-xl border border-white/10 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0789D1]" />
+          <span>Memuat data...</span>
         </div>
       )}
     </>

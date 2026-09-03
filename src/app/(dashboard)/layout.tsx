@@ -18,7 +18,21 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden bg-slate-50">
+      <div className="flex h-screen overflow-hidden bg-[#F3F6F8] text-[#263238] font-sans relative selection:bg-[#0789D1]/20 selection:text-[#005B96]">
+        {/* Subtle Non-Neon Ambient Glow Blobs */}
+        <div
+          className="absolute -top-32 -left-32 w-96 h-96 bg-[#0789D1]/5 rounded-full blur-3xl pointer-events-none -z-10"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute top-1/3 -right-32 w-[28rem] h-[28rem] bg-[#005B96]/5 rounded-full blur-3xl pointer-events-none -z-10"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute bottom-10 left-1/3 w-80 h-80 bg-[#E8F5FC]/60 rounded-full blur-3xl pointer-events-none -z-10"
+          aria-hidden="true"
+        />
+
         {/* 1. SIDEBAR FULL-HEIGHT DI SISI KIRI */}
         <Sidebar user={user} />
 

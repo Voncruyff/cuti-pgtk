@@ -24,7 +24,7 @@ import {
   updateCompanyProfileSettingsAction,
 } from "@/actions/aksi-pengaturan";
 
-export default function PengaturanProfilPage() {
+export default function PengaturanProfilPerusahaanPage() {
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
 

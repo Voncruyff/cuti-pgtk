@@ -24,6 +24,15 @@ const config: Config = {
         ],
       },
       colors: {
+        brand: {
+          primary: "#0789D1",
+          secondary: "#005B96",
+          accent: "#E8F5FC",
+          bg: "#F3F6F8",
+          white: "#FFFFFF",
+          textPrimary: "#263238",
+          textSecondary: "#6B7280",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
