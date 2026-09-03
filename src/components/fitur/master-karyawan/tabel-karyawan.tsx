@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { StatCard } from "@/components/bersama/kartu-statistik";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -173,52 +174,67 @@ export function TabelKaryawan({
     <div className="space-y-6 w-full pb-12">
       {/* Tab Kategori & Tombol Aksi */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
-        <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 w-fit">
+        <div className="flex items-center gap-1 p-1 bg-[#F3F6F8] rounded-xl border border-[#E8F5FC] w-fit">
           <button
             type="button"
             onClick={() => onUbahTabKategori("ALL")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-              tabKategori === "ALL"
-                ? "bg-white text-slate-900 shadow-2xs font-bold"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer select-none transition-colors"
           >
-            <Users className="h-3.5 w-3.5" />
-            Semua Karyawan
-            <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "ALL" ? "bg-slate-100 text-slate-800 font-bold" : "bg-slate-200 text-slate-600"}`}>
-              {isLoading ? "..." : karyawan.length}
+            {tabKategori === "ALL" && (
+              <motion.div
+                layoutId="tab-kategori-indicator"
+                className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-[#E8F5FC]"
+                transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-1.5 ${tabKategori === "ALL" ? "text-[#263238] font-bold" : "text-[#6B7280] hover:text-[#263238]"}`}>
+              <Users className="h-3.5 w-3.5" />
+              Semua Karyawan
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "ALL" ? "bg-[#E8F5FC] text-[#005B96] font-bold" : "bg-slate-200 text-slate-600"}`}>
+                {isLoading ? "..." : karyawan.length}
+              </span>
             </span>
           </button>
 
           <button
             type="button"
             onClick={() => onUbahTabKategori("PIMPINAN")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-              tabKategori === "PIMPINAN"
-                ? "bg-white text-[#0084c7] shadow-2xs font-bold"
-                : "text-slate-600 hover:text-[#0084c7] hover:bg-white/50"
-            }`}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer select-none transition-colors"
           >
-            <Briefcase className="h-3.5 w-3.5" />
-            Pimpinan
-            <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PIMPINAN" ? "bg-sky-50 text-[#0084c7] font-bold border border-sky-100" : "bg-slate-200 text-slate-600"}`}>
-              {isLoading ? "..." : jumlahPimpinan}
+            {tabKategori === "PIMPINAN" && (
+              <motion.div
+                layoutId="tab-kategori-indicator"
+                className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-[#E8F5FC]"
+                transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-1.5 ${tabKategori === "PIMPINAN" ? "text-[#0789D1] font-bold" : "text-[#6B7280] hover:text-[#0789D1]"}`}>
+              <Briefcase className="h-3.5 w-3.5" />
+              Pimpinan
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PIMPINAN" ? "bg-[#E8F5FC] text-[#0789D1] font-bold border border-[#0789D1]/20" : "bg-slate-200 text-slate-600"}`}>
+                {isLoading ? "..." : jumlahPimpinan}
+              </span>
             </span>
           </button>
 
           <button
             type="button"
             onClick={() => onUbahTabKategori("PELAKSANA")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-              tabKategori === "PELAKSANA"
-                ? "bg-white text-emerald-700 shadow-2xs font-bold"
-                : "text-slate-600 hover:text-emerald-700 hover:bg-white/50"
-            }`}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer select-none transition-colors"
           >
-            <HardHat className="h-3.5 w-3.5" />
-            Pelaksana
-            <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PELAKSANA" ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-100" : "bg-slate-200 text-slate-600"}`}>
-              {isLoading ? "..." : jumlahPelaksana}
+            {tabKategori === "PELAKSANA" && (
+              <motion.div
+                layoutId="tab-kategori-indicator"
+                className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-[#E8F5FC]"
+                transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-1.5 ${tabKategori === "PELAKSANA" ? "text-emerald-700 font-bold" : "text-[#6B7280] hover:text-emerald-700"}`}>
+              <HardHat className="h-3.5 w-3.5" />
+              Pelaksana
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-md font-mono ${tabKategori === "PELAKSANA" ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200" : "bg-slate-200 text-slate-600"}`}>
+                {isLoading ? "..." : jumlahPelaksana}
+              </span>
             </span>
           </button>
         </div>

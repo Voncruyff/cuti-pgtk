@@ -60,7 +60,7 @@ export function StatCard({
   return (
     <Card
       className={cn(
-        "rounded-2xl shadow-2xs min-h-[90px] h-full flex flex-col justify-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs",
+        "rounded-2xl shadow-2xs min-h-[90px] h-full flex flex-col justify-center transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgb(0,0,0,0.03)]",
         style.cardBg,
         className
       )}

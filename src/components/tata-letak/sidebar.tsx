@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SessionUser } from "@/types/autentikasi";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 import { useSidebar } from "./konteks-sidebar";
 
 export interface SidebarProps {
@@ -132,18 +133,25 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
 
   return (
     <>
-      {/* Mobile backdrop */}
-      {isOpen && (
-        <div
-          onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs transition-opacity lg:hidden"
-        />
-      )}
+      {/* Mobile backdrop with Smooth Motion Fade */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="sidebar-mobile-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Container (Full-Height) */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#E8F5FC] bg-white transition-all duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#E8F5FC] bg-white transition-[width,transform] duration-300 ease-in-out lg:static lg:h-full shrink-0 select-none",
           // Mobile state
           isOpen ? "translate-x-0 w-64 shadow-xl" : "-translate-x-full lg:translate-x-0",
           // Desktop state (Collapsed vs Expanded)
@@ -243,15 +251,15 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
                         prefetch={true}
                         onClick={onClose}
                         className={cn(
-                          "group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 mx-auto my-1 cursor-pointer",
+                          "group relative flex h-10 w-10 items-center justify-center rounded-full transition-[color,background-color,box-shadow,transform] duration-150 active:scale-95 mx-auto my-1 cursor-pointer",
                           isActive
                             ? "bg-[#0789D1] text-white shadow-xs shadow-[#0789D1]/20 scale-105"
                             : "text-[#263238] hover:bg-[#E8F5FC] hover:text-[#005B96]"
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
-                        {/* Floating tooltip on hover */}
-                        <span className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                        {/* Floating tooltip on hover with scale transition */}
+                        <span className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 origin-left pointer-events-none transition-[opacity,transform] duration-150 z-50">
                           {item.name}
                         </span>
                       </Link>
@@ -265,7 +273,7 @@ export function Sidebar({ user, isOpen: propIsOpen, onClose: propOnClose }: Side
                       prefetch={true}
                       onClick={onClose}
                       className={cn(
-                        "group flex items-center gap-3 rounded-full px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 cursor-pointer",
+                        "group flex items-center gap-3 rounded-full px-3.5 py-2.5 text-xs font-semibold transition-[color,background-color,box-shadow,transform] duration-150 active:scale-[0.98] cursor-pointer",
                         isActive
                           ? "bg-[#0789D1] text-white font-bold shadow-xs shadow-[#0789D1]/20"
                           : "text-[#263238] hover:bg-[#E8F5FC] hover:text-[#005B96]"

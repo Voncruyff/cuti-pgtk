@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, HelpCircle } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { accordionVariants } from "@/lib/motion";
 
 interface FAQItem {
   question: string;
@@ -55,10 +57,10 @@ export function FAQAccordion() {
         return (
           <div
             key={idx}
-            className={`border rounded-xl transition-all duration-200 overflow-hidden ${
+            className={`border rounded-xl transition-[border-color,background-color,box-shadow] duration-200 overflow-hidden ${
               isOpen
-                ? "border-sky-300 bg-sky-50/30 shadow-xs"
-                : "border-slate-200/90 bg-white hover:border-slate-300"
+                ? "border-[#0789D1]/30 bg-[#E8F5FC]/30 shadow-2xs"
+                : "border-[#E8F5FC] bg-white hover:border-[#0789D1]/20"
             }`}
           >
             <button
@@ -66,10 +68,10 @@ export function FAQAccordion() {
               onClick={() => toggle(idx)}
               className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 cursor-pointer select-none"
             >
-              <span className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2.5">
+              <span className="text-xs sm:text-sm font-bold text-[#263238] flex items-center gap-2.5">
                 <HelpCircle
-                  className={`h-4 w-4 shrink-0 transition-colors ${
-                    isOpen ? "text-[#0084c7]" : "text-slate-400"
+                  className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                    isOpen ? "text-[#0789D1]" : "text-[#6B7280]"
                   }`}
                 />
                 {item.question}
@@ -77,19 +79,30 @@ export function FAQAccordion() {
               <div
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-transform duration-200 ${
                   isOpen
-                    ? "rotate-180 bg-[#0084c7] text-white"
-                    : "bg-slate-100 text-slate-500"
+                    ? "rotate-180 bg-[#0789D1] text-white"
+                    : "bg-[#F3F6F8] text-[#6B7280]"
                 }`}
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </div>
             </button>
 
-            {isOpen && (
-              <div className="px-5 pb-4 pt-1 text-xs text-slate-600 leading-relaxed border-t border-sky-100/60">
-                {item.answer}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="faq-content"
+                  variants={accordionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="overflow-hidden"
+                >
+                  <div className="px-5 pb-4 pt-1 text-xs text-[#6B7280] leading-relaxed border-t border-[#E8F5FC]">
+                    {item.answer}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}

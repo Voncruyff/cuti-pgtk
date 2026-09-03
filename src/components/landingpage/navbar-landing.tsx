@@ -19,7 +19,7 @@ export function NavbarLanding() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 transition-[background-color,border-color,box-shadow,padding] duration-200 ease-out ${
         isScrolled
           ? "bg-white/95 backdrop-blur-2xl shadow-xs border-b border-[#E8F5FC] py-2.5"
           : "bg-white/80 backdrop-blur-xl border-b border-[#E8F5FC]/80 py-3 sm:py-3.5"
@@ -45,7 +45,7 @@ export function NavbarLanding() {
           <Link href="/login">
             <Button
               size="sm"
-              className="bg-[#0789D1] hover:bg-[#005B96] text-white font-semibold text-xs shadow-xs gap-1.5 h-8 sm:h-9 px-3.5 sm:px-4 rounded-xl cursor-pointer transition-all duration-200 border border-[#0789D1]/20"
+              className="bg-[#0789D1] hover:bg-[#005B96] text-white font-semibold text-xs shadow-xs gap-1.5 h-8 sm:h-9 px-3.5 sm:px-4 rounded-xl cursor-pointer transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out active:scale-[0.98] border border-[#0789D1]/20"
             >
               <LogIn className="h-3.5 w-3.5" />
               <span>Login</span>
