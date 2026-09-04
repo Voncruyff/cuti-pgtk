@@ -88,7 +88,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
       return "Kelola User";
     }
     if (pathname.startsWith("/pengaturan") || pathname.startsWith("/settings")) {
-      return "Pengaturan Sistem";
+      return user.role === "ADMIN_UTAMA" ? "Pengaturan Sistem" : "Pengaturan Akun";
     }
     return "SIP-CUTI";
   };

@@ -19,7 +19,7 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden bg-[#F3F6F8] text-[#263238] font-sans relative selection:bg-[#0789D1]/20 selection:text-[#005B96] print:h-auto print:overflow-visible print:bg-white print:block">
+      <div data-main-dashboard className="flex h-screen overflow-hidden bg-[#F3F6F8] text-[#263238] font-sans relative selection:bg-[#0789D1]/20 selection:text-[#005B96] print:h-auto print:overflow-visible print:bg-white print:block">
         {/* Subtle Non-Neon Ambient Glow Blobs */}
         <div
           className="absolute -top-32 -left-32 w-96 h-96 bg-[#0789D1]/5 rounded-full blur-3xl pointer-events-none -z-10 print:hidden"

@@ -31,13 +31,17 @@ model User {
 }
 
 model Department {
-  id        String    @id @default(uuid())
-  code      String    @unique @db.VarChar(50)
-  name      String    @db.VarChar(150)
-  isActive  Boolean   @default(true) @map("is_active")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  stations  Station[]
+  id              String    @id @default(uuid())
+  code            String    @unique @db.VarChar(50)
+  name            String    @db.VarChar(150)
+  namaPimpinan    String?   @map("nama_pimpinan") @db.VarChar(200)
+  nipPimpinan     String?   @map("nip_pimpinan") @db.VarChar(50)
+  jabatanPimpinan String?   @map("jabatan_pimpinan") @db.VarChar(150)
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  stations        Station[]
+  signatories     Penandatanganan[]
 
   @@index([isActive])
   @@map("bagian")
@@ -158,19 +162,30 @@ model OtomasiSaldoCuti {
 }
 
 model ProfilPerusahaan {
-  id                 String   @id @default("DEFAULT_PROFILE")
-  companyName        String   @default("PT KEBON AGUNG") @map("nama_perusahaan") @db.VarChar(200)
-  unitName           String   @default("PABRIK GULA TRANGKIL") @map("nama_unit") @db.VarChar(200)
-  location           String   @default("Trangkil, Pati, Jawa Tengah") @map("lokasi") @db.VarChar(255)
-  hrManagerName      String   @default("Hendra Wijaya, S.E.") @map("nama_sdm") @db.VarChar(200)
-  hrManagerNip       String   @default("198503152010011002") @map("nip_sdm") @db.VarChar(50)
-  hrManagerTitle     String   @default("Kepala Bagian SDM & Umum") @map("jabatan_sdm") @db.VarChar(150)
-  generalManagerName String   @default("Ir. Bambang Santoso, M.M.") @map("nama_gm") @db.VarChar(200)
-  generalManagerNip  String   @default("197805122003121001") @map("nip_gm") @db.VarChar(50)
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id          String   @id @default("DEFAULT_PROFILE")
+  companyName String   @default("PT KEBON AGUNG") @map("nama_perusahaan") @db.VarChar(200)
+  unitName    String   @default("PABRIK GULA TRANGKIL") @map("nama_unit") @db.VarChar(200)
+  location    String   @default("Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153") @map("lokasi") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("profil_perusahaan")
+}
+
+model Penandatanganan {
+  id           String      @id @default(uuid())
+  kategori     String      @default("BAGIAN") @map("kategori") @db.VarChar(50) // PEMIMPIN / BAGIAN
+  nama         String      @default("") @map("nama") @db.VarChar(200)
+  jabatan      String      @default("") @map("jabatan") @db.VarChar(150)
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  urutan       Int         @default(0) @map("urutan")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([kategori])
+  @@index([departmentId])
+  @@map("penandatanganan")
 }
 
 

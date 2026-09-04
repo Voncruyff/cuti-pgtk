@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
+import { getAllowedDepartmentNames, isDepartmentMatch } from "@/lib/auth/department-checker";
 
 export interface EmployeeBalanceReportItem {
   id: string;
@@ -82,11 +83,8 @@ export async function getLeaveBalanceReportAction(params?: {
 
     // Filter by department if Admin Bagian
     if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      items = items.filter((item) => {
-        const itemDept = item.bagian.toLowerCase();
-        return itemDept.includes(userDept) || userDept.includes(itemDept);
-      });
+      const allowedNames = await getAllowedDepartmentNames(user.department);
+      items = items.filter((item) => isDepartmentMatch(item.bagian, allowedNames));
     } else if (params?.department && params.department !== "ALL") {
       const filterDept = params.department.toLowerCase();
       items = items.filter((item) => {
@@ -219,11 +217,8 @@ export async function getLeaveUsageReportAction(params?: {
 
     // Filter by department if Admin Bagian
     if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      items = items.filter((item) => {
-        const itemDept = item.bagian.toLowerCase();
-        return itemDept.includes(userDept) || userDept.includes(itemDept);
-      });
+      const allowedNames = await getAllowedDepartmentNames(user.department);
+      items = items.filter((item) => isDepartmentMatch(item.bagian, allowedNames));
     } else if (params?.department && params.department !== "ALL") {
       const filterDept = params.department.toLowerCase();
       items = items.filter((item) => {

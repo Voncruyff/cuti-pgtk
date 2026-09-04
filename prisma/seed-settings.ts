@@ -59,15 +59,24 @@ async function main() {
       id: "DEFAULT_PROFILE",
       companyName: "PT KEBON AGUNG",
       unitName: "PABRIK GULA TRANGKIL",
-      location: "Trangkil, Pati, Jawa Tengah",
-      hrManagerName: "Hendra Wijaya, S.E.",
-      hrManagerNip: "198503152010011002",
-      hrManagerTitle: "Kepala Bagian SDM & Umum",
-      generalManagerName: "Ir. Bambang Santoso, M.M.",
-      generalManagerNip: "197805122003121001",
+      location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
     },
   });
   console.log("✓ Profil Perusahaan terdaftar:", profile.unitName, "-", profile.companyName);
+
+  // 4. Inisialisasi Penandatanganan Pemimpin
+  const signatory = await prisma.penandatanganan.upsert({
+    where: { id: "PEMIMPIN_UTAMA" },
+    update: {},
+    create: {
+      id: "PEMIMPIN_UTAMA",
+      kategori: "PEMIMPIN",
+      nama: "Ir. Bambang Santoso, M.M.",
+      jabatan: "General Manager",
+      urutan: 0,
+    },
+  });
+  console.log("✓ Penandatanganan Pemimpin terdaftar:", signatory.nama, "-", signatory.jabatan);
 
   console.log("Semua tabel dan data awal berhasil diverifikasi di database MySQL!");
 }

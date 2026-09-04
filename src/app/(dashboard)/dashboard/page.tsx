@@ -2,16 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateIndo, formatSingkatanBagian } from "@/lib/utils";
+import { getAllowedDepartmentNames, isDepartmentMatch } from "@/lib/auth/department-checker";
 
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Dasbor Sistem Pengelolaan Cuti Karyawan PG Trangkil",
 };
 
-export default async function HalamanDashboard() {
+export default async function HalamanDashboard(props: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const user = await requireAuth();
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const isUnauthorized = searchParams?.error === "unauthorized";
 
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -49,16 +55,31 @@ export default async function HalamanDashboard() {
   }> = [];
 
   try {
+    const allowedDeptNames =
+      user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL"
+        ? await getAllowedDepartmentNames(user.department)
+        : [];
+
+    let deptFilterWhere: any = { isActive: true };
+    if (allowedDeptNames.length > 0) {
+      deptFilterWhere = {
+        isActive: true,
+        OR: allowedDeptNames.map((name) => ({
+          bagian: { contains: name },
+        })),
+      };
+    }
+
     totalKaryawanAktif = await prisma.employee.count({
-      where: { isActive: true },
+      where: deptFilterWhere,
     });
 
     const [pimpinanCount, pelaksanaCount] = await Promise.all([
       prisma.employee.count({
-        where: { isActive: true, category: "PIMPINAN" },
+        where: { ...deptFilterWhere, category: "PIMPINAN" },
       }),
       prisma.employee.count({
-        where: { isActive: true, category: "PELAKSANA" },
+        where: { ...deptFilterWhere, category: "PELAKSANA" },
       }),
     ]);
     totalPimpinan = pimpinanCount;
@@ -85,10 +106,9 @@ export default async function HalamanDashboard() {
       const isToday = dates.some((d) => searchFormats.includes(d));
       if (!isToday) return false;
 
-      if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-        const empDept = (row.employee?.bagian || "").toLowerCase();
-        const userDept = user.department.toLowerCase();
-        return empDept.includes(userDept) || userDept.includes(empDept);
+      if (allowedDeptNames.length > 0) {
+        const empDept = row.employee?.bagian || "";
+        return isDepartmentMatch(empDept, allowedDeptNames);
       }
       return true;
     });
@@ -124,7 +144,14 @@ export default async function HalamanDashboard() {
       (r) => new Date(String(r.tgl_transaksi || r.created_at)) >= startOfMonth
     ).length;
 
-    daftarTransaksiTerbaru = baris;
+    if (allowedDeptNames.length > 0) {
+      daftarTransaksiTerbaru = baris.filter((r) => {
+        const rowDept = String(r.bagian || "");
+        return isDepartmentMatch(rowDept, allowedDeptNames);
+      });
+    } else {
+      daftarTransaksiTerbaru = baris;
+    }
   } catch {
     totalKaryawanAktif = 0;
     totalPimpinan = 0;
@@ -135,6 +162,16 @@ export default async function HalamanDashboard() {
 
   return (
     <div className="space-y-6 w-full pb-12">
+      {/* Alert Notifikasi Jika Akses Tidak Diizinkan */}
+      {isUnauthorized && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex items-center gap-3 text-xs font-medium shadow-2xs">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+          <span>
+            Anda tidak memiliki hak akses untuk membuka halaman tersebut. Sistem mengarahkan Anda kembali ke Dashboard.
+          </span>
+        </div>
+      )}
+
       {/* Header Dashboard Minimalis */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>

@@ -60,11 +60,14 @@ export interface SystemSettingsData {
     companyName: string;
     unitName: string;
     location: string;
-    hrManagerName: string;
-    hrManagerNip: string;
-    hrManagerTitle: string;
-    generalManagerName: string;
-    generalManagerNip: string;
+    namaPemimpin: string;
+    nipPemimpin: string;
+    jabatanPemimpin: string;
+    hrManagerName?: string;
+    hrManagerNip?: string;
+    hrManagerTitle?: string;
+    generalManagerName?: string;
+    generalManagerNip?: string;
   };
   // 3. User Info
   currentUser: {
@@ -133,7 +136,10 @@ let systemConfigStore = {
   companyProfile: {
     companyName: "PT KEBON AGUNG",
     unitName: "PABRIK GULA TRANGKIL",
-    location: "Trangkil, Pati, Jawa Tengah",
+    location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+    namaPemimpin: "Ir. Bambang Santoso, M.M.",
+    nipPemimpin: "197805122003121001",
+    jabatanPemimpin: "General Manager",
     hrManagerName: "Hendra Wijaya, S.E.",
     hrManagerNip: "198503152010011002",
     hrManagerTitle: "Kepala Bagian SDM & Umum",
@@ -222,12 +228,23 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
           id: "DEFAULT_PROFILE",
           companyName: "PT KEBON AGUNG",
           unitName: "PABRIK GULA TRANGKIL",
-          location: "Trangkil, Pati, Jawa Tengah",
-          hrManagerName: "Hendra Wijaya, S.E.",
-          hrManagerNip: "198503152010011002",
-          hrManagerTitle: "Kepala Bagian SDM & Umum",
-          generalManagerName: "Ir. Bambang Santoso, M.M.",
-          generalManagerNip: "197805122003121001",
+          location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+        },
+      });
+    }
+
+    // 3. Ambil Data Penandatanganan Pemimpin dari Tabel penandatanganan
+    let signatoryRecord = await prisma.penandatanganan.findFirst({
+      where: { kategori: "PEMIMPIN" },
+    });
+    if (!signatoryRecord) {
+      signatoryRecord = await prisma.penandatanganan.create({
+        data: {
+          id: "PEMIMPIN_UTAMA",
+          kategori: "PEMIMPIN",
+          nama: "Ir. Bambang Santoso, M.M.",
+          jabatan: "General Manager",
+          urutan: 0,
         },
       });
     }
@@ -277,11 +294,14 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
       companyName: profileRecord.companyName,
       unitName: profileRecord.unitName,
       location: profileRecord.location,
-      hrManagerName: profileRecord.hrManagerName,
-      hrManagerNip: profileRecord.hrManagerNip,
-      hrManagerTitle: profileRecord.hrManagerTitle,
-      generalManagerName: profileRecord.generalManagerName,
-      generalManagerNip: profileRecord.generalManagerNip,
+      namaPemimpin: signatoryRecord.nama,
+      nipPemimpin: "-",
+      jabatanPemimpin: signatoryRecord.jabatan,
+      hrManagerName: "Hendra Wijaya, S.E.",
+      hrManagerNip: "198503152010011002",
+      hrManagerTitle: "Kepala Bagian SDM & Umum",
+      generalManagerName: signatoryRecord.nama,
+      generalManagerNip: "-",
     };
 
     // Sinkronkan cache in-memory fallback
@@ -480,11 +500,14 @@ export async function updateCompanyProfileSettingsAction(payload: {
   companyName: string;
   unitName: string;
   location: string;
-  hrManagerName: string;
-  hrManagerNip: string;
-  hrManagerTitle: string;
-  generalManagerName: string;
-  generalManagerNip: string;
+  hrManagerName?: string;
+  hrManagerNip?: string;
+  hrManagerTitle?: string;
+  generalManagerName?: string;
+  generalManagerNip?: string;
+  namaPemimpin?: string;
+  nipPemimpin?: string;
+  jabatanPemimpin?: string;
 }): Promise<ActionResult<void>> {
   const user = await requireAuth();
   if (user.role !== "ADMIN_UTAMA") {
@@ -497,29 +520,47 @@ export async function updateCompanyProfileSettingsAction(payload: {
       update: {
         companyName: payload.companyName.trim() || "PT KEBON AGUNG",
         unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
-        location: payload.location.trim() || "Trangkil, Pati, Jawa Tengah",
-        hrManagerName: payload.hrManagerName.trim() || "-",
-        hrManagerNip: payload.hrManagerNip.trim() || "-",
-        hrManagerTitle: payload.hrManagerTitle.trim() || "Kepala Bagian SDM",
-        generalManagerName: payload.generalManagerName.trim() || "-",
-        generalManagerNip: payload.generalManagerNip.trim() || "-",
+        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
       },
       create: {
         id: "DEFAULT_PROFILE",
         companyName: payload.companyName.trim() || "PT KEBON AGUNG",
         unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
-        location: payload.location.trim() || "Trangkil, Pati, Jawa Tengah",
-        hrManagerName: payload.hrManagerName.trim() || "-",
-        hrManagerNip: payload.hrManagerNip.trim() || "-",
-        hrManagerTitle: payload.hrManagerTitle.trim() || "Kepala Bagian SDM",
-        generalManagerName: payload.generalManagerName.trim() || "-",
-        generalManagerNip: payload.generalManagerNip.trim() || "-",
+        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
       },
     });
+
+    const namaPemimpin = payload.namaPemimpin || payload.generalManagerName;
+    if (namaPemimpin) {
+      const existingPemimpin = await prisma.penandatanganan.findFirst({
+        where: { kategori: "PEMIMPIN" },
+      });
+      if (existingPemimpin) {
+        await prisma.penandatanganan.update({
+          where: { id: existingPemimpin.id },
+          data: {
+            nama: namaPemimpin.trim(),
+            jabatan: payload.jabatanPemimpin?.trim() || "General Manager",
+          },
+        });
+      } else {
+        await prisma.penandatanganan.create({
+          data: {
+            id: "PEMIMPIN_UTAMA",
+            kategori: "PEMIMPIN",
+            nama: namaPemimpin.trim(),
+            jabatan: payload.jabatanPemimpin?.trim() || "General Manager",
+            urutan: 0,
+          },
+        });
+      }
+    }
 
     revalidatePath("/settings");
     revalidatePath("/pengaturan");
     revalidatePath("/pengaturan/profil-perusahaan");
+    revalidatePath("/pengaturan/penandatangan");
+    revalidatePath("/laporan-cuti");
 
     return {
       success: true,
@@ -529,6 +570,341 @@ export async function updateCompanyProfileSettingsAction(payload: {
     return {
       success: false,
       message: error.message || "Gagal memperbarui profil perusahaan ke database.",
+    };
+  }
+}
+
+/**
+ * Memperbarui HANYA Profil Unit & Lokasi Pabrik Gula (Tanpa mengubah penandatangan)
+ */
+export async function updateCompanyProfileOnlyAction(payload: {
+  companyName: string;
+  unitName: string;
+  location: string;
+}): Promise<ActionResult<void>> {
+  const user = await requireAuth();
+  if (user.role !== "ADMIN_UTAMA") {
+    return { success: false, message: "Hanya Admin Utama yang berwenang mengubah profil perusahaan." };
+  }
+
+  try {
+    await prisma.profilPerusahaan.upsert({
+      where: { id: "DEFAULT_PROFILE" },
+      update: {
+        companyName: payload.companyName.trim() || "PT KEBON AGUNG",
+        unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
+        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+      },
+      create: {
+        id: "DEFAULT_PROFILE",
+        companyName: payload.companyName.trim() || "PT KEBON AGUNG",
+        unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
+        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+      },
+    });
+
+    revalidatePath("/settings");
+    revalidatePath("/pengaturan");
+    revalidatePath("/pengaturan/profil-perusahaan");
+    revalidatePath("/laporan-cuti");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: "Profil Perusahaan berhasil diperbarui.",
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Gagal memperbarui profil perusahaan.",
+    };
+  }
+}
+
+/**
+ * Memperbarui Data Pejabat Penandatanganan ke Tabel penandatanganan di Database
+ */
+export async function updateSignatoriesAction(payload: {
+  namaPemimpin: string;
+  jabatanPemimpin: string;
+  signatories?: Array<{
+    id?: string;
+    departmentId: string;
+    nama: string;
+    jabatan: string;
+  }>;
+  departmentSignatories?: Array<{
+    id: string;
+    namaPimpinan?: string | null;
+    nipPimpinan?: string | null;
+    jabatanPimpinan?: string | null;
+  }>;
+}): Promise<ActionResult<void>> {
+  const user = await requireAuth();
+  if (user.role !== "ADMIN_UTAMA") {
+    return { success: false, message: "Hanya Admin Utama yang berwenang mengubah penandatanganan." };
+  }
+
+  try {
+    // 1. Update Pemimpin ke tabel penandatanganan (Kategori PEMIMPIN)
+    const existingLeader = await prisma.penandatanganan.findFirst({
+      where: { kategori: "PEMIMPIN" },
+    });
+    if (existingLeader) {
+      await prisma.penandatanganan.update({
+        where: { id: existingLeader.id },
+        data: {
+          nama: payload.namaPemimpin.trim() || "Ir. Bambang Santoso, M.M.",
+          jabatan: payload.jabatanPemimpin.trim() || "General Manager",
+        },
+      });
+    } else {
+      await prisma.penandatanganan.create({
+        data: {
+          id: "PEMIMPIN_UTAMA",
+          kategori: "PEMIMPIN",
+          nama: payload.namaPemimpin.trim() || "Ir. Bambang Santoso, M.M.",
+          jabatan: payload.jabatanPemimpin.trim() || "General Manager",
+          urutan: 0,
+        },
+      });
+    }
+
+    // 2. Bersihkan penandatangan bagian lama di tabel penandatanganan
+    await prisma.penandatanganan.deleteMany({
+      where: { kategori: "BAGIAN" },
+    });
+
+    // 3. Masukkan penandatangan bagian baru ke tabel penandatanganan
+    const rawSignatories =
+      payload.signatories ||
+      payload.departmentSignatories?.map((d) => ({
+        departmentId: d.id,
+        nama: d.namaPimpinan || "",
+        jabatan: d.jabatanPimpinan || "",
+      })) ||
+      [];
+
+    if (rawSignatories && rawSignatories.length > 0) {
+      let urutan = 1;
+      for (const sig of rawSignatories) {
+        if (sig.nama && sig.nama.trim() !== "") {
+          await prisma.penandatanganan.create({
+            data: {
+              kategori: "BAGIAN",
+              nama: sig.nama.trim(),
+              jabatan: sig.jabatan?.trim() || "Kepala Bagian",
+              departmentId: sig.departmentId || null,
+              urutan: urutan++,
+            },
+          });
+        }
+      }
+    }
+
+    // 4. Sinkronkan juga field pimpinan di tabel Department (bagian)
+    const allDepts = await prisma.department.findMany();
+    for (const dept of allDepts) {
+      const sig = rawSignatories.find((s) => s.departmentId === dept.id);
+      await prisma.department.update({
+        where: { id: dept.id },
+        data: {
+          namaPimpinan: sig?.nama?.trim() || null,
+          jabatanPimpinan: sig?.jabatan?.trim() || null,
+        },
+      });
+    }
+
+    revalidatePath("/settings");
+    revalidatePath("/pengaturan");
+    revalidatePath("/pengaturan/penandatangan");
+    revalidatePath("/master-bagian");
+    revalidatePath("/laporan-cuti");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: "Data penandatanganan berhasil disimpan ke database.",
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Gagal memperbarui data penandatanganan.",
+    };
+  }
+}
+
+/**
+ * Mengambil Data Penandatanganan: Pemimpin dan Seluruh Penandatangan Bagian dari Tabel penandatanganan
+ */
+export async function getSignatoriesAction(): Promise<ActionResult<{
+  leader: {
+    namaPemimpin: string;
+    jabatanPemimpin: string;
+  };
+  signatories: Array<{
+    id: string;
+    departmentId: string;
+    departmentCode: string;
+    departmentName: string;
+    nama: string;
+    jabatan: string;
+  }>;
+  allDepartments: Array<{
+    id: string;
+    code: string;
+    name: string;
+  }>;
+  departmentSignatories: Array<{
+    id: string;
+    code: string;
+    name: string;
+    namaPimpinan: string;
+    nipPimpinan: string;
+    jabatanPimpinan: string;
+    isActive: boolean;
+  }>;
+}>> {
+  await requireAuth();
+
+  try {
+    let leader = await prisma.penandatanganan.findFirst({
+      where: { kategori: "PEMIMPIN" },
+    });
+
+    if (!leader) {
+      leader = await prisma.penandatanganan.create({
+        data: {
+          id: "PEMIMPIN_UTAMA",
+          kategori: "PEMIMPIN",
+          nama: "Ir. Bambang Santoso, M.M.",
+          jabatan: "General Manager",
+          urutan: 0,
+        },
+      });
+    }
+
+    const allDepts = await prisma.department.findMany({
+      where: { isActive: true },
+      orderBy: { code: "asc" },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        namaPimpinan: true,
+        nipPimpinan: true,
+        jabatanPimpinan: true,
+        isActive: true,
+      },
+    });
+
+    const dbSignatories = await prisma.penandatanganan.findMany({
+      where: {
+        kategori: "BAGIAN",
+        departmentId: { not: null },
+      },
+      orderBy: { urutan: "asc" },
+      include: {
+        department: true,
+      },
+    });
+
+    const validSignatories = dbSignatories.filter((s) => s.department !== null);
+
+    return {
+      success: true,
+      data: {
+        leader: {
+          namaPemimpin: leader.nama,
+          jabatanPemimpin: leader.jabatan,
+        },
+        signatories: validSignatories.map((s) => ({
+          id: s.id,
+          departmentId: s.departmentId || "",
+          departmentCode: s.department?.code || "",
+          departmentName: s.department?.name || "",
+          nama: s.nama,
+          jabatan: s.jabatan,
+        })),
+        allDepartments: allDepts.map((d) => ({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+        })),
+        departmentSignatories: allDepts.map((d) => ({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          namaPimpinan: d.namaPimpinan || "",
+          nipPimpinan: d.nipPimpinan || "",
+          jabatanPimpinan: d.jabatanPimpinan || `Kepala Bagian ${d.name}`,
+          isActive: d.isActive,
+        })),
+      },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Gagal memuat data penandatanganan.",
+    };
+  }
+}
+
+/**
+ * Mengambil Profil Perusahaan (Unit, Lokasi/Alamat, dan Pejabat Penandatangan)
+ */
+export async function getCompanyProfileAction(): Promise<ActionResult<{
+  companyName: string;
+  unitName: string;
+  location: string;
+  namaPemimpin: string;
+  nipPemimpin: string;
+  jabatanPemimpin: string;
+  hrManagerName: string;
+  hrManagerNip: string;
+  hrManagerTitle: string;
+  generalManagerName: string;
+  generalManagerNip: string;
+  currentUserName: string;
+}>> {
+  const user = await requireAuth();
+
+  try {
+    const profileRecord = await prisma.profilPerusahaan.findUnique({
+      where: { id: "DEFAULT_PROFILE" },
+    });
+    const leaderRecord = await prisma.penandatanganan.findFirst({
+      where: { kategori: "PEMIMPIN" },
+    });
+
+    const companyName = profileRecord?.companyName || "PT KEBON AGUNG";
+    const unitName = profileRecord?.unitName || "PABRIK GULA TRANGKIL";
+    const location = profileRecord?.location || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153";
+    const namaPemimpin = leaderRecord?.nama || "Ir. Bambang Santoso, M.M.";
+    const nipPemimpin = "-";
+    const jabatanPemimpin = leaderRecord?.jabatan || "General Manager";
+
+    return {
+      success: true,
+      data: {
+        companyName,
+        unitName,
+        location,
+        namaPemimpin,
+        nipPemimpin,
+        jabatanPemimpin,
+        hrManagerName: "Hendra Wijaya, S.E.",
+        hrManagerNip: "198503152010011002",
+        hrManagerTitle: "Kepala Bagian SDM & Umum",
+        generalManagerName: namaPemimpin,
+        generalManagerNip: nipPemimpin,
+        currentUserName: user.fullName || user.username || "Administrator",
+      },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Gagal mengambil profil perusahaan.",
     };
   }
 }

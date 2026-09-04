@@ -262,7 +262,18 @@ interface PropsModalTambahBagian {
   onTutup: () => void;
 }
 
-export function ModalTambahBagian({ terbuka, isPending, kode, nama, aktif, onUbahKode, onUbahNama, onUbahAktif, onSubmit, onTutup }: PropsModalTambahBagian) {
+export function ModalTambahBagian({
+  terbuka,
+  isPending,
+  kode,
+  nama,
+  aktif,
+  onUbahKode,
+  onUbahNama,
+  onUbahAktif,
+  onSubmit,
+  onTutup,
+}: PropsModalTambahBagian) {
   return (
     <Dialog open={terbuka} onOpenChange={onTutup}>
       <DialogContent onClose={onTutup} className="max-w-md">
@@ -315,7 +326,18 @@ interface PropsModalEditBagian {
   onTutup: () => void;
 }
 
-export function ModalEditBagian({ terbuka, isPending, kode, nama, aktif, onUbahKode, onUbahNama, onUbahAktif, onSubmit, onTutup }: PropsModalEditBagian) {
+export function ModalEditBagian({
+  terbuka,
+  isPending,
+  kode,
+  nama,
+  aktif,
+  onUbahKode,
+  onUbahNama,
+  onUbahAktif,
+  onSubmit,
+  onTutup,
+}: PropsModalEditBagian) {
   return (
     <Dialog open={terbuka} onOpenChange={onTutup}>
       <DialogContent onClose={onTutup} className="max-w-md">

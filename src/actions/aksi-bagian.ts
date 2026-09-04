@@ -69,6 +69,13 @@ export async function createDepartmentAction(
 ): Promise<ActionResult<{ departmentId: string }>> {
   const user = await requireAuth();
 
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menambah bagian.",
+    };
+  }
+
   const validation = departmentSchema.safeParse(data);
   if (!validation.success) {
     return {
@@ -132,6 +139,13 @@ export async function updateDepartmentAction(
   data: DepartmentInput
 ): Promise<ActionResult> {
   const user = await requireAuth();
+
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk mengubah bagian.",
+    };
+  }
 
   const validation = departmentSchema.safeParse(data);
   if (!validation.success) {
@@ -215,6 +229,13 @@ export async function updateDepartmentAction(
 export async function deleteDepartmentAction(id: string): Promise<ActionResult> {
   const user = await requireAuth();
 
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menghapus bagian.",
+    };
+  }
+
   try {
     const existing = await prisma.department.findUnique({
       where: { id },
@@ -243,6 +264,23 @@ export async function deleteDepartmentAction(id: string): Promise<ActionResult> 
         message: `Tidak dapat menghapus '${existing.name}' karena masih terdapat ${empCount} karyawan yang terdaftar di bagian ini. Silakan pindahkan karyawan terlebih dahulu.`,
       };
     }
+
+    // Cek apakah masih ada stasiun di bagian ini
+    const stationCount = await prisma.station.count({
+      where: { departmentId: id },
+    });
+
+    if (stationCount > 0) {
+      return {
+        success: false,
+        message: `Tidak dapat menghapus bagian '${existing.name}' karena masih terdapat ${stationCount} stasiun kerja yang terdaftar di bawah bagian ini. Silakan pindahkan atau hapus stasiun terlebih dahulu.`,
+      };
+    }
+
+    // Hapus data penandatangan yang terikat dengan bagian ini
+    await prisma.penandatanganan.deleteMany({
+      where: { departmentId: id },
+    });
 
     await prisma.department.delete({
       where: { id },

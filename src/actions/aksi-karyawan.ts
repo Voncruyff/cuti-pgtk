@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
+import { getAllowedDepartmentNames, isDepartmentMatch } from "@/lib/auth/department-checker";
 import type { ActionResult } from "@/types/actions";
 import { z } from "zod";
 
@@ -119,7 +120,7 @@ export async function getLeadersAction() {
 }
 
 export async function getEmployeePageDataAction() {
-  await requireAuth();
+  const user = await requireAuth();
 
   try {
     const [dbEmployees, departments, allStations] = await Promise.all([
@@ -137,7 +138,48 @@ export async function getEmployeePageDataAction() {
       }),
     ]);
 
-    const employees = dbEmployees.map((emp) => {
+    // Role check: If Admin Bagian, filter only employees and data in their department
+    let filteredDbEmployees = dbEmployees;
+    let allowedDepartments = departments;
+    let allowedStations = allStations;
+
+    if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
+      const allowedNames = await getAllowedDepartmentNames(user.department);
+      const userDeptStr = user.department.toLowerCase().trim();
+      const userDeptRecord = departments.find(
+        (d) =>
+          d.code.toLowerCase() === userDeptStr ||
+          d.name.toLowerCase() === userDeptStr ||
+          isDepartmentMatch(d.name, allowedNames) ||
+          isDepartmentMatch(d.code, allowedNames)
+      );
+
+      filteredDbEmployees = dbEmployees.filter((emp) => {
+        const empBagian = (emp.bagian || "").toLowerCase().trim();
+        if (isDepartmentMatch(empBagian, allowedNames)) return true;
+
+        if (userDeptRecord) {
+          return (
+            emp.bagian === userDeptRecord.id ||
+            empBagian === userDeptRecord.code.toLowerCase() ||
+            empBagian === userDeptRecord.name.toLowerCase() ||
+            (emp.station && emp.station.departmentId === userDeptRecord.id)
+          );
+        }
+        return false;
+      });
+
+      if (userDeptRecord) {
+        allowedDepartments = [userDeptRecord];
+        allowedStations = allStations.filter(
+          (s) =>
+            s.departmentId === userDeptRecord.id ||
+            (s.department?.name && s.department.name.toLowerCase() === userDeptRecord.name.toLowerCase())
+        );
+      }
+    }
+
+    const employees = filteredDbEmployees.map((emp) => {
       const dept = departments.find(
         (d) =>
           d.id === emp.bagian ||
@@ -188,7 +230,7 @@ export async function getEmployeePageDataAction() {
       };
     });
 
-    const stations = allStations.map((s) => ({
+    const stations = allowedStations.map((s) => ({
       id: s.id,
       code: s.code,
       name: s.name,
@@ -196,7 +238,15 @@ export async function getEmployeePageDataAction() {
       departmentName: s.department?.name || "-",
     }));
 
-    return { success: true, employees, departments, stations };
+    return {
+      success: true,
+      employees,
+      departments: allowedDepartments,
+      stations,
+      canManage: user.role === "ADMIN_UTAMA",
+      userRole: user.role,
+      userDepartment: user.department,
+    };
   } catch (error) {
     console.error("getEmployeePageDataAction error:", error);
     return {
@@ -283,6 +333,13 @@ export async function createLeaderAction(
   data: LeaderInput
 ): Promise<ActionResult<{ employeeId: string }>> {
   const user = await requireAuth();
+
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menambah data karyawan.",
+    };
+  }
 
   const validation = leaderSchema.safeParse(data);
   if (!validation.success) {
@@ -430,6 +487,13 @@ export async function updateLeaderAction(
 ): Promise<ActionResult> {
   const user = await requireAuth();
 
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk mengubah data karyawan.",
+    };
+  }
+
   try {
     const existing = await prisma.employee.findUnique({
       where: { id },
@@ -549,6 +613,13 @@ export async function updateLeaderAction(
 
 export async function deleteLeaderAction(id: string): Promise<ActionResult> {
   const user = await requireAuth();
+
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menghapus data karyawan.",
+    };
+  }
 
   try {
     const existing = await prisma.employee.findUnique({
