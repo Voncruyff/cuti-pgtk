@@ -52,6 +52,7 @@ import {
   LeaveUsageReportItem,
 } from "@/actions/aksi-laporan";
 import { getDepartmentsAction, getStationsForDepartmentAction } from "@/actions/aksi-karyawan";
+import { getCompanyProfileAction } from "@/actions/aksi-pengaturan";
 import { formatDateIndo, formatSingkatanBagian } from "@/lib/utils";
 
 function parseDatesList(tglCutiStr?: string, startDate?: string, endDate?: string): string[] {
@@ -191,20 +192,29 @@ export default function HalamanLaporan() {
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [companyAddress, setCompanyAddress] = useState<string>("Trangkil, Pati, Jawa Tengah");
 
-  // Load Departments & Stations Metadata
+  const pencetakName =
+    (activeTab === "BALANCES" ? balanceData?.generatedBy : usageData?.generatedBy) ||
+    "Administrator";
+
+  // Load Departments, Stations, & Company Profile Metadata
   useEffect(() => {
     async function loadMeta() {
       try {
-        const [deptRes, stRes] = await Promise.all([
+        const [deptRes, stRes, profileRes] = await Promise.all([
           getDepartmentsAction(),
           getStationsForDepartmentAction(),
+          getCompanyProfileAction(),
         ]);
         if (deptRes.success && deptRes.data) {
           setDepartmentsList(deptRes.data);
         }
         if (stRes.success && stRes.data) {
           setStationsList(stRes.data);
+        }
+        if (profileRes.success && profileRes.data?.location) {
+          setCompanyAddress(profileRes.data.location);
         }
       } catch (e) {
         console.error("Load meta error:", e);
@@ -467,13 +477,21 @@ export default function HalamanLaporan() {
         csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
         downloadFile(csvContent, `Rekap_Saldo_Cuti_PG_Trangkil_${nowStr}.csv`);
       } else {
-        const headers = ["No", "NIP", "Nama Karyawan", "Bagian", "Stasiun", "Tgl Transaksi", "Uraian", "Tanggal Cuti", "Jenis & Total Hari"];
+        const headers = [
+          "No",
+          "NIP",
+          "Nama Karyawan",
+          "Bagian",
+          "Stasiun",
+          "Tgl Transaksi",
+          "Tanggal Cuti",
+          "Tahunan",
+          "Besar",
+          "Inhaldagen",
+          "Total Hari",
+          "Keperluan / Uraian",
+        ];
         const rows = sortedUsageItems.map((item, idx) => {
-          const parts: string[] = [];
-          if (item.annualDays > 0) parts.push(`Tahunan: ${item.annualDays} hr`);
-          if (item.longLeaveDays > 0) parts.push(`Besar: ${item.longLeaveDays} hr`);
-          if (item.inhaldagenDays > 0) parts.push(`Inhaldagen: ${item.inhaldagenDays} hr`);
-          const typeText = parts.length > 0 ? parts.join(", ") : "Cuti";
           return [
             idx + 1,
             `"${item.nip}"`,
@@ -481,9 +499,12 @@ export default function HalamanLaporan() {
             `"${item.bagian}"`,
             `"${item.stasiun}"`,
             `"${item.tglTransaksi ? item.tglTransaksi.split("T")[0] : item.requestDate ? item.requestDate.split("T")[0] : "-"}"`,
-            `"${(item.uraian || item.purpose || "-").replace(/"/g, '""')}"`,
             `"${(item.tglCuti && item.tglCuti.length > 0 ? item.tglCuti : item.startDate ? `${item.startDate.split("T")[0]} s/d ${item.endDate.split("T")[0]}` : "-").replace(/"/g, '""')}"`,
-            `"${item.totalDays} hari (${typeText})"`,
+            item.annualDays > 0 ? -item.annualDays : 0,
+            item.longLeaveDays > 0 ? -item.longLeaveDays : 0,
+            item.inhaldagenDays > 0 ? -item.inhaldagenDays : 0,
+            item.totalDays,
+            `"${(item.uraian || item.purpose || "-").replace(/"/g, '""')}"`,
           ];
         });
 
@@ -547,44 +568,19 @@ export default function HalamanLaporan() {
 
       {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN */}
       <div className="hidden print:block mb-4">
-        {/* Header Kop: Logo Kiri, Teks Tengah/Kiri, Logo Kanan */}
-        <div className="flex items-center justify-between border-b-2 border-black pb-2.5">
-          {/* Logo PT Kebon Agung */}
-          <div className="flex items-center gap-3">
-            <Image
-              src="/assets/KebonAgungLogo.png"
-              alt="Logo PT Kebon Agung"
-              width={48}
-              height={48}
-              priority
-              className="h-12 w-12 object-contain"
-            />
-            <div>
-              <div className="text-[13px] font-black tracking-wider uppercase text-black font-serif">
-                PT KEBON AGUNG
-              </div>
-              <div className="text-[11px] font-extrabold uppercase text-black">
-                PABRIK GULA TRANGKIL PATI
-              </div>
-              <div className="text-[9px] text-black leading-tight">
-                Jl. Raya Trangkil No. 1, Kec. Trangkil, Kab. Pati, Jawa Tengah 59153
-              </div>
-            </div>
-          </div>
-
-          {/* Logo PG Trangkil & Info Dokumen */}
-          <div className="flex flex-col items-end">
+        {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
+        <div className="border-b-2 border-black pb-2.5">
+          <div className="flex flex-col items-start gap-1">
             <Image
               src="/assets/PGTrangkilLogo.png"
               alt="Logo PG Trangkil"
-              width={160}
-              height={32}
+              width={180}
+              height={36}
               priority
-              className="h-8 w-auto object-contain mb-1"
+              className="h-9 w-auto object-contain"
             />
-            <div className="text-right text-[9px] text-black font-mono">
-              <div>Klasifikasi: Internal SDM</div>
-              <div>Tanggal Cetak: {formatDateIndo(new Date())}</div>
+            <div className="text-[9px] text-black leading-tight mt-0.5">
+              {companyAddress}
             </div>
           </div>
         </div>
@@ -991,22 +987,42 @@ export default function HalamanLaporan() {
                     </TableHead>
                     <TableHead
                       className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
-                      onClick={() => handleUsageSort("uraian")}
-                      title="Urutkan Uraian / Keperluan"
-                    >
-                      <div className="inline-flex items-center gap-1">
-                        <span>Uraian</span>
-                        {renderSortIcon(usageSortField, "uraian", usageSortOrder)}
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
                       onClick={() => handleUsageSort("tglCuti")}
                       title="Urutkan Tanggal Cuti"
                     >
                       <div className="inline-flex items-center gap-1">
                         <span>Tanggal Cuti</span>
                         {renderSortIcon(usageSortField, "tglCuti", usageSortOrder)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
+                      onClick={() => handleUsageSort("annualDays")}
+                      title="Urutkan Cuti Tahunan"
+                    >
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>Tahunan</span>
+                        {renderSortIcon(usageSortField, "annualDays", usageSortOrder)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
+                      onClick={() => handleUsageSort("longLeaveDays")}
+                      title="Urutkan Cuti Besar"
+                    >
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>Besar</span>
+                        {renderSortIcon(usageSortField, "longLeaveDays", usageSortOrder)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
+                      onClick={() => handleUsageSort("inhaldagenDays")}
+                      title="Urutkan Inhaldagen"
+                    >
+                      <div className="inline-flex items-center justify-center gap-1">
+                        <span>Inhaldagen</span>
+                        {renderSortIcon(usageSortField, "inhaldagenDays", usageSortOrder)}
                       </div>
                     </TableHead>
                     <TableHead className="text-center font-bold w-24 print:hidden">
@@ -1017,7 +1033,7 @@ export default function HalamanLaporan() {
                 <TableBody>
                   {sortedUsageItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-slate-500 text-xs print:border print:border-black print:text-black">
+                      <TableCell colSpan={10} className="h-24 text-center text-slate-500 text-xs print:border print:border-black print:text-black">
                         Belum ada aktivitas mutasi/pengambilan cuti yang sesuai filter.
                       </TableCell>
                     </TableRow>
@@ -1058,10 +1074,6 @@ export default function HalamanLaporan() {
                           {formatDateIndo(item.tglTransaksi || item.requestDate)}
                         </TableCell>
 
-                        {/* Uraian */}
-                        <TableCell className="text-xs text-slate-800 max-w-xs print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
-                          {item.uraian || item.purpose || "-"}
-                        </TableCell>
 
                         {/* Tanggal Cuti */}
                         <TableCell className="text-xs font-mono text-slate-700 print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
@@ -1096,6 +1108,39 @@ export default function HalamanLaporan() {
                           })()}
                         </TableCell>
 
+                        {/* Tahunan */}
+                        <TableCell className="text-center font-mono text-xs print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
+                          {item.annualDays > 0 ? (
+                            <span className="font-bold text-red-600 print:text-black">
+                              -{item.annualDays}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 font-normal print:text-black">-</span>
+                          )}
+                        </TableCell>
+
+                        {/* Besar */}
+                        <TableCell className="text-center font-mono text-xs print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
+                          {item.longLeaveDays > 0 ? (
+                            <span className="font-bold text-red-600 print:text-black">
+                              -{item.longLeaveDays}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 font-normal print:text-black">-</span>
+                          )}
+                        </TableCell>
+
+                        {/* Inhaldagen */}
+                        <TableCell className="text-center font-mono text-xs print:border print:border-black print:text-black print:p-1.5 print:text-[10px]">
+                          {item.inhaldagenDays > 0 ? (
+                            <span className="font-bold text-red-600 print:text-black">
+                              -{item.inhaldagenDays}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 font-normal print:text-black">-</span>
+                          )}
+                        </TableCell>
+
                         {/* Aksi: Tombol Detail Modal */}
                         <TableCell className="text-center print:hidden">
                           <Button
@@ -1119,6 +1164,12 @@ export default function HalamanLaporan() {
           )}
         </CardContent>
       </Card>
+
+      {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
+      <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
+        <div>{pencetakName}</div>
+        <div>{formatDateIndo(new Date())}</div>
+      </div>
 
       {/* MODAL POPUP: RINCIAN TANGGAL CUTI */}
       <Dialog

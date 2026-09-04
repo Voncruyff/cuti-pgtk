@@ -166,96 +166,47 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
   };
 
   return (
-    <div className="space-y-5">
-      {/* 1. Metrics Bar - Non-neon, official brand colors */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] p-3 sm:p-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#E8F5FC]">
-          {/* Metric 1 */}
-          <div className="p-2 sm:px-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#E8F5FC] text-[#0789D1] flex items-center justify-center shrink-0 border border-[#0789D1]/20">
-              <Users className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-[#6B7280] block">
-                Total Cuti Hari Ini
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg sm:text-xl font-bold text-[#263238] tracking-tight">
-                  {totalCount}
-                </span>
-                <span className="text-[11px] text-[#6B7280]">orang</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Metric 2 */}
-          <div className="p-2 sm:px-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#E8F5FC] text-[#005B96] flex items-center justify-center shrink-0 border border-[#005B96]/20">
-              <Briefcase className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-[#6B7280] block">
-                Cuti Tahunan
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg sm:text-xl font-bold text-[#263238] tracking-tight">
-                  {countTahunan}
-                </span>
-                <span className="text-[11px] text-[#6B7280]">orang</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Metric 3 */}
-          <div className="p-2 sm:px-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#F3F6F8] text-[#005B96] flex items-center justify-center shrink-0 border border-[#E8F5FC]">
-              <Calendar className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-[#6B7280] block">
-                Cuti Besar
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg sm:text-xl font-bold text-[#263238] tracking-tight">
-                  {countBesar}
-                </span>
-                <span className="text-[11px] text-[#6B7280]">orang</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Metric 4 */}
-          <div className="p-2 sm:px-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#E8F5FC] text-[#0789D1] flex items-center justify-center shrink-0 border border-[#0789D1]/20">
-              <Layers className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-[#6B7280] block">
-                Inhaldagen
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg sm:text-xl font-bold text-[#263238] tracking-tight">
-                  {countInhaldagen}
-                </span>
-                <span className="text-[11px] text-[#6B7280]">orang</span>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-3.5">
+      {/* 1. Metrics Bar - Minimalist & Compact Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
+          <span className="text-xs text-[#6B7280] font-medium">Total Cuti</span>
+          <span className="text-sm font-bold text-[#263238]">
+            {totalCount} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
+          </span>
+        </div>
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
+          <span className="text-xs text-[#6B7280] font-medium">Tahunan</span>
+          <span className="text-sm font-bold text-[#0789D1]">
+            {countTahunan} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
+          </span>
+        </div>
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
+          <span className="text-xs text-[#6B7280] font-medium">Besar</span>
+          <span className="text-sm font-bold text-[#005B96]">
+            {countBesar} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
+          </span>
+        </div>
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
+          <span className="text-xs text-[#6B7280] font-medium">Inhaldagen</span>
+          <span className="text-sm font-bold text-slate-700">
+            {countInhaldagen} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
+          </span>
         </div>
       </div>
 
-      {/* 2. Filter & Search Bar */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] p-3 sm:p-3.5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] space-y-3">
-        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+      {/* 2. Filter & Search Bar - Minimalist & Compact */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] p-2.5 sm:p-3 shadow-2xs space-y-2">
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
             <Input
               type="text"
-              placeholder="Cari karyawan, NIP, bagian, keperluan..."
+              placeholder="Cari nama, NIP, bagian, keperluan..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-8.5 pr-8 h-9 text-xs bg-[#F3F6F8]/70 text-[#263238] placeholder:text-[#6B7280] border-[#E8F5FC] focus-visible:bg-white rounded-xl transition-all shadow-2xs"
+              className="pl-9 pr-8 h-8 text-xs bg-[#F3F6F8]/80 text-[#263238] placeholder:text-[#6B7280] border-[#E8F5FC] focus-visible:bg-white rounded-lg transition-all"
             />
             {query && (
               <button
@@ -269,14 +220,14 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
             )}
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Controls */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {/* Kategori Tabs */}
-            <div className="inline-flex rounded-xl bg-[#F3F6F8] p-0.5 text-xs font-medium border border-[#E8F5FC]">
+            <div className="inline-flex rounded-lg bg-[#F3F6F8] p-0.5 text-xs font-medium border border-[#E8F5FC]">
               <button
                 type="button"
                 onClick={() => setFilterKategori("SEMUA")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
+                className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer text-xs ${
                   filterKategori === "SEMUA"
                     ? "bg-white text-[#263238] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -287,7 +238,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterKategori("PIMPINAN")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
+                className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer text-xs ${
                   filterKategori === "PIMPINAN"
                     ? "bg-white text-[#005B96] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -298,7 +249,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <button
                 type="button"
                 onClick={() => setFilterKategori("PELAKSANA")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer ${
+                className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer text-xs ${
                   filterKategori === "PELAKSANA"
                     ? "bg-white text-[#0789D1] shadow-2xs font-semibold"
                     : "text-[#6B7280] hover:text-[#263238]"
@@ -308,53 +259,17 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               </button>
             </div>
 
-            {/* Jenis Cuti Tabs */}
-            <div className="inline-flex rounded-xl bg-[#F3F6F8] p-0.5 text-xs font-medium border border-[#E8F5FC]">
-              <button
-                type="button"
-                onClick={() => setFilterJenis("SEMUA")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
-                  filterJenis === "SEMUA"
-                    ? "bg-[#0789D1] text-white shadow-2xs font-semibold"
-                    : "text-[#6B7280] hover:text-[#263238]"
-                }`}
-              >
-                Semua Cuti
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterJenis("TAHUNAN")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
-                  filterJenis === "TAHUNAN"
-                    ? "bg-white text-[#0789D1] border border-[#0789D1]/30 shadow-2xs font-semibold"
-                    : "text-[#6B7280] hover:text-[#263238]"
-                }`}
-              >
-                Tahunan
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterJenis("BESAR")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
-                  filterJenis === "BESAR"
-                    ? "bg-white text-[#005B96] border border-[#005B96]/30 shadow-2xs font-semibold"
-                    : "text-[#6B7280] hover:text-[#263238]"
-                }`}
-              >
-                Cuti Besar
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterJenis("INHALDAGEN")}
-                className={`px-2.5 py-1 rounded-lg transition-[color,background-color,border-color,box-shadow] duration-150 ease-out cursor-pointer ${
-                  filterJenis === "INHALDAGEN"
-                    ? "bg-white text-[#005B96] border border-[#005B96]/30 shadow-2xs font-semibold"
-                    : "text-[#6B7280] hover:text-[#263238]"
-                }`}
-              >
-                Inhaldagen
-              </button>
-            </div>
+            {/* Jenis Cuti Dropdown Selector */}
+            <select
+              value={filterJenis}
+              onChange={(e) => setFilterJenis(e.target.value as any)}
+              className="h-7 text-xs bg-[#F3F6F8] text-[#263238] border border-[#E8F5FC] rounded-lg px-2 cursor-pointer focus:outline-none focus:border-[#0789D1] font-medium transition-colors"
+            >
+              <option value="SEMUA">Semua Jenis Cuti</option>
+              <option value="TAHUNAN">Cuti Tahunan</option>
+              <option value="BESAR">Cuti Besar</option>
+              <option value="INHALDAGEN">Inhaldagen</option>
+            </select>
 
             {hasActiveFilters && (
               <Button
@@ -370,7 +285,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
         </div>
 
         {/* Status Line */}
-        <div className="flex items-center justify-between text-[11px] text-[#6B7280] pt-2 border-t border-[#E8F5FC]">
+        <div className="flex items-center justify-between text-[11px] text-[#6B7280] pt-1.5 border-t border-[#E8F5FC]">
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#0789D1]" />
             <span>
@@ -378,23 +293,22 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <strong className="text-[#263238] font-semibold">{totalCount}</strong> karyawan cuti
             </span>
           </div>
-          <span>Tanggal: {tanggalHariIniFormatted}</span>
         </div>
       </div>
 
-      {/* 3. Table / List */}
+      {/* 3. Table / Empty State */}
       {totalCount === 0 ? (
-        /* Empty State */
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] p-10 text-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] space-y-3">
-          <div className="h-12 w-12 mx-auto rounded-full bg-[#E8F5FC] text-[#005B96] flex items-center justify-center">
-            <CheckCircle2 className="h-6 w-6" />
+        /* Empty State - Clean & Compact */
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] py-8 px-4 text-center shadow-2xs space-y-2">
+          <div className="h-10 w-10 mx-auto rounded-full bg-[#E8F5FC] text-[#005B96] flex items-center justify-center">
+            <CheckCircle2 className="h-5 w-5" />
           </div>
-          <div className="space-y-1 max-w-sm mx-auto">
+          <div>
             <h3 className="text-sm font-bold text-[#263238]">
               Tidak Ada Karyawan Cuti Hari Ini
             </h3>
-            <p className="text-xs text-[#6B7280] leading-relaxed">
-              Seluruh staf dan karyawan pimpinan & pelaksana PT Kebon Agung - PG Trangkil tercatat aktif bekerja pada hari ini.
+            <p className="text-xs text-[#6B7280] mt-0.5 max-w-sm mx-auto">
+              Seluruh staf dan karyawan pimpinan & pelaksana tercatat aktif bekerja pada hari ini.
             </p>
           </div>
         </div>

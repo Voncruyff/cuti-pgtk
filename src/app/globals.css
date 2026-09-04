@@ -200,4 +200,10 @@
     margin: 0 !important;
     padding: 0 !important;
   }
+
+  /* Sembunyikan konten latar belakang dashboard saat modal cetak sedang aktif */
+  body:has(#printable-leave-letter) [data-main-dashboard],
+  body:has(#printable-history-sheet) [data-main-dashboard] {
+    display: none !important;
+  }
 }

@@ -350,11 +350,9 @@ interface PropsModalTambahStasiun {
   kode: string;
   nama: string;
   bagianId: string;
-  aktif: boolean;
   onUbahKode: (val: string) => void;
   onUbahNama: (val: string) => void;
   onUbahBagianId: (val: string) => void;
-  onUbahAktif: (val: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   onTutup: () => void;
 }
@@ -366,11 +364,9 @@ export function ModalTambahStasiun({
   kode,
   nama,
   bagianId,
-  aktif,
   onUbahKode,
   onUbahNama,
   onUbahBagianId,
-  onUbahAktif,
   onSubmit,
   onTutup,
 }: PropsModalTambahStasiun) {
@@ -401,10 +397,6 @@ export function ModalTambahStasiun({
               {bagian.map((d) => (<option key={d.id} value={d.id}>{d.code} - {d.name}</option>))}
             </select>
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="tambah-aktif-stasiun" checked={aktif} onChange={(e) => onUbahAktif(e.target.checked)} disabled={isPending} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <Label htmlFor="tambah-aktif-stasiun" className="text-xs font-normal cursor-pointer text-slate-700">Stasiun aktif dan operasional</Label>
-          </div>
           <DialogFooter className="gap-2 pt-3">
             <Button type="button" variant="outline" onClick={onTutup} disabled={isPending}>Batal</Button>
             <Button type="submit" disabled={isPending} className="font-semibold gap-1.5">
@@ -426,11 +418,9 @@ interface PropsModalEditStasiun {
   kode: string;
   nama: string;
   bagianId: string;
-  aktif: boolean;
   onUbahKode: (val: string) => void;
   onUbahNama: (val: string) => void;
   onUbahBagianId: (val: string) => void;
-  onUbahAktif: (val: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   onTutup: () => void;
 }
@@ -442,11 +432,9 @@ export function ModalEditStasiun({
   kode,
   nama,
   bagianId,
-  aktif,
   onUbahKode,
   onUbahNama,
   onUbahBagianId,
-  onUbahAktif,
   onSubmit,
   onTutup,
 }: PropsModalEditStasiun) {
@@ -455,7 +443,7 @@ export function ModalEditStasiun({
       <DialogContent onClose={onTutup} className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900"><Pencil className="h-5 w-5 text-amber-600" />Edit Data Stasiun</DialogTitle>
-          <DialogDescription>Perbarui kode stasiun, nama stasiun, Bagian induk, atau status keaktifan.</DialogDescription>
+          <DialogDescription>Perbarui kode stasiun, nama stasiun, atau Bagian induk.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
@@ -472,10 +460,6 @@ export function ModalEditStasiun({
               <option value="" disabled>-- Pilih Bagian Induk --</option>
               {bagian.map((d) => (<option key={d.id} value={d.id}>{d.code} - {d.name}</option>))}
             </select>
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="edit-aktif-stasiun" checked={aktif} onChange={(e) => onUbahAktif(e.target.checked)} disabled={isPending} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <Label htmlFor="edit-aktif-stasiun" className="text-xs font-normal cursor-pointer text-slate-700">Stasiun aktif dan operasional</Label>
           </div>
           <DialogFooter className="gap-2 pt-3">
             <Button type="button" variant="outline" onClick={onTutup} disabled={isPending}>Batal</Button>

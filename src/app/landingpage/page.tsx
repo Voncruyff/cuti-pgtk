@@ -93,21 +93,23 @@ export default async function LandingPage() {
       <NavbarLanding />
 
       {/* 2. Main Content */}
-      <main className="flex-1 py-7 sm:py-9">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* Header Title Section */}
-          <div className="text-center space-y-2.5 max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-[#E8F5FC] text-[#005B96] text-xs font-semibold shadow-xs">
+      <main className="flex-1 py-5 sm:py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Header Title Section - Minimalist & Ringkas */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-2.5 border-b border-[#E8F5FC]">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-[#263238] tracking-tight">
+                Daftar Karyawan Cuti
+              </h1>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                Monitoring status cuti kerja PT Kebon Agung Pabrik Gula Trangkil
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-[#E8F5FC] text-[#005B96] text-xs font-semibold shadow-2xs self-start sm:self-auto shrink-0">
               <Calendar className="h-3.5 w-3.5 text-[#0789D1]" />
               <span>{tanggalHariIniFormatted}</span>
             </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black text-[#263238] tracking-tight">
-              Daftar Karyawan Cuti Hari Ini
-            </h1>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              Informasi realtime status cuti kerja karyawan pimpinan dan pelaksana PT Kebon Agung - Pabrik Gula Trangkil.
-            </p>
           </div>
 
           {/* Table & Metrics Component */}

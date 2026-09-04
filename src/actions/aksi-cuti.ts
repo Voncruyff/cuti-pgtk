@@ -5,6 +5,11 @@ import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
 import { leaveRequestSchema, LeaveRequestInput } from "@/lib/validation/leave-schema";
 import { getLeadersAction } from "@/actions/aksi-karyawan";
+import {
+  getAllowedDepartmentNames,
+  isDepartmentMatch,
+  checkDepartmentAuthorization,
+} from "@/lib/auth/department-checker";
 import type { ActionResult } from "@/types/actions";
 
 export async function getEmployeesForLeaveAction() {
@@ -16,14 +21,15 @@ export async function getEmployeesForLeaveAction() {
 
     // If user is Admin Bagian, filter only employees in their department
     if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
+      const allowedNames = await getAllowedDepartmentNames(user.department);
       employees = employees.filter((e: any) => {
-        const deptName = (e.department?.name || "").toLowerCase();
-        const deptCode = (e.department?.code || "").toLowerCase();
+        const deptName = e.department?.name || "";
+        const deptCode = e.department?.code || "";
+        const deptId = e.department?.id || "";
         return (
-          deptName.includes(userDept) ||
-          userDept.includes(deptName) ||
-          deptCode === userDept
+          isDepartmentMatch(deptName, allowedNames) ||
+          isDepartmentMatch(deptCode, allowedNames) ||
+          isDepartmentMatch(deptId, allowedNames)
         );
       });
     }
@@ -148,9 +154,12 @@ export async function createLeaveRequestAction(
 
     // Role check: If Admin Bagian, ensure employee is in their department
     if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      const empDept = employee.bagian.toLowerCase();
-      if (!empDept.includes(userDept) && !userDept.includes(empDept)) {
+      const isAuthorized = await checkDepartmentAuthorization(
+        user.role,
+        user.department,
+        employee.bagian
+      );
+      if (!isAuthorized) {
         return {
           success: false,
           message: `Anda hanya memiliki hak akses untuk menginput cuti karyawan ${user.department}.`,
@@ -711,15 +720,19 @@ export async function getEmployeesOnLeaveTodayAction(): Promise<ActionResult<Emp
       },
     });
 
+    const allowedNames =
+      user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL"
+        ? await getAllowedDepartmentNames(user.department)
+        : [];
+
     const filtered = rawCutiHariIni.filter((row) => {
       const dates = (row.tglCuti || "").split(",").map((s) => s.trim());
       const isToday = dates.some((d) => searchFormats.includes(d));
       if (!isToday) return false;
 
-      if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-        const empDept = (row.employee?.bagian || "").toLowerCase();
-        const userDept = user.department.toLowerCase();
-        return empDept.includes(userDept) || userDept.includes(empDept);
+      if (allowedNames.length > 0) {
+        const empDept = row.employee?.bagian || "";
+        return isDepartmentMatch(empDept, allowedNames);
       }
       return true;
     });

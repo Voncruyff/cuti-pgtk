@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/session";
 import { logAudit } from "@/lib/audit/audit-logger";
+import { getAllowedDepartmentNames, isDepartmentMatch } from "@/lib/auth/department-checker";
 import type { ActionResult } from "@/types/actions";
 
 export interface LeaveRequestCorrectionItem {
@@ -143,10 +144,9 @@ export async function getLeaveRequestsForCorrectionAction(params?: {
 
     // Role Filtering untuk Admin Bagian
     if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
+      const allowedNames = await getAllowedDepartmentNames(user.department);
       items = items.filter((item) => {
-        const itemDept = item.department.toLowerCase();
-        return itemDept.includes(userDept) || userDept.includes(itemDept);
+        return isDepartmentMatch(item.department, allowedNames);
       });
     }
 
@@ -229,16 +229,12 @@ export async function updateLeaveRequestCorrectionAction(
       };
     }
 
-    // Pemeriksaan hak akses Admin Bagian
-    if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      const empDept = employee.bagian.toLowerCase();
-      if (!empDept.includes(userDept) && !userDept.includes(empDept)) {
-        return {
-          success: false,
-          message: `Anda hanya memiliki hak akses untuk mengoreksi cuti karyawan bagian ${user.department}.`,
-        };
-      }
+    // Pemeriksaan hak akses: Hanya Admin Utama
+    if (user.role !== "ADMIN_UTAMA") {
+      return {
+        success: false,
+        message: "Hanya Admin Utama yang memiliki hak akses untuk mengoreksi transaksi cuti.",
+      };
     }
 
     // Ambil transaksi yang sedang dikoreksi
@@ -453,16 +449,12 @@ export async function voidLeaveRequestAction(data: {
       return { success: false, message: "Data karyawan tidak ditemukan di database." };
     }
 
-    // Pemeriksaan hak akses Admin Bagian
-    if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      const empDept = employee.bagian.toLowerCase();
-      if (!empDept.includes(userDept) && !userDept.includes(empDept)) {
-        return {
-          success: false,
-          message: `Anda hanya memiliki hak akses untuk mengoreksi cuti karyawan bagian ${user.department}.`,
-        };
-      }
+    // Pemeriksaan hak akses: Hanya Admin Utama
+    if (user.role !== "ADMIN_UTAMA") {
+      return {
+        success: false,
+        message: "Hanya Admin Utama yang memiliki hak akses untuk membatalkan transaksi cuti.",
+      };
     }
 
     // Hitung kuota hari yang dipulihkan

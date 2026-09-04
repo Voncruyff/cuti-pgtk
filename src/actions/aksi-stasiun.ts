@@ -103,6 +103,13 @@ export async function createStationAction(
 ): Promise<ActionResult<{ stationId: string }>> {
   const user = await requireAuth();
 
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menambah stasiun.",
+    };
+  }
+
   const validation = stationSchema.safeParse(data);
   if (!validation.success) {
     return {
@@ -170,6 +177,13 @@ export async function updateStationAction(
   data: StationInput
 ): Promise<ActionResult> {
   const user = await requireAuth();
+
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk mengubah stasiun.",
+    };
+  }
 
   const validation = stationSchema.safeParse(data);
   if (!validation.success) {
@@ -258,6 +272,13 @@ export async function updateStationAction(
 
 export async function deleteStationAction(id: string): Promise<ActionResult> {
   const user = await requireAuth();
+
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menghapus stasiun.",
+    };
+  }
 
   try {
     const existing = await prisma.station.findUnique({

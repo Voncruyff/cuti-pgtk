@@ -60,7 +60,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto print:static print:p-0 print:overflow-visible print:z-auto print:block">
           {/* Backdrop with Smooth Motion */}
           <motion.div
             key="dialog-backdrop"
@@ -68,7 +68,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs print:hidden"
             onClick={() => onOpenChange(false)}
           />
 
@@ -79,9 +79,9 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="relative z-50 w-full max-w-2xl my-auto mx-auto flex items-center justify-center pointer-events-none"
+            className="relative z-50 w-full max-w-2xl my-auto mx-auto flex items-center justify-center pointer-events-none print:static print:max-w-none print:w-full print:m-0 print:block"
           >
-            <div className="w-full flex items-center justify-center pointer-events-auto">
+            <div className="w-full flex items-center justify-center pointer-events-auto print:block">
               {children}
             </div>
           </motion.div>
@@ -104,7 +104,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        "relative w-full mx-auto rounded-2xl border border-[#E8F5FC] bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto",
+        "relative w-full mx-auto rounded-2xl border border-[#E8F5FC] bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto print:static print:p-0 print:m-0 print:border-none print:shadow-none print:max-h-none print:overflow-visible print:rounded-none print:w-full print:bg-transparent",
         className
       )}
     >
@@ -113,7 +113,7 @@ export function DialogContent({
           type="button"
           onClick={onClose}
           aria-label="Tutup dialog"
-          className="absolute right-4 top-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs group active:scale-95 z-10"
+          className="absolute right-4 top-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs group active:scale-95 z-10 print:hidden"
         >
           <X className="h-4 w-4 transition-transform group-hover:scale-110" />
           <span className="sr-only">Tutup</span>

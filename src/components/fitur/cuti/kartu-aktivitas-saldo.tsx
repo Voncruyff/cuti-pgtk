@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
+import Image from "next/image";
 import {
   Printer,
   History,
@@ -48,6 +50,7 @@ import {
   EmployeeLeaveHistoryItem,
 } from "@/actions/aksi-cuti";
 import { voidLeaveRequestAction } from "@/actions/aksi-koreksi";
+import { getCompanyProfileAction } from "@/actions/aksi-pengaturan";
 import { formatDateIndo } from "@/lib/utils";
 
 export interface EmployeeInfo {
@@ -112,6 +115,40 @@ export function BalanceActivityCard({
 
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+
+  const [companyProfile, setCompanyProfile] = useState<{
+    companyName: string;
+    unitName: string;
+    location: string;
+    hrManagerName: string;
+    hrManagerNip: string;
+    hrManagerTitle: string;
+    currentUserName: string;
+  }>({
+    companyName: "PT KEBON AGUNG",
+    unitName: "PABRIK GULA TRANGKIL",
+    location: "Trangkil, Pati, Jawa Tengah",
+    hrManagerName: "Hendra Wijaya, S.E.",
+    hrManagerNip: "198503152010011002",
+    hrManagerTitle: "Kepala Bagian SDM & Umum",
+    currentUserName: "Administrator",
+  });
+
+  useEffect(() => {
+    getCompanyProfileAction().then((res) => {
+      if (res.success && res.data) {
+        setCompanyProfile({
+          companyName: res.data.companyName || "PT KEBON AGUNG",
+          unitName: res.data.unitName || "PABRIK GULA TRANGKIL",
+          location: res.data.location || "Trangkil, Pati, Jawa Tengah",
+          hrManagerName: res.data.hrManagerName || "-",
+          hrManagerNip: res.data.hrManagerNip || "-",
+          hrManagerTitle: res.data.hrManagerTitle || "Kepala Bagian SDM & Umum",
+          currentUserName: res.data.currentUserName || "Administrator",
+        });
+      }
+    });
+  }, []);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -202,9 +239,37 @@ export function BalanceActivityCard({
     });
   };
 
-  // Print Dialog States
+  // Direct Print States (Tanpa Pop-up Modal)
   const [printingLetterItem, setPrintingLetterItem] = useState<EmployeeLeaveHistoryItem | null>(null);
-  const [isPrintingHistoryModalOpen, setIsPrintingHistoryModalOpen] = useState(false);
+  const [isPrintingHistory, setIsPrintingHistory] = useState(false);
+
+  // Trigger Cetak Surat Cuti langsung ke dialog cetak sistem (tanpa popup modal)
+  const handlePrintLetter = (item: EmployeeLeaveHistoryItem) => {
+    setIsPrintingHistory(false);
+    setPrintingLetterItem(item);
+    setTimeout(() => {
+      window.print();
+    }, 50);
+  };
+
+  // Trigger Cetak Lembar Histori Saldo langsung ke dialog cetak sistem (tanpa popup modal)
+  const handlePrintHistory = () => {
+    setPrintingLetterItem(null);
+    setIsPrintingHistory(true);
+    setTimeout(() => {
+      window.print();
+    }, 50);
+  };
+
+  // Bersihkan state cetak saat jendela cetak ditutup
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setPrintingLetterItem(null);
+      setIsPrintingHistory(false);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
+  }, []);
 
   // Calculation for requested days & balances in Edit Modal
   const editMaxAnnual = (employee.balances.annual ?? 0) + (editingLeaveItem?.annualDays ?? 0);
@@ -318,19 +383,16 @@ export function BalanceActivityCard({
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {actionButton}
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setIsPrintingHistoryModalOpen(true)}
-                disabled={history.length === 0}
-                className="gap-1.5 h-8 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border-slate-200 shadow-2xs"
-                title="Cetak Rekap Riwayat Cuti"
+                onClick={handlePrintHistory}
+                className="font-medium gap-1.5 h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50"
               >
-                <Printer className="h-3.5 w-3.5 text-slate-500" />
-                Cetak Rekap
+                <Printer className="h-3.5 w-3.5" />
+                Cetak Histori Saldo
               </Button>
             </div>
           </div>
@@ -520,7 +582,7 @@ export function BalanceActivityCard({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPrintingLetterItem(item)}
+                                onClick={() => handlePrintLetter(item)}
                                 className="gap-1.5 h-7 text-[11px] font-medium text-blue-700 bg-blue-50/60 hover:bg-blue-100/80 border-blue-200"
                                 title="Cetak Surat Izin Cuti"
                               >
@@ -935,277 +997,246 @@ export function BalanceActivityCard({
         </DialogContent>
       </Dialog>
 
-      {/* POPUP MODAL: CETAK SURAT IZIN CUTI */}
-      <Dialog open={!!printingLetterItem} onOpenChange={(open) => !open && setPrintingLetterItem(null)}>
-        <DialogContent onClose={() => setPrintingLetterItem(null)} className="max-w-3xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between text-base font-bold text-slate-900">
-              <span className="flex items-center gap-2">
-                <Printer className="h-5 w-5 text-blue-600" />
-                Cetak Surat Izin Cuti Karyawan
-              </span>
-              <Badge variant="outline" className="font-mono text-xs">
-                {employee.employeeNumber}
-              </Badge>
-            </DialogTitle>
-            <DialogDescription>
-              Format standar cetak Surat Izin Cuti PG Trangkil Pati
-            </DialogDescription>
-          </DialogHeader>
-
-          {printingLetterItem && (
-            <div className="space-y-4 pt-2">
-              <div
-                id="printable-leave-letter"
-                className="border border-slate-300 bg-white p-8 rounded-lg text-slate-900 font-serif text-sm shadow-2xs space-y-6"
-              >
-                {/* KOP SURAT RESMI */}
-                <div className="text-center border-b-2 border-slate-900 pb-3 space-y-1">
-                  <h2 className="font-bold text-base tracking-wider uppercase text-slate-900">
-                    PT PERKEBUNAN NUSANTARA
-                  </h2>
-                  <h3 className="font-extrabold text-lg uppercase tracking-widest text-slate-900">
-                    PABRIK GULA TRANGKIL
-                  </h3>
-                  <p className="text-xs font-sans text-slate-600">
-                    Jl. Raya Trangkil No. 1, Pati, Jawa Tengah — Telp: (0295) 381234
-                  </p>
-                </div>
-
-                {/* JUDUL SURAT */}
-                <div className="text-center space-y-1">
-                  <h4 className="font-bold text-base underline uppercase tracking-wide">
-                    SURAT IZIN PENGAMBILAN CUTI
-                  </h4>
-                </div>
-
-                {/* ISI SURAT */}
-                <div className="space-y-3 font-sans text-xs text-slate-800 leading-relaxed">
-                  <p>Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
-                  <div className="grid grid-cols-[140px_10px_1fr] gap-y-1.5 pl-4">
-                    <span className="font-medium text-slate-600">Nama</span>
-                    <span>:</span>
-                    <strong className="text-slate-900">{employee.name}</strong>
-
-                    <span className="font-medium text-slate-600">NIP</span>
-                    <span>:</span>
-                    <span className="font-mono">{employee.employeeNumber}</span>
-
-                    <span className="font-medium text-slate-600">Bagian</span>
-                    <span>:</span>
-                    <span>{employee.department.name}</span>
-
-                    <span className="font-medium text-slate-600">Jabatan / Stasiun</span>
-                    <span>:</span>
-                    <span>{employee.position || "-"} ({employee.stasiun || "Umum"})</span>
-                  </div>
-
-                  <p className="pt-2">
-                    Diberikan izin untuk melaksanakan <strong>{printingLetterItem.uraian || "Cuti"}</strong> selama{" "}
-                    <strong>{printingLetterItem.totalDays} Hari Kerja</strong> pada tanggal:
-                  </p>
-
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs font-bold text-blue-900 pl-4">
-                    {printingLetterItem.selectedDates && printingLetterItem.selectedDates.length > 0
-                      ? printingLetterItem.selectedDates.join(", ")
-                      : `${formatDateIndo(printingLetterItem.startDate)} s/d ${formatDateIndo(printingLetterItem.endDate)}`}
-                  </div>
-
-                  <div className="grid grid-cols-[140px_10px_1fr] gap-y-1 pl-4 pt-1">
-                    <span className="font-medium text-slate-600">Alasan / Keperluan</span>
-                    <span>:</span>
-                    <span>{printingLetterItem.purpose || "-"}</span>
-
-                    <span className="font-medium text-slate-600">Rincian Saldo Terpakai</span>
-                    <span>:</span>
-                    <span>
-                      Tahunan: {printingLetterItem.annualDays} hr | Besar: {printingLetterItem.longLeaveDays} hr {!isPelaksana && `| Inhaldagen: ${printingLetterItem.inhaldagenDays} hr`}
-                    </span>
-                  </div>
-
-                  <p className="pt-2">
-                    Demikian surat izin cuti ini diberikan untuk dapat dipergunakan sebagaimana mestinya.
-                  </p>
-                </div>
-
-                {/* TANDA TANGAN */}
-                <div className="grid grid-cols-2 gap-8 pt-8 text-center font-sans text-xs">
-                  <div>
-                    <p className="text-slate-600">Pemohon Cuti,</p>
-                    <div className="h-16"></div>
-                    <p className="font-bold text-slate-900 underline">{employee.name}</p>
-                    <p className="text-slate-500 font-mono">NIP. {employee.employeeNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600">Pati, {formatDateIndo(new Date().toISOString())}</p>
-                    <p className="text-slate-600 font-medium">Kepala Bagian SDM & Umum,</p>
-                    <div className="h-16"></div>
-                    <p className="font-bold text-slate-900 underline">( ............................................ )</p>
-                    <p className="text-slate-500 font-mono">NIP. ....................................</p>
-                  </div>
+      {/* ELEMEN CETAK SURAT IZIN CUTI (LANGSUNG CETAK TANPA POPUP / MODAL) */}
+      {typeof document !== "undefined" && printingLetterItem && createPortal(
+        <div className="hidden print:block print:w-full print:m-0 print:p-0 print-page-wrapper">
+          <div
+            id="printable-leave-letter"
+            className="text-slate-900 font-serif text-sm print:border-none print:shadow-none print:p-0 print:m-0 print:space-y-4 relative"
+          >
+            {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
+            <div className="border-b-2 border-black pb-2.5">
+              <div className="flex flex-col items-start gap-1">
+                <Image
+                  src="/assets/PGTrangkilLogo.png"
+                  alt="Logo PG Trangkil"
+                  width={180}
+                  height={36}
+                  priority
+                  className="h-9 w-auto object-contain"
+                />
+                <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
+                  {companyProfile.location}
                 </div>
               </div>
             </div>
-          )}
 
-          <DialogFooter className="gap-2 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPrintingLetterItem(null)}
-            >
-              Tutup
-            </Button>
-            <Button
-              type="button"
-              onClick={() => window.print()}
-              className="font-semibold gap-1.5"
-            >
-              <Printer className="h-4 w-4" />
-              Cetak / Simpan PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* JUDUL SURAT */}
+            <div className="text-center mt-3 mb-2">
+              <h4 className="font-bold text-base underline uppercase tracking-wide text-black">
+                SURAT IZIN PENGAMBILAN CUTI
+              </h4>
+            </div>
 
-      {/* POPUP MODAL: CETAK LEMBAR REKAP AKTIVITAS SALDO PEGAWAI */}
-      <Dialog open={isPrintingHistoryModalOpen} onOpenChange={setIsPrintingHistoryModalOpen}>
-        <DialogContent onClose={() => setIsPrintingHistoryModalOpen(false)} className="max-w-4xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between text-base font-bold text-slate-900">
-              <span className="flex items-center gap-2">
-                <Printer className="h-5 w-5 text-blue-600" />
-                Cetak Lembar Aktivitas Saldo Cuti Karyawan
-              </span>
-            </DialogTitle>
-            <DialogDescription>
-              Format Kartu Riwayat Mutasi Saldo & Pengambilan Cuti Pegawai PT Perkebunan Nusantara — PG Trangkil
-            </DialogDescription>
-          </DialogHeader>
+            {/* ISI SURAT */}
+            <div className="space-y-3 font-sans text-xs text-slate-800 leading-relaxed">
+              <p>Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
+              <div className="grid grid-cols-[140px_10px_1fr] gap-y-1.5 pl-4">
+                <span className="font-medium text-slate-600">Nama</span>
+                <span>:</span>
+                <strong className="text-slate-900">{employee.name}</strong>
 
-          <div className="space-y-4 pt-1">
-            <div id="printable-history-sheet" className="border border-slate-300 bg-white p-6 rounded-lg text-slate-900 text-xs shadow-2xs font-sans space-y-4">
-              {/* Kop Surat */}
-              <div className="border-b-2 border-slate-800 pb-3 text-center space-y-0.5">
-                <h2 className="text-sm font-black tracking-widest text-slate-900 uppercase">
-                  PT PERKEBUNAN NUSANTARA
-                </h2>
-                <h3 className="text-base font-extrabold text-slate-900 uppercase tracking-wider">
-                  PABRIK GULA TRANGKIL PATI
-                </h3>
-                <p className="text-[10px] text-slate-600 font-medium">
-                  KARTU / BUKU HISTORI AKTIVITAS SALDO CUTI KARYAWAN {isPelaksana ? "PELAKSANA" : "PIMPINAN"}
-                </p>
+                <span className="font-medium text-slate-600">NIP</span>
+                <span>:</span>
+                <span className="font-mono">{employee.employeeNumber}</span>
+
+                <span className="font-medium text-slate-600">Bagian</span>
+                <span>:</span>
+                <span>{employee.department.name}</span>
+
+                <span className="font-medium text-slate-600">Jabatan / Stasiun</span>
+                <span>:</span>
+                <span>{employee.position || "-"} ({employee.stasiun || "Umum"})</span>
               </div>
 
-              {/* Info Pegawai */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded border border-slate-200 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Nama Karyawan:</span>
-                  <strong className="text-slate-900 text-sm">{employee.name}</strong>
-                  <span className="text-slate-500 block text-[11px] font-mono mt-1">NIP: {employee.employeeNumber}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-500 block text-[11px]">Bagian & Stasiun:</span>
-                  <strong className="text-slate-900">{employee.department.name}</strong>
-                  <span className="text-slate-600 block text-[11px]">Stasiun: {employee.stasiun || "-"}</span>
-                </div>
+              <p className="pt-2">
+                Diberikan izin untuk melaksanakan <strong>{printingLetterItem.uraian || "Cuti"}</strong> selama{" "}
+                <strong>{printingLetterItem.totalDays} Hari Kerja</strong> pada tanggal:
+              </p>
+
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs font-bold text-blue-900 pl-4">
+                {printingLetterItem.selectedDates && printingLetterItem.selectedDates.length > 0
+                  ? printingLetterItem.selectedDates.join(", ")
+                  : `${formatDateIndo(printingLetterItem.startDate)} s/d ${formatDateIndo(printingLetterItem.endDate)}`}
               </div>
 
-              {/* Tabel Histori */}
-              <table className="w-full border-collapse border border-slate-300 text-xs">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                    <th className="border border-slate-300 p-2 text-center w-10">No</th>
-                    <th className="border border-slate-300 p-2 text-center w-28">Tgl Transaksi</th>
-                    <th className="border border-slate-300 p-2 text-left">Uraian</th>
-                    <th className="border border-slate-300 p-2 text-left">Tanggal Cuti</th>
-                    <th className="border border-slate-300 p-2 text-center w-20">Tahunan</th>
-                    <th className="border border-slate-300 p-2 text-center w-20">Besar</th>
-                    {!isPelaksana && (
-                      <th className="border border-slate-300 p-2 text-center w-20">Inhaldagen</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedHistory.map((h, i) => {
-                    const isTambah = h.transactionType === "TAMBAH_SALDO";
-                    return (
-                      <tr key={h.id} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="p-2 text-center font-mono">{i + 1}</td>
-                        <td className="p-2 text-center font-mono">{formatDateIndo(h.requestDate)}</td>
-                        <td className="p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}</td>
-                        <td className="p-2 font-mono">
-                          {isTambah ? "-" : (h.selectedDates && h.selectedDates.length > 0 ? h.selectedDates.join(", ") : `${formatDateIndo(h.startDate)} s/d ${formatDateIndo(h.endDate)}`)}
-                        </td>
-                        <td className="p-2 text-center font-mono font-bold">
-                          {h.annualDays > 0 ? (
-                            isTambah ? <span className="text-emerald-700">+{h.annualDays}</span> : <span className="text-red-600">-{h.annualDays}</span>
-                          ) : <span className="text-slate-400 font-normal">-</span>}
-                        </td>
-                        <td className="p-2 text-center font-mono font-bold">
-                          {h.longLeaveDays > 0 ? (
-                            isTambah ? <span className="text-emerald-700">+{h.longLeaveDays}</span> : <span className="text-red-600">-{h.longLeaveDays}</span>
-                          ) : <span className="text-slate-400 font-normal">-</span>}
-                        </td>
-                        {!isPelaksana && (
-                          <td className="p-2 text-center font-mono font-bold">
-                            {h.inhaldagenDays > 0 ? (
-                              isTambah ? <span className="text-emerald-700">+{h.inhaldagenDays}</span> : <span className="text-red-600">-{h.inhaldagenDays}</span>
-                            ) : <span className="text-slate-400 font-normal">-</span>}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="grid grid-cols-[140px_10px_1fr] gap-y-1 pl-4 pt-1">
+                <span className="font-medium text-slate-600">Alasan / Keperluan</span>
+                <span>:</span>
+                <span>{printingLetterItem.purpose || "-"}</span>
 
-              {/* Sisa Saldo Terkini */}
-              <div className="text-right text-xs pt-1">
-                <span className="font-semibold text-slate-800">
-                  Total Sisa Saldo Cuti Saat Ini: <strong className="font-mono text-blue-900">{employee.balances.total} Hari</strong> (Tahunan: {employee.balances.annual} hr, Besar: {employee.balances.longLeave} hr{!isPelaksana ? `, Inhaldagen: ${employee.balances.inhaldagen} hr` : ""})
+                <span className="font-medium text-slate-600">Rincian Saldo Terpakai</span>
+                <span>:</span>
+                <span>
+                  Tahunan: {printingLetterItem.annualDays} hr | Besar: {printingLetterItem.longLeaveDays} hr {!isPelaksana && `| Inhaldagen: ${printingLetterItem.inhaldagenDays} hr`}
                 </span>
               </div>
 
-              {/* Sign-off */}
-              <div className="grid grid-cols-2 gap-8 pt-8 text-center text-xs">
-                <div>
-                  <p className="text-slate-600">Dicetak Oleh (Operator Cuti),</p>
-                  <div className="h-14"></div>
-                  <p className="font-bold text-slate-900 underline">( ............................................ )</p>
-                </div>
-                <div>
-                  <p className="text-slate-600">Mengetahui, Kepala Bagian SDM & Umum</p>
-                  <div className="h-14"></div>
-                  <p className="font-bold text-slate-900 underline">( ............................................ )</p>
+              <p className="pt-2">
+                Demikian surat izin cuti ini diberikan untuk dapat dipergunakan sebagaimana mestinya.
+              </p>
+            </div>
+
+            {/* TANDA TANGAN */}
+            <div className="grid grid-cols-2 gap-8 pt-8 text-center font-sans text-xs">
+              <div>
+                <p className="text-slate-600">Pemohon Cuti,</p>
+                <div className="h-16"></div>
+                <p className="font-bold text-slate-900 underline">{employee.name}</p>
+                <p className="text-slate-500 font-mono">NIP. {employee.employeeNumber}</p>
+              </div>
+              <div>
+                <p className="text-slate-600">
+                  {companyProfile.location.split(",")[0]?.trim() || "Pati"},{" "}
+                  {formatDateIndo(new Date().toISOString())}
+                </p>
+                <p className="text-slate-600 font-medium">{companyProfile.hrManagerTitle},</p>
+                <div className="h-16"></div>
+                <p className="font-bold text-slate-900 underline">{companyProfile.hrManagerName}</p>
+                <p className="text-slate-500 font-mono">NIP. {companyProfile.hrManagerNip}</p>
+              </div>
+            </div>
+
+            {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
+            <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
+              <div>{companyProfile.currentUserName}</div>
+              <div>{formatDateIndo(new Date())}</div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ELEMEN CETAK LEMBAR REKAP AKTIVITAS SALDO (LANGSUNG CETAK TANPA POPUP / MODAL) */}
+      {typeof document !== "undefined" && isPrintingHistory && createPortal(
+        <div className="hidden print:block print:w-full print:m-0 print:p-0 print-page-wrapper">
+          <div
+            id="printable-history-sheet"
+            className="text-slate-900 text-xs font-sans print:border-none print:shadow-none print:p-0 print:m-0 print:space-y-3 relative"
+          >
+            {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
+            <div className="border-b-2 border-black pb-2.5">
+              <div className="flex flex-col items-start gap-1">
+                <Image
+                  src="/assets/PGTrangkilLogo.png"
+                  alt="Logo PG Trangkil"
+                  width={180}
+                  height={36}
+                  priority
+                  className="h-9 w-auto object-contain"
+                />
+                <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
+                  {companyProfile.location}
                 </div>
               </div>
             </div>
-          </div>
 
-          <DialogFooter className="gap-2 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsPrintingHistoryModalOpen(false)}
-            >
-              Tutup
-            </Button>
-            <Button
-              type="button"
-              onClick={() => window.print()}
-              className="font-semibold gap-1.5"
-            >
-              <Printer className="h-4 w-4" />
-              Cetak / Simpan PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* Judul Dokumen Resmi */}
+            <div className="text-center mt-3 mb-2">
+              <h1 className="text-sm font-black uppercase text-black tracking-wide">
+                KARTU HISTORI AKTIVITAS SALDO CUTI KARYAWAN
+              </h1>
+              <p className="text-[11px] text-black mt-0.5">
+                Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"} • Bagian: {employee.department.name}
+              </p>
+            </div>
+
+            {/* Info Pegawai */}
+            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded border border-slate-200 text-xs">
+              <div>
+                <span className="text-slate-500 block text-[11px]">Nama Karyawan:</span>
+                <strong className="text-slate-900 text-sm">{employee.name}</strong>
+                <span className="text-slate-500 block text-[11px] font-mono mt-1">NIP: {employee.employeeNumber}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500 block text-[11px]">Bagian & Stasiun:</span>
+                <strong className="text-slate-900">{employee.department.name}</strong>
+                <span className="text-slate-600 block text-[11px]">Stasiun: {employee.stasiun || "-"}</span>
+              </div>
+            </div>
+
+            {/* Tabel Histori */}
+            <table className="w-full border-collapse border border-slate-300 text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                  <th className="border border-slate-300 p-2 text-center w-10">No</th>
+                  <th className="border border-slate-300 p-2 text-center w-28">Tgl Transaksi</th>
+                  <th className="border border-slate-300 p-2 text-left">Uraian</th>
+                  <th className="border border-slate-300 p-2 text-left">Tanggal Cuti</th>
+                  <th className="border border-slate-300 p-2 text-center w-20">Tahunan</th>
+                  <th className="border border-slate-300 p-2 text-center w-20">Besar</th>
+                  {!isPelaksana && (
+                    <th className="border border-slate-300 p-2 text-center w-20">Inhaldagen</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedHistory.map((h, i) => {
+                  const isTambah = h.transactionType === "TAMBAH_SALDO";
+                  return (
+                    <tr key={h.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="p-2 text-center font-mono">{i + 1}</td>
+                      <td className="p-2 text-center font-mono">{formatDateIndo(h.requestDate)}</td>
+                      <td className="p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}</td>
+                      <td className="p-2 font-mono">
+                        {isTambah ? "-" : (h.selectedDates && h.selectedDates.length > 0 ? h.selectedDates.join(", ") : `${formatDateIndo(h.startDate)} s/d ${formatDateIndo(h.endDate)}`)}
+                      </td>
+                      <td className="p-2 text-center font-mono font-bold">
+                        {h.annualDays > 0 ? (
+                          isTambah ? <span className="text-emerald-700">+{h.annualDays}</span> : <span className="text-red-600">-{h.annualDays}</span>
+                        ) : <span className="text-slate-400 font-normal">-</span>}
+                      </td>
+                      <td className="p-2 text-center font-mono font-bold">
+                        {h.longLeaveDays > 0 ? (
+                          isTambah ? <span className="text-emerald-700">+{h.longLeaveDays}</span> : <span className="text-red-600">-{h.longLeaveDays}</span>
+                        ) : <span className="text-slate-400 font-normal">-</span>}
+                      </td>
+                      {!isPelaksana && (
+                        <td className="p-2 text-center font-mono font-bold">
+                          {h.inhaldagenDays > 0 ? (
+                            isTambah ? <span className="text-emerald-700">+{h.inhaldagenDays}</span> : <span className="text-red-600">-{h.inhaldagenDays}</span>
+                          ) : <span className="text-slate-400 font-normal">-</span>}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Sisa Saldo Terkini */}
+            <div className="text-right text-xs pt-1">
+              <span className="font-semibold text-slate-800">
+                Total Sisa Saldo Cuti Saat Ini: <strong className="font-mono text-blue-900">{employee.balances.total} Hari</strong> (Tahunan: {employee.balances.annual} hr, Besar: {employee.balances.longLeave} hr{!isPelaksana ? `, Inhaldagen: ${employee.balances.inhaldagen} hr` : ""})
+              </span>
+            </div>
+
+            {/* Sign-off */}
+            <div className="grid grid-cols-2 gap-8 pt-8 text-center text-xs">
+              <div>
+                <p className="text-slate-600">Dicetak Oleh (Operator Cuti),</p>
+                <div className="h-14"></div>
+                <p className="font-bold text-slate-900 underline">( ............................................ )</p>
+              </div>
+              <div>
+                <p className="text-slate-600">Mengetahui, {companyProfile.hrManagerTitle}</p>
+                <div className="h-14"></div>
+                <p className="font-bold text-slate-900 underline">{companyProfile.hrManagerName}</p>
+                <p className="text-slate-500 font-mono text-[10px]">NIP. {companyProfile.hrManagerNip}</p>
+              </div>
+            </div>
+
+            {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
+            <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
+              <div>{companyProfile.currentUserName}</div>
+              <div>{formatDateIndo(new Date())}</div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
 
 export { BalanceActivityCard as KartuAktivitasSaldo };
-

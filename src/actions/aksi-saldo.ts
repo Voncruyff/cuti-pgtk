@@ -35,17 +35,12 @@ export async function addLeaveBalanceAction(
       };
     }
 
-    // Role verification: If user is Admin Bagian, ensure employee is in their department
-    if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      const empDept = employee.bagian.toLowerCase();
-      if (!empDept.includes(userDept) && !userDept.includes(empDept)) {
-        return {
-          success: false,
-          message: `Anda hanya memiliki hak akses untuk menambah saldo karyawan ${user.department}.`,
-        };
-      }
-    }
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menambah saldo cuti.",
+    };
+  }
 
     let annual = employee.leaveBalance?.cutiTahunan ?? 12;
     let longLeave = employee.leaveBalance?.cutiBesar ?? 0;
@@ -193,17 +188,12 @@ export async function addMultipleLeaveBalanceAction(
       };
     }
 
-    // Role verification
-    if (user.role === "ADMIN_BAGIAN" && user.department && user.department !== "ALL") {
-      const userDept = user.department.toLowerCase();
-      const empDept = employee.bagian.toLowerCase();
-      if (!empDept.includes(userDept) && !userDept.includes(empDept)) {
-        return {
-          success: false,
-          message: `Anda hanya memiliki hak akses untuk menambah saldo karyawan ${user.department}.`,
-        };
-      }
-    }
+  if (user.role !== "ADMIN_UTAMA") {
+    return {
+      success: false,
+      message: "Hanya Admin Utama yang memiliki hak akses untuk menambah saldo cuti.",
+    };
+  }
 
     let annual = employee.leaveBalance?.cutiTahunan ?? 12;
     let longLeave = employee.leaveBalance?.cutiBesar ?? 0;
