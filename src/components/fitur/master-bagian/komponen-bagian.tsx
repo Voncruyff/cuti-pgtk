@@ -254,10 +254,10 @@ interface PropsModalTambahBagian {
   isPending: boolean;
   kode: string;
   nama: string;
-  aktif: boolean;
+  aktif?: boolean;
   onUbahKode: (val: string) => void;
   onUbahNama: (val: string) => void;
-  onUbahAktif: (val: boolean) => void;
+  onUbahAktif?: (val: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   onTutup: () => void;
 }
@@ -267,10 +267,8 @@ export function ModalTambahBagian({
   isPending,
   kode,
   nama,
-  aktif,
   onUbahKode,
   onUbahNama,
-  onUbahAktif,
   onSubmit,
   onTutup,
 }: PropsModalTambahBagian) {
@@ -295,14 +293,10 @@ export function ModalTambahBagian({
             <Label htmlFor="tambah-nama-bagian" required className="text-xs font-medium text-slate-700">Nama Bagian / Unit Kerja</Label>
             <Input id="tambah-nama-bagian" type="text" placeholder="Contoh: Sumber Daya Manusia (SDM)" value={nama} onChange={(e) => onUbahNama(e.target.value)} disabled={isPending} required className="h-9 text-xs" />
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="tambah-aktif-bagian" checked={aktif} onChange={(e) => onUbahAktif(e.target.checked)} disabled={isPending} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <Label htmlFor="tambah-aktif-bagian" className="text-xs font-normal cursor-pointer text-slate-700">Bagian aktif dan dapat dipilih saat input data karyawan</Label>
-          </div>
           <DialogFooter className="gap-2 pt-3">
             <Button type="button" variant="outline" onClick={onTutup} disabled={isPending}>Batal</Button>
             <Button type="submit" disabled={isPending} className="font-semibold gap-1.5">
-              {isPending ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" />Menyimpan...</>) : (<><CheckCircle2 className="h-3.5 w-3.5" />Simpan Bagian Baru</>)}
+              {isPending ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" />Menyimpan...</>) : "Simpan Bagian Baru"}
             </Button>
           </DialogFooter>
         </form>
@@ -318,10 +312,10 @@ interface PropsModalEditBagian {
   isPending: boolean;
   kode: string;
   nama: string;
-  aktif: boolean;
+  aktif?: boolean;
   onUbahKode: (val: string) => void;
   onUbahNama: (val: string) => void;
-  onUbahAktif: (val: boolean) => void;
+  onUbahAktif?: (val: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   onTutup: () => void;
 }
@@ -331,10 +325,8 @@ export function ModalEditBagian({
   isPending,
   kode,
   nama,
-  aktif,
   onUbahKode,
   onUbahNama,
-  onUbahAktif,
   onSubmit,
   onTutup,
 }: PropsModalEditBagian) {
@@ -346,7 +338,7 @@ export function ModalEditBagian({
             <Pencil className="h-5 w-5 text-amber-600" />
             Edit / Ubah Data Bagian
           </DialogTitle>
-          <DialogDescription>Perbarui kode singkatan, nama bagian, atau status keaktifan.</DialogDescription>
+          <DialogDescription>Perbarui kode singkatan atau nama bagian.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 pt-2">
@@ -358,14 +350,10 @@ export function ModalEditBagian({
             <Label htmlFor="edit-nama-bagian" required className="text-xs font-medium text-slate-700">Nama Bagian / Unit Kerja</Label>
             <Input id="edit-nama-bagian" type="text" value={nama} onChange={(e) => onUbahNama(e.target.value)} disabled={isPending} required className="h-9 text-xs" />
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="edit-aktif-bagian" checked={aktif} onChange={(e) => onUbahAktif(e.target.checked)} disabled={isPending} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <Label htmlFor="edit-aktif-bagian" className="text-xs font-normal cursor-pointer text-slate-700">Bagian aktif dan dapat dipilih</Label>
-          </div>
           <DialogFooter className="gap-2 pt-3">
             <Button type="button" variant="outline" onClick={onTutup} disabled={isPending}>Batal</Button>
             <Button type="submit" disabled={isPending} className="font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white">
-              {isPending ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" />Memperbarui...</>) : (<><CheckCircle2 className="h-3.5 w-3.5" />Simpan Perubahan</>)}
+              {isPending ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" />Memperbarui...</>) : "Simpan Perubahan"}
             </Button>
           </DialogFooter>
         </form>

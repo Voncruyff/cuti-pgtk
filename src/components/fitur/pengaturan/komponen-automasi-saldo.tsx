@@ -7,16 +7,12 @@ import {
   Save,
   Loader2,
   Info,
+  Clock,
+  Award,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   getSystemSettingsAction,
@@ -59,10 +55,16 @@ export function KomponenAutomasiSaldo() {
   const [longLeaveCarryOverUnit, setLongLeaveCarryOverUnit] = useState<"HARI" | "BULAN" | "TAHUN">("HARI");
   const [longLeaveStatus, setLongLeaveStatus] = useState<"AKTIF" | "NONAKTIF">("AKTIF");
 
+  // 3. Inhaldagen State (Khusus Masa Berlaku / Kedaluwarsa)
+  const [inhaldagenAutoEnabled, setInhaldagenAutoEnabled] = useState(true);
+  const [inhaldagenExpiryYears, setInhaldagenExpiryYears] = useState(1);
+  const [inhaldagenExpiryMonths, setInhaldagenExpiryMonths] = useState(1);
+  const [inhaldagenExpiryUnit, setInhaldagenExpiryUnit] = useState<"HARI" | "BULAN" | "TAHUN">("BULAN");
+  const [inhaldagenStatus, setInhaldagenStatus] = useState<"AKTIF" | "NONAKTIF">("AKTIF");
+
   // Fallbacks
   const [defaultInhaldagenDays, setDefaultInhaldagenDays] = useState(6);
   const [inhaldagenEligibleYears, setInhaldagenEligibleYears] = useState(0);
-  const [inhaldagenExpiryMonths, setInhaldagenExpiryMonths] = useState(12);
   const [activePeriodYear, setActivePeriodYear] = useState(2026);
   const [maxAccumulatedDays, setMaxAccumulatedDays] = useState(36);
 
@@ -111,10 +113,15 @@ export function KomponenAutomasiSaldo() {
       setLongLeaveMaxCarryOver(policy.longLeaveMaxCarryOver ?? 0);
       setLongLeaveCarryOverUnit(policy.longLeaveCarryOverUnit || "HARI");
 
-      // Fallbacks
+      // 3. Inhaldagen (Masa Berlaku Kedaluwarsa)
+      const inhaldagenActive = policy.inhaldagenAutoEnabled !== false && policy.inhaldagenStatus !== "NONAKTIF";
+      setInhaldagenAutoEnabled(inhaldagenActive);
+      setInhaldagenStatus(inhaldagenActive ? "AKTIF" : "NONAKTIF");
+      setInhaldagenExpiryYears(policy.inhaldagenExpiryYears ?? (policy.inhaldagenExpiryMonths ?? 1));
+      setInhaldagenExpiryUnit(policy.inhaldagenExpiryUnit || "BULAN");
+      setInhaldagenExpiryMonths(policy.inhaldagenExpiryMonths ?? 1);
       setDefaultInhaldagenDays(policy.defaultInhaldagenDays ?? 6);
       setInhaldagenEligibleYears(policy.inhaldagenEligibleYears ?? 0);
-      setInhaldagenExpiryMonths(policy.inhaldagenExpiryMonths ?? 12);
       setActivePeriodYear(policy.activePeriodYear ?? 2026);
       setMaxAccumulatedDays(policy.maxAccumulatedDays ?? 36);
     } else {
@@ -160,18 +167,29 @@ export function KomponenAutomasiSaldo() {
         longLeaveCarryOverUnit,
         longLeaveStatus: longLeaveAutoEnabled ? "AKTIF" : "NONAKTIF",
 
+        // 3. Inhaldagen
+        inhaldagenName: "Cuti Inhaldagen",
+        inhaldagenAutoEnabled,
+        inhaldagenExpiryYears,
+        inhaldagenExpiryMonths:
+          inhaldagenExpiryUnit === "TAHUN"
+            ? inhaldagenExpiryYears * 12
+            : inhaldagenExpiryUnit === "HARI"
+            ? Math.max(1, Math.round(inhaldagenExpiryYears / 30))
+            : inhaldagenExpiryYears,
+        inhaldagenExpiryUnit,
+        inhaldagenStatus: inhaldagenAutoEnabled ? "AKTIF" : "NONAKTIF",
         defaultInhaldagenDays,
         inhaldagenEligibleYears,
-        inhaldagenExpiryMonths,
         activePeriodYear,
         maxAccumulatedDays,
       });
 
       if (res.success) {
-        toast.success(res.message || "Ketentuan saldo otomatis berhasil disimpan.");
+        toast.success(res.message || "Pengaturan berhasil disimpan.");
         loadSettings();
       } else {
-        toast.error(res.message || "Gagal menyimpan ketentuan saldo otomatis.");
+        toast.error(res.message || "Gagal menyimpan pengaturan.");
       }
     });
   };
@@ -180,9 +198,9 @@ export function KomponenAutomasiSaldo() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-7 w-7 animate-spin text-[#0084c7]" />
-          <p className="text-xs font-semibold text-slate-600">
-            Memuat ketentuan saldo otomatis...
+          <Loader2 className="h-6 w-6 animate-spin text-[#0084c7]" />
+          <p className="text-xs font-medium text-slate-500">
+            Memuat ketentuan otomasi saldo...
           </p>
         </div>
       </div>
@@ -191,33 +209,33 @@ export function KomponenAutomasiSaldo() {
 
   return (
     <form onSubmit={handleSavePolicy} className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
         {/* ======================================================== */}
         {/* 1. CUTI TAHUNAN                                          */}
         {/* ======================================================== */}
         <Card
-          className={`border-slate-200/85 shadow-2xs flex flex-col justify-between transition-all duration-200 ${
-            !annualAutoEnabled ? "bg-slate-50/40 border-dashed" : "bg-white"
+          className={`border transition-all duration-200 flex flex-col justify-between rounded-xl shadow-xs overflow-hidden ${
+            !annualAutoEnabled
+              ? "bg-slate-50/50 border-slate-200"
+              : "bg-white border-slate-200/90 hover:border-slate-300"
           }`}
         >
-          <CardHeader className="py-3.5 px-5 bg-gradient-to-r from-sky-50/60 via-slate-50/20 to-transparent border-b border-slate-100 flex flex-row items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          {/* Card Header: Ringkas & Tidak Menumpuk */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-gradient-to-r from-sky-50/50 via-white to-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-[#0084c7] font-bold text-xs shrink-0">
                 <CalendarDays className="h-4 w-4 text-[#0084c7]" />
-                1. Saldo Otomatis Cuti Tahunan
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pengaturan saldo otomatis cuti tahunan reguler bagi seluruh karyawan
-              </CardDescription>
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 truncate">Cuti Tahunan</h3>
+                <p className="text-[11px] text-slate-500 truncate">Akrual kuota otomatis tahunan</p>
+              </div>
             </div>
 
-            {/* Tombol ON / OFF Status Otomasi Cuti Tahunan */}
-            <div className="flex items-center gap-2 shrink-0 bg-white/90 py-1.5 px-3 rounded-full border border-slate-200/80 shadow-2xs">
-              <span className="text-xs font-medium text-slate-600">
-                Status Otomasi:
-              </span>
+            {/* Toggle Switch Simple */}
+            <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`text-xs font-bold transition-colors ${
+                className={`text-[11px] font-semibold transition-colors ${
                   annualAutoEnabled ? "text-emerald-600" : "text-slate-400"
                 }`}
               >
@@ -227,220 +245,195 @@ export function KomponenAutomasiSaldo() {
                 type="button"
                 role="switch"
                 aria-checked={annualAutoEnabled}
-                title={annualAutoEnabled ? "Klik untuk menonaktifkan otomasi" : "Klik untuk mengaktifkan otomasi"}
+                title={annualAutoEnabled ? "Nonaktifkan otomasi cuti tahunan" : "Aktifkan otomasi cuti tahunan"}
                 onClick={() => {
                   const next = !annualAutoEnabled;
                   setAnnualAutoEnabled(next);
                   setAnnualStatus(next ? "AKTIF" : "NONAKTIF");
-                  toast.info(next ? "Otomasi Saldo Cuti Tahunan diaktifkan." : "Otomasi Saldo Cuti Tahunan dinonaktifkan.");
+                  toast.info(next ? "Otomasi Cuti Tahunan diaktifkan." : "Otomasi Cuti Tahunan dinonaktifkan.");
                 }}
-                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#0084c7] ${
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#0084c7] ${
                   annualAutoEnabled ? "bg-emerald-500" : "bg-slate-300"
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                    annualAutoEnabled ? "translate-x-5" : "translate-x-0"
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                    annualAutoEnabled ? "translate-x-4" : "translate-x-0"
                   }`}
                 />
               </button>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
-            {!annualAutoEnabled && (
-              <div className="rounded-lg bg-amber-50/90 border border-amber-200/80 p-2.5 flex items-center gap-2 text-xs text-amber-800 animate-in fade-in duration-200">
-                <Info className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Status otomasi <strong>Nonaktif</strong>. Sistem tidak akan menambah saldo cuti secara otomatis.</span>
+          {/* Card Body */}
+          <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+            {!annualAutoEnabled ? (
+              <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-3 flex items-start gap-2 text-xs text-amber-800">
+                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  Status <strong>Nonaktif</strong>. Sistem tidak akan menambah saldo tahunan secara otomatis.
+                </p>
               </div>
-            )}
+            ) : null}
 
             <div
-              className={`space-y-3.5 transition-all duration-300 ${
-                !annualAutoEnabled
-                  ? "opacity-40 pointer-events-none select-none filter blur-[0.4px] grayscale-[40%]"
-                  : "opacity-100"
+              className={`space-y-3.5 transition-all duration-200 ${
+                !annualAutoEnabled ? "opacity-40 pointer-events-none select-none grayscale-[40%]" : ""
               }`}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Saldo Diberikan */}
+              {/* Row 1: Jumlah Kuota & Syarat Masa Kerja */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Saldo Diberikan
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Jumlah Kuota
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#0084c7] focus-within:ring-1 focus-within:ring-[#0084c7] h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={365}
                       value={defaultAnnualDays}
                       onChange={(e) => setDefaultAnnualDays(Number(e.target.value))}
-                      className="h-9 text-xs font-mono font-bold text-[#0084c7] pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={defaultAnnualUnit}
-                        onChange={(e) => setDefaultAnnualUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={defaultAnnualUnit}
+                      onChange={(e) => setDefaultAnnualUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="HARI">Hari</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="TAHUN">Tahun</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Standar umum: 12 hari</p>
                 </div>
 
-                {/* Minimal Masa Kerja */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Minimal Masa Kerja
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Syarat Masa Kerja
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#0084c7] focus-within:ring-1 focus-within:ring-[#0084c7] h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={0}
                       max={100}
                       value={annualEligibleYears}
                       onChange={(e) => setAnnualEligibleYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={annualEligibleUnit}
-                        onChange={(e) => setAnnualEligibleUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={annualEligibleUnit}
+                      onChange={(e) => setAnnualEligibleUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Syarat minimal hak cuti</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Diberikan Ulang Setiap */}
+              {/* Row 2: Siklus Pemberian & Masa Berlaku */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Diberikan Ulang Setiap
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Siklus Pemberian
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#0084c7] focus-within:ring-1 focus-within:ring-[#0084c7] h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={100}
                       value={annualRepeatYears}
                       onChange={(e) => setAnnualRepeatYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={annualRepeatUnit}
-                        onChange={(e) => setAnnualRepeatUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={annualRepeatUnit}
+                      onChange={(e) => setAnnualRepeatUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Periode siklus kuota</p>
                 </div>
 
-                {/* Masa Berlaku */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
                     Masa Berlaku
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#0084c7] focus-within:ring-1 focus-within:ring-[#0084c7] h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={100}
                       value={annualExpiryYears}
                       onChange={(e) => setAnnualExpiryYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={annualExpiryUnit}
-                        onChange={(e) => setAnnualExpiryUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={annualExpiryUnit}
+                      onChange={(e) => setAnnualExpiryUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Masa aktif kedaluwarsa kuota</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Carry Over */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Carry Over (Sisa Saldo)
-                  </Label>
+              {/* Row 3: Carry Over Box */}
+              <div className="rounded-lg bg-slate-50/70 border border-slate-200/80 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-700">Carry Over Sisa Saldo</div>
+                    <div className="text-[10px] text-slate-500">Alihkan sisa saldo ke periode baru</div>
+                  </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={annualCarryOver}
                     onClick={() => setAnnualCarryOver(!annualCarryOver)}
-                    className={`h-9 w-full flex items-center justify-between px-3 rounded-md border text-xs font-semibold transition-all cursor-pointer select-none ${
-                      annualCarryOver
-                        ? "bg-emerald-50/60 border-emerald-300 text-emerald-700 shadow-2xs"
-                        : "bg-slate-50/70 border-slate-200/80 text-slate-500 hover:bg-slate-100"
+                    className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      annualCarryOver ? "bg-emerald-500" : "bg-slate-300"
                     }`}
                   >
-                    <span>{annualCarryOver ? "Aktif" : "Tidak Aktif"}</span>
                     <span
-                      className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                        annualCarryOver ? "bg-emerald-500" : "bg-slate-300"
+                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                        annualCarryOver ? "translate-x-3" : "translate-x-0"
                       }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                          annualCarryOver ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </span>
+                    />
                   </button>
-                  <p className="text-[10px] text-slate-400">Sisa saldo bisa dialihkan ke periode berikutnya</p>
                 </div>
 
-                {/* Maksimal Carry Over */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Maksimal Carry Over
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={365}
-                      disabled={!annualCarryOver}
-                      value={annualMaxCarryOver}
-                      onChange={(e) => setAnnualMaxCarryOver(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24 disabled:bg-slate-100 disabled:text-slate-400"
-                      required
-                    />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
+                {annualCarryOver && (
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/60 animate-in fade-in-50 duration-150">
+                    <span className="text-[11px] font-medium text-slate-600 shrink-0">
+                      Batas Maksimal:
+                    </span>
+                    <div className="flex items-center rounded-md border border-slate-200 bg-white h-7 overflow-hidden w-36 shadow-2xs">
+                      <input
+                        type="number"
+                        min={0}
+                        max={365}
+                        value={annualMaxCarryOver}
+                        onChange={(e) => setAnnualMaxCarryOver(Number(e.target.value))}
+                        className="w-full h-full px-2 text-xs font-semibold text-slate-800 outline-none text-right"
+                        required
+                      />
                       <select
-                        disabled={!annualCarryOver}
                         value={annualCarryOverUnit}
                         onChange={(e) => setAnnualCarryOverUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] disabled:opacity-50 disabled:bg-slate-100 cursor-pointer transition-colors"
+                        className="h-full bg-slate-50 border-l border-slate-200 px-1.5 text-[10px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer"
                       >
                         <option value="HARI">Hari</option>
                         <option value="BULAN">Bulan</option>
@@ -448,53 +441,52 @@ export function KomponenAutomasiSaldo() {
                       </select>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-400">Maksimum sisa saldo dialihkan</p>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Simpan Cuti Tahunan */}
-            <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+            {/* Footer / Simpan */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
               <Button
                 type="button"
                 onClick={() => handleSavePolicy()}
                 disabled={isPending}
                 size="sm"
-                className="font-semibold text-xs shadow-2xs"
+                className="h-8 px-3 text-xs font-semibold shadow-2xs"
               >
-                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
                 Simpan Cuti Tahunan
               </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         {/* ======================================================== */}
         {/* 2. CUTI BESAR / PANJANG                                  */}
         {/* ======================================================== */}
         <Card
-          className={`border-slate-200/85 shadow-2xs flex flex-col justify-between transition-all duration-200 ${
-            !longLeaveAutoEnabled ? "bg-slate-50/40 border-dashed" : "bg-white"
+          className={`border transition-all duration-200 flex flex-col justify-between rounded-xl shadow-xs overflow-hidden ${
+            !longLeaveAutoEnabled
+              ? "bg-slate-50/50 border-slate-200"
+              : "bg-white border-slate-200/90 hover:border-slate-300"
           }`}
         >
-          <CardHeader className="py-3.5 px-5 bg-gradient-to-r from-indigo-50/60 via-slate-50/20 to-transparent border-b border-slate-100 flex flex-row items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-indigo-600" />
-                2. Saldo Otomatis Cuti Besar
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pengaturan saldo otomatis istirahat panjang berkala sesuai masa kerja
-              </CardDescription>
+          {/* Card Header: Ringkas & Tidy */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-gradient-to-r from-indigo-50/50 via-white to-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
+                <Award className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 truncate">Cuti Besar</h3>
+                <p className="text-[11px] text-slate-500 truncate">Istirahat panjang kelipatan dinas</p>
+              </div>
             </div>
 
-            {/* Tombol ON / OFF Status Otomasi Cuti Besar */}
-            <div className="flex items-center gap-2 shrink-0 bg-white/90 py-1.5 px-3 rounded-full border border-slate-200/80 shadow-2xs">
-              <span className="text-xs font-medium text-slate-600">
-                Status Otomasi:
-              </span>
+            {/* Toggle Switch Simple */}
+            <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`text-xs font-bold transition-colors ${
+                className={`text-[11px] font-semibold transition-colors ${
                   longLeaveAutoEnabled ? "text-indigo-600" : "text-slate-400"
                 }`}
               >
@@ -504,220 +496,195 @@ export function KomponenAutomasiSaldo() {
                 type="button"
                 role="switch"
                 aria-checked={longLeaveAutoEnabled}
-                title={longLeaveAutoEnabled ? "Klik untuk menonaktifkan otomasi" : "Klik untuk mengaktifkan otomasi"}
+                title={longLeaveAutoEnabled ? "Nonaktifkan otomasi cuti besar" : "Aktifkan otomasi cuti besar"}
                 onClick={() => {
                   const next = !longLeaveAutoEnabled;
                   setLongLeaveAutoEnabled(next);
                   setLongLeaveStatus(next ? "AKTIF" : "NONAKTIF");
-                  toast.info(next ? "Otomasi Saldo Cuti Besar diaktifkan." : "Otomasi Saldo Cuti Besar dinonaktifkan.");
+                  toast.info(next ? "Otomasi Cuti Besar diaktifkan." : "Otomasi Cuti Besar dinonaktifkan.");
                 }}
-                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 ${
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 ${
                   longLeaveAutoEnabled ? "bg-indigo-600" : "bg-slate-300"
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                    longLeaveAutoEnabled ? "translate-x-5" : "translate-x-0"
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                    longLeaveAutoEnabled ? "translate-x-4" : "translate-x-0"
                   }`}
                 />
               </button>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
-            {!longLeaveAutoEnabled && (
-              <div className="rounded-lg bg-amber-50/90 border border-amber-200/80 p-2.5 flex items-center gap-2 text-xs text-amber-800 animate-in fade-in duration-200">
-                <Info className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Status otomasi <strong>Nonaktif</strong>. Sistem tidak akan menambah saldo cuti besar secara otomatis.</span>
+          {/* Card Body */}
+          <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+            {!longLeaveAutoEnabled ? (
+              <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-3 flex items-start gap-2 text-xs text-amber-800">
+                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  Status <strong>Nonaktif</strong>. Sistem tidak akan menambah saldo cuti besar secara otomatis.
+                </p>
               </div>
-            )}
+            ) : null}
 
             <div
-              className={`space-y-3.5 transition-all duration-300 ${
-                !longLeaveAutoEnabled
-                  ? "opacity-40 pointer-events-none select-none filter blur-[0.4px] grayscale-[40%]"
-                  : "opacity-100"
+              className={`space-y-3.5 transition-all duration-200 ${
+                !longLeaveAutoEnabled ? "opacity-40 pointer-events-none select-none grayscale-[40%]" : ""
               }`}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Saldo Diberikan */}
+              {/* Row 1: Jumlah Kuota & Syarat Masa Kerja */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Saldo Diberikan
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Jumlah Kuota
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-600 h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={365}
                       value={defaultLongLeaveDays}
                       onChange={(e) => setDefaultLongLeaveDays(Number(e.target.value))}
-                      className="h-9 text-xs font-mono font-bold text-indigo-700 pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-indigo-950 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={defaultLongLeaveUnit}
-                        onChange={(e) => setDefaultLongLeaveUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={defaultLongLeaveUnit}
+                      onChange={(e) => setDefaultLongLeaveUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="HARI">Hari</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="TAHUN">Tahun</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Standar umum: 30 hari</p>
                 </div>
 
-                {/* Minimal Masa Kerja */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Minimal Masa Kerja
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Syarat Masa Kerja
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-600 h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={100}
                       value={longLeaveEligibleYears}
                       onChange={(e) => setLongLeaveEligibleYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={longLeaveEligibleUnit}
-                        onChange={(e) => setLongLeaveEligibleUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={longLeaveEligibleUnit}
+                      onChange={(e) => setLongLeaveEligibleUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Syarat minimal masa dinas</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Diberikan Ulang Setiap */}
+              {/* Row 2: Siklus Pemberian & Masa Berlaku */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Diberikan Ulang Setiap
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                    Siklus Pemberian
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-600 h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={100}
                       value={longLeaveRepeatYears}
                       onChange={(e) => setLongLeaveRepeatYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={longLeaveRepeatUnit}
-                        onChange={(e) => setLongLeaveRepeatUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={longLeaveRepeatUnit}
+                      onChange={(e) => setLongLeaveRepeatUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Setiap kelipatan masa dinas</p>
                 </div>
 
-                {/* Masa Berlaku */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
+                  <label className="text-[11px] font-semibold text-slate-700 block truncate">
                     Masa Berlaku
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
+                  </label>
+                  <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-600 h-8 overflow-hidden shadow-2xs">
+                    <input
                       type="number"
                       min={1}
                       max={100}
                       value={longLeaveExpiryYears}
                       onChange={(e) => setLongLeaveExpiryYears(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24"
+                      className="w-full h-full px-2.5 text-xs font-semibold text-slate-800 bg-transparent outline-none"
                       required
                     />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
-                      <select
-                        value={longLeaveExpiryUnit}
-                        onChange={(e) => setLongLeaveExpiryUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 cursor-pointer transition-colors"
-                      >
-                        <option value="HARI">Hari</option>
-                        <option value="BULAN">Bulan</option>
-                        <option value="TAHUN">Tahun</option>
-                      </select>
-                    </div>
+                    <select
+                      value={longLeaveExpiryUnit}
+                      onChange={(e) => setLongLeaveExpiryUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                      className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <option value="TAHUN">Tahun</option>
+                      <option value="BULAN">Bulan</option>
+                      <option value="HARI">Hari</option>
+                    </select>
                   </div>
-                  <p className="text-[10px] text-slate-400">Masa aktif kedaluwarsa kuota</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Carry Over */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Carry Over (Sisa Saldo)
-                  </Label>
+              {/* Row 3: Carry Over Box */}
+              <div className="rounded-lg bg-slate-50/70 border border-slate-200/80 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-700">Carry Over Sisa Saldo</div>
+                    <div className="text-[10px] text-slate-500">Standar cuti besar: tanpa carry over</div>
+                  </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={longLeaveCarryOver}
                     onClick={() => setLongLeaveCarryOver(!longLeaveCarryOver)}
-                    className={`h-9 w-full flex items-center justify-between px-3 rounded-md border text-xs font-semibold transition-all cursor-pointer select-none ${
-                      longLeaveCarryOver
-                        ? "bg-indigo-50/60 border-indigo-300 text-indigo-700 shadow-2xs"
-                        : "bg-slate-50/70 border-slate-200/80 text-slate-500 hover:bg-slate-100"
+                    className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      longLeaveCarryOver ? "bg-indigo-600" : "bg-slate-300"
                     }`}
                   >
-                    <span>{longLeaveCarryOver ? "Aktif" : "Tidak Aktif"}</span>
                     <span
-                      className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                        longLeaveCarryOver ? "bg-indigo-600" : "bg-slate-300"
+                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                        longLeaveCarryOver ? "translate-x-3" : "translate-x-0"
                       }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                          longLeaveCarryOver ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </span>
+                    />
                   </button>
-                  <p className="text-[10px] text-slate-400">Umumnya cuti besar tidak carry over</p>
                 </div>
 
-                {/* Maksimal Carry Over */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Maksimal Carry Over
-                  </Label>
-                  <div className="relative flex items-center">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={365}
-                      disabled={!longLeaveCarryOver}
-                      value={longLeaveMaxCarryOver}
-                      onChange={(e) => setLongLeaveMaxCarryOver(Number(e.target.value))}
-                      className="h-9 text-xs font-mono pr-24 disabled:bg-slate-100 disabled:text-slate-400"
-                      required
-                    />
-                    <div className="absolute right-1 top-1 bottom-1 flex items-center">
+                {longLeaveCarryOver && (
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/60 animate-in fade-in-50 duration-150">
+                    <span className="text-[11px] font-medium text-slate-600 shrink-0">
+                      Batas Maksimal:
+                    </span>
+                    <div className="flex items-center rounded-md border border-slate-200 bg-white h-7 overflow-hidden w-36 shadow-2xs">
+                      <input
+                        type="number"
+                        min={0}
+                        max={365}
+                        value={longLeaveMaxCarryOver}
+                        onChange={(e) => setLongLeaveMaxCarryOver(Number(e.target.value))}
+                        className="w-full h-full px-2 text-xs font-semibold text-slate-800 outline-none text-right"
+                        required
+                      />
                       <select
-                        disabled={!longLeaveCarryOver}
                         value={longLeaveCarryOverUnit}
                         onChange={(e) => setLongLeaveCarryOverUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
-                        className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 disabled:opacity-50 disabled:bg-slate-100 cursor-pointer transition-colors"
+                        className="h-full bg-slate-50 border-l border-slate-200 px-1.5 text-[10px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer"
                       >
                         <option value="HARI">Hari</option>
                         <option value="BULAN">Bulan</option>
@@ -725,25 +692,162 @@ export function KomponenAutomasiSaldo() {
                       </select>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-400">Maksimum sisa saldo dialihkan</p>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Simpan Cuti Besar */}
-            <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+            {/* Footer / Simpan */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
               <Button
                 type="button"
                 onClick={() => handleSavePolicy()}
                 disabled={isPending}
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-2xs"
+                className="h-8 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs"
               >
-                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
                 Simpan Cuti Besar
               </Button>
             </div>
-          </CardContent>
+          </div>
+        </Card>
+
+        {/* ======================================================== */}
+        {/* 3. CUTI INHALDAGEN (KEDALUWARSA / EXPIRED SAJA)         */}
+        {/* ======================================================== */}
+        <Card
+          className={`border transition-all duration-200 flex flex-col justify-between rounded-xl shadow-xs overflow-hidden ${
+            !inhaldagenAutoEnabled
+              ? "bg-slate-50/50 border-slate-200"
+              : "bg-white border-slate-200/90 hover:border-slate-300"
+          }`}
+        >
+          {/* Card Header: Ringkas & Tidy */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50/50 via-white to-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 font-bold text-xs shrink-0">
+                <Clock className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 truncate">Cuti Inhaldagen</h3>
+                <p className="text-[11px] text-slate-500 truncate">Masa berlaku kompensasi piket</p>
+              </div>
+            </div>
+
+            {/* Toggle Switch Simple */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span
+                className={`text-[11px] font-semibold transition-colors ${
+                  inhaldagenAutoEnabled ? "text-amber-600" : "text-slate-400"
+                }`}
+              >
+                {inhaldagenAutoEnabled ? "Aktif" : "Nonaktif"}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={inhaldagenAutoEnabled}
+                title={inhaldagenAutoEnabled ? "Nonaktifkan batas kedaluwarsa inhaldagen" : "Aktifkan batas kedaluwarsa inhaldagen"}
+                onClick={() => {
+                  const next = !inhaldagenAutoEnabled;
+                  setInhaldagenAutoEnabled(next);
+                  setInhaldagenStatus(next ? "AKTIF" : "NONAKTIF");
+                  toast.info(next ? "Batas Kedaluwarsa Inhaldagen diaktifkan." : "Batas Kedaluwarsa Inhaldagen dinonaktifkan.");
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                  inhaldagenAutoEnabled ? "bg-amber-500" : "bg-slate-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                    inhaldagenAutoEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Card Body */}
+          <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+            {!inhaldagenAutoEnabled ? (
+              <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-3 flex items-start gap-2 text-xs text-amber-800">
+                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  Batas kedaluwarsa <strong>Nonaktif</strong>. Saldo inhaldagen pimpinan tidak akan hangus otomatis.
+                </p>
+              </div>
+            ) : null}
+
+            <div
+              className={`space-y-3.5 transition-all duration-200 ${
+                !inhaldagenAutoEnabled ? "opacity-40 pointer-events-none select-none grayscale-[40%]" : ""
+              }`}
+            >
+              {/* Input Masa Berlaku (Kedaluwarsa) */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-700 block truncate">
+                  Masa Berlaku Kuota
+                </label>
+                <div className="flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-amber-600 focus-within:ring-1 focus-within:ring-amber-600 h-8 overflow-hidden shadow-2xs">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={inhaldagenExpiryYears}
+                    onChange={(e) => setInhaldagenExpiryYears(Number(e.target.value))}
+                    className="w-full h-full px-2.5 text-xs font-semibold text-amber-950 bg-transparent outline-none"
+                    required
+                  />
+                  <select
+                    value={inhaldagenExpiryUnit}
+                    onChange={(e) => setInhaldagenExpiryUnit(e.target.value as "HARI" | "BULAN" | "TAHUN")}
+                    className="h-full bg-slate-50 border-l border-slate-200 px-2 text-[11px] font-medium text-slate-600 outline-none hover:bg-slate-100 cursor-pointer transition-colors"
+                  >
+                    <option value="BULAN">Bulan</option>
+                    <option value="TAHUN">Tahun</option>
+                    <option value="HARI">Hari</option>
+                  </select>
+                </div>
+                <p className="text-[10px] text-slate-400">Dihitung sejak tanggal penugasan di hari libur</p>
+              </div>
+
+              {/* Tabel Ringkas Ketentuan Inhaldagen */}
+              <div className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-3 space-y-2 text-xs">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  <span>Ketentuan Khusus Inhaldagen</span>
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500">Penerima</span>
+                    <span className="font-semibold text-slate-800">Khusus Pimpinan</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500">Pemberian</span>
+                    <span className="font-semibold text-slate-800">Manual via Tambah Saldo</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-slate-500">Kedaluwarsa</span>
+                    <span className="font-semibold text-amber-700">Hangus otomatis setelah batas waktu</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer / Simpan */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+              <Button
+                type="button"
+                onClick={() => handleSavePolicy()}
+                disabled={isPending}
+                size="sm"
+                className="h-8 px-3 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+              >
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                Simpan Cuti Inhaldagen
+              </Button>
+            </div>
+          </div>
         </Card>
       </div>
     </form>

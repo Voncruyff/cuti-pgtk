@@ -49,7 +49,28 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
-  console.log("✓ Cuti Besar terdaftar:", longLeave.namaKebijakan, "| Status Otomasi:", longLeave.isOtomatisAktif);
+  // 2b. Inisialisasi Masa Berlaku Inhaldagen
+  const inhaldagen = await prisma.otomasiSaldoCuti.upsert({
+    where: { jenisCuti: "INHALDAGEN" },
+    update: {},
+    create: {
+      jenisCuti: "INHALDAGEN",
+      namaKebijakan: "Cuti Inhaldagen",
+      isOtomatisAktif: true,
+      saldoDiberikan: 0,
+      satuanSaldo: "HARI",
+      minMasaKerja: 0,
+      satuanMasaKerja: "TAHUN",
+      siklusUlang: 0,
+      satuanSiklus: "TAHUN",
+      masaBerlaku: 12,
+      satuanBerlaku: "BULAN",
+      isCarryOver: false,
+      maxCarryOver: 0,
+      satuanCarryOver: "HARI",
+    },
+  });
+  console.log("✓ Cuti Inhaldagen terdaftar:", inhaldagen.namaKebijakan, "| Masa Berlaku:", inhaldagen.masaBerlaku, inhaldagen.satuanBerlaku);
 
   // 3. Inisialisasi Profil Perusahaan
   const profile = await prisma.profilPerusahaan.upsert({

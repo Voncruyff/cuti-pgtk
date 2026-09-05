@@ -495,11 +495,11 @@ export default function HalamanAmbilCuti() {
           actionButton={
             <Button
               type="button"
-              size="default"
+              size="sm"
               onClick={handleOpenLeaveModal}
-              className="font-semibold shadow-xs"
+              className="font-semibold shadow-xs gap-1.5 h-8 text-xs cursor-pointer"
             >
-              <CalendarDays className="h-4 w-4" />
+              <CalendarDays className="h-3.5 w-3.5" />
               Ambil Cuti
             </Button>
           }

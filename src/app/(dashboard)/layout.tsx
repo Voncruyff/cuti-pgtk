@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/tata-letak/sidebar";
 import { Header } from "@/components/tata-letak/header";
 import { SidebarProvider } from "@/components/tata-letak/konteks-sidebar";
 import { PageTransition } from "@/components/motion/page-transition";
+import { executeAutomatedLeaveAccrualsAction } from "@/actions/aksi-otomasi-saldo";
 
 /**
  * Layout Induk Halaman Dashboard:
@@ -16,6 +17,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const user = await requireAuth();
+
+  // Otomatisasi Latar Belakang: Sistem memeriksa tanggal pengangkatan & kedaluwarsa kuota secara otomatis
+  executeAutomatedLeaveAccrualsAction({ isSystemCall: true }).catch((err) => {
+    console.error("Background auto-accrual error:", err);
+  });
 
   return (
     <SidebarProvider>
