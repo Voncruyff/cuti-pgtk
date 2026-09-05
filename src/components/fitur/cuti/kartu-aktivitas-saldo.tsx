@@ -50,7 +50,7 @@ import {
   EmployeeLeaveHistoryItem,
 } from "@/actions/aksi-cuti";
 import { voidLeaveRequestAction } from "@/actions/aksi-koreksi";
-import { getCompanyProfileAction } from "@/actions/aksi-pengaturan";
+import { getCompanyProfileAction, getSignatoriesAction } from "@/actions/aksi-pengaturan";
 import { formatDateIndo } from "@/lib/utils";
 
 export interface EmployeeInfo {
@@ -134,6 +134,143 @@ export function BalanceActivityCard({
     currentUserName: "Administrator",
   });
 
+  // Helper parser data penandatanganan dari database tabel penandatanganan
+  const parseSignatoriesData = (resData: NonNullable<Awaited<ReturnType<typeof getSignatoriesAction>>["data"]>) => {
+    const heads: Record<string, { nama: string; jabatan: string }> = {};
+
+    // 1. Inisialisasi awal dari data bagian departmentSignatories
+    resData.departmentSignatories?.forEach((d) => {
+      const entry = {
+        nama: d.namaPimpinan || "",
+        jabatan: d.jabatanPimpinan || `Kepala Bagian ${d.name}`,
+      };
+      if (d.id) heads[d.id.toLowerCase().trim()] = entry;
+      if (d.code) heads[d.code.toLowerCase().trim()] = entry;
+      if (d.name) heads[d.name.toLowerCase().trim()] = entry;
+    });
+
+    // 2. Timpa dengan data resmi tabel penandatanganan (kategori BAGIAN) yang diinput pengguna
+    resData.signatories?.forEach((s) => {
+      const entry = {
+        nama: s.nama,
+        jabatan: s.jabatan || `Kepala Bagian ${s.departmentName}`,
+      };
+      if (s.departmentId) {
+        heads[s.departmentId] = entry;
+        heads[s.departmentId.toLowerCase().trim()] = entry;
+      }
+      if (s.departmentCode) {
+        heads[s.departmentCode] = entry;
+        heads[s.departmentCode.toLowerCase().trim()] = entry;
+      }
+      if (s.departmentName) {
+        const lowName = s.departmentName.toLowerCase().trim();
+        heads[lowName] = entry;
+        const upper = s.departmentName.toUpperCase();
+        if (upper.includes("TATA USAHA") || upper.includes("KEUANGAN") || upper.includes("TUK")) {
+          heads["tuk"] = entry;
+          heads["dept-tuk"] = entry;
+          heads["tata usaha & keuangan"] = entry;
+          heads["tata usaha dan keuangan"] = entry;
+        }
+        if (upper.includes("TANAMAN") || upper.includes("TAN")) {
+          heads["tan"] = entry;
+          heads["dept-tan"] = entry;
+          heads["tanaman"] = entry;
+        }
+        if (upper.includes("PABRIKASI") || upper.includes("PAB")) {
+          heads["pab"] = entry;
+          heads["dept-pab"] = entry;
+          heads["pabrikasi"] = entry;
+        }
+        if (upper.includes("TEKNIK") || upper.includes("TEK")) {
+          heads["tek"] = entry;
+          heads["dept-tek"] = entry;
+          heads["teknik"] = entry;
+        }
+      }
+    });
+
+    return {
+      namaPemimpin: resData.leader?.namaPemimpin || "",
+      jabatanPemimpin: resData.leader?.jabatanPemimpin || "",
+      departmentHeads: heads,
+    };
+  };
+
+  const resolveDeptHead = (
+    deptObj: any,
+    deptHeads: Record<string, { nama: string; jabatan: string }>
+  ): { nama: string; jabatan: string } | null => {
+    if (!deptObj || !deptHeads) return null;
+    const deptId = (deptObj?.id || "").toLowerCase().trim();
+    const deptCode = (deptObj?.code || "").toLowerCase().trim();
+    const deptName = (deptObj?.name || "").toLowerCase().trim();
+    const deptShort = formatDeptForLetter(deptObj?.name || "").toLowerCase().trim();
+
+    // 1. Cocokkan langsung berdasarkan ID/Code/ShortName/FullName
+    if (deptId && deptHeads[deptId]) return deptHeads[deptId];
+    if (deptCode && deptHeads[deptCode]) return deptHeads[deptCode];
+    if (deptShort && deptHeads[deptShort]) return deptHeads[deptShort];
+    if (deptName && deptHeads[deptName]) return deptHeads[deptName];
+
+    // 2. Pencarian khusus Bagian TUK (Tata Usaha & Keuangan)
+    if (
+      deptName.includes("tata usaha") ||
+      deptName.includes("keuangan") ||
+      deptName.includes("tuk") ||
+      deptShort === "tuk"
+    ) {
+      if (deptHeads["dept-tuk"]) return deptHeads["dept-tuk"];
+      if (deptHeads["tuk"]) return deptHeads["tuk"];
+      if (deptHeads["tata usaha & keuangan"]) return deptHeads["tata usaha & keuangan"];
+    }
+
+    // 3. Pencarian khusus bagian lainnya
+    if (deptName.includes("tanaman") || deptShort === "tan") {
+      if (deptHeads["dept-tan"]) return deptHeads["dept-tan"];
+      if (deptHeads["tan"]) return deptHeads["tan"];
+    }
+    if (deptName.includes("pabrikasi") || deptShort === "pab") {
+      if (deptHeads["dept-pab"]) return deptHeads["dept-pab"];
+      if (deptHeads["pab"]) return deptHeads["pab"];
+    }
+    if (deptName.includes("teknik") || deptShort === "tek") {
+      if (deptHeads["dept-tek"]) return deptHeads["dept-tek"];
+      if (deptHeads["tek"]) return deptHeads["tek"];
+    }
+
+    // 4. Pencarian fuzzy di seluruh daftar keys
+    const found = Object.entries(deptHeads).find(([k]) => {
+      if (!k) return false;
+      return (
+        (deptName && (deptName.includes(k) || k.includes(deptName))) ||
+        (deptShort && (deptShort.includes(k) || k.includes(deptShort))) ||
+        (deptCode && (deptCode.includes(k) || k.includes(deptCode)))
+      );
+    });
+
+    return found ? found[1] : null;
+  };
+
+  const [signatories, setSignatories] = useState<{
+    namaPemimpin: string;
+    jabatanPemimpin: string;
+    departmentHeads: Record<string, { nama: string; jabatan: string }>;
+  }>({
+    namaPemimpin: "",
+    jabatanPemimpin: "",
+    departmentHeads: {},
+  });
+
+  // State override khusus cetak untuk memastikan data termutakhir langsung masuk tanpa delay
+  const [printSignatoryOverride, setPrintSignatoryOverride] = useState<{
+    namaPemimpin?: string;
+    jabatanPemimpin?: string;
+    namaKepalaBagian?: string;
+    jabatanKepalaBagian?: string;
+  } | null>(null);
+
   useEffect(() => {
     getCompanyProfileAction().then((res) => {
       if (res.success && res.data) {
@@ -146,6 +283,12 @@ export function BalanceActivityCard({
           hrManagerTitle: res.data.hrManagerTitle || "Kepala Bagian SDM & Umum",
           currentUserName: res.data.currentUserName || "Administrator",
         });
+      }
+    });
+
+    getSignatoriesAction().then((res) => {
+      if (res.success && res.data) {
+        setSignatories(parseSignatoriesData(res.data));
       }
     });
   }, []);
@@ -186,13 +329,16 @@ export function BalanceActivityCard({
   }, [history, sortField, sortOrder]);
 
   const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-slate-400 group-hover:text-slate-700 transition-colors" />;
-    }
-    return sortOrder === "asc" ? (
-      <ArrowUp className="h-3 w-3 text-[#0093dc] font-bold" />
-    ) : (
-      <ArrowDown className="h-3 w-3 text-[#0093dc] font-bold" />
+    return (
+      <span className="inline-flex print:hidden">
+        {sortField !== field ? (
+          <ArrowUpDown className="h-3 w-3 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0 print:hidden" />
+        ) : sortOrder === "asc" ? (
+          <ArrowUp className="h-3 w-3 text-[#0093dc] font-bold shrink-0 print:hidden" />
+        ) : (
+          <ArrowDown className="h-3 w-3 text-[#0093dc] font-bold shrink-0 print:hidden" />
+        )}
+      </span>
     );
   };
 
@@ -244,21 +390,55 @@ export function BalanceActivityCard({
   const [isPrintingHistory, setIsPrintingHistory] = useState(false);
 
   // Trigger Cetak Surat Cuti langsung ke dialog cetak sistem (tanpa popup modal)
-  const handlePrintLetter = (item: EmployeeLeaveHistoryItem) => {
+  const handlePrintLetter = async (item: EmployeeLeaveHistoryItem) => {
+    toast.dismiss();
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("[data-sonner-toaster], [data-sonner-toast], section[aria-label*='Notification']").forEach((el) => {
+        (el as HTMLElement).style.setProperty("display", "none", "important");
+      });
+    }
+
+    // Ambil data penandatanganan terbaru langsung dari database penandatanganan agar selalu mutakhir sesuai DB
+    let currentSignatories = signatories;
+    try {
+      const res = await getSignatoriesAction();
+      if (res.success && res.data) {
+        currentSignatories = parseSignatoriesData(res.data);
+        setSignatories(currentSignatories);
+      }
+    } catch (err) {
+      console.error("Gagal sinkronisasi data penandatanganan:", err);
+    }
+
+    // Sinkronisasi override penandatanganan agar seketika aktif sebelum dialog cetak terbuka
+    const matched = resolveDeptHead(employee.department, currentSignatories.departmentHeads);
+    setPrintSignatoryOverride({
+      namaPemimpin: currentSignatories.namaPemimpin,
+      jabatanPemimpin: currentSignatories.jabatanPemimpin,
+      namaKepalaBagian: matched?.nama,
+      jabatanKepalaBagian: matched?.jabatan,
+    });
+
     setIsPrintingHistory(false);
     setPrintingLetterItem(item);
     setTimeout(() => {
       window.print();
-    }, 50);
+    }, 250);
   };
 
   // Trigger Cetak Lembar Histori Saldo langsung ke dialog cetak sistem (tanpa popup modal)
   const handlePrintHistory = () => {
+    toast.dismiss();
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("[data-sonner-toaster], [data-sonner-toast], section[aria-label*='Notification']").forEach((el) => {
+        (el as HTMLElement).style.setProperty("display", "none", "important");
+      });
+    }
     setPrintingLetterItem(null);
     setIsPrintingHistory(true);
     setTimeout(() => {
       window.print();
-    }, 50);
+    }, 100);
   };
 
   // Bersihkan state cetak saat jendela cetak ditutup
@@ -266,6 +446,7 @@ export function BalanceActivityCard({
     const handleAfterPrint = () => {
       setPrintingLetterItem(null);
       setIsPrintingHistory(false);
+      setPrintSignatoryOverride(null);
     };
     window.addEventListener("afterprint", handleAfterPrint);
     return () => window.removeEventListener("afterprint", handleAfterPrint);
@@ -358,9 +539,464 @@ export function BalanceActivityCard({
         onEmployeeBalancesUpdated(res.data.updatedBalances);
         onRefreshHistory(employee.id);
       } else {
-        toast.error(res.message || "Gagal menyimpan koreksi permohonan cuti.");
+        toast.error(res.message || "Gagal mengoreksi permohonan cuti.");
       }
     });
+  };
+
+  // Formatters & Calculations for Official Leave Letter (Surat Izin Permohonan Cuti)
+  const formatDateDDMMYYYY = (val: string | Date | null | undefined) => {
+    if (!val) return "-";
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) {
+        if (typeof val === "string" && /^\d{2}-\d{2}-\d{4}$/.test(val)) return val;
+        if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+          const [y, m, day] = val.split("-");
+          return `${day}-${m}-${y}`;
+        }
+        return String(val);
+      }
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    } catch {
+      return String(val);
+    }
+  };
+
+  const calculatedLeaveBalances = useMemo(() => {
+    if (!printingLetterItem) {
+      return {
+        saldoSebelumAnnual: 0,
+        saldoSebelumLongLeave: 0,
+        saldoSebelumInhaldagen: 0,
+        saldoSebelumTotal: 0,
+        sisaCutiHariIni: 0,
+      };
+    }
+
+    const chronologicalHistory = [...history].sort((a, b) => {
+      return new Date(a.requestDate).getTime() - new Date(b.requestDate).getTime();
+    });
+
+    const itemIdx = chronologicalHistory.findIndex((h) => h.id === printingLetterItem.id);
+
+    let subsequentAnnualDeduction = 0;
+    let subsequentLongLeaveDeduction = 0;
+    let subsequentInhaldagenDeduction = 0;
+
+    if (itemIdx !== -1) {
+      for (let i = itemIdx + 1; i < chronologicalHistory.length; i++) {
+        const item = chronologicalHistory[i];
+        if (item.transactionType === "AMBIL_CUTI") {
+          subsequentAnnualDeduction += item.annualDays || 0;
+          subsequentLongLeaveDeduction += item.longLeaveDays || 0;
+          subsequentInhaldagenDeduction += item.inhaldagenDays || 0;
+        } else if (item.transactionType === "TAMBAH_SALDO") {
+          subsequentAnnualDeduction -= item.annualDays || 0;
+          subsequentLongLeaveDeduction -= item.longLeaveDays || 0;
+          subsequentInhaldagenDeduction -= item.inhaldagenDays || 0;
+        } else if (item.transactionType === "KEDALUWARSA") {
+          subsequentAnnualDeduction += item.annualDays || 0;
+          subsequentLongLeaveDeduction += item.longLeaveDays || 0;
+          subsequentInhaldagenDeduction += item.inhaldagenDays || 0;
+        }
+      }
+    }
+
+    const setelahAnnual = Math.max(0, employee.balances.annual + subsequentAnnualDeduction);
+    const setelahLongLeave = Math.max(0, employee.balances.longLeave + subsequentLongLeaveDeduction);
+    const setelahInhaldagen = Math.max(0, employee.balances.inhaldagen + subsequentInhaldagenDeduction);
+
+    const sebAnnual = setelahAnnual + (printingLetterItem.annualDays || 0);
+    const sebLongLeave = setelahLongLeave + (printingLetterItem.longLeaveDays || 0);
+    const sebInhaldagen = setelahInhaldagen + (printingLetterItem.inhaldagenDays || 0);
+
+    const sebTotal = sebAnnual + sebLongLeave + (isPelaksana ? 0 : sebInhaldagen);
+    const sisaHari =
+      sebTotal -
+      ((printingLetterItem.annualDays || 0) +
+        (printingLetterItem.longLeaveDays || 0) +
+        (isPelaksana ? 0 : (printingLetterItem.inhaldagenDays || 0)));
+
+    return {
+      saldoSebelumAnnual: sebAnnual,
+      saldoSebelumLongLeave: sebLongLeave,
+      saldoSebelumInhaldagen: sebInhaldagen,
+      saldoSebelumTotal: sebTotal,
+      sisaCutiHariIni: sisaHari,
+    };
+  }, [printingLetterItem, history, employee.balances, isPelaksana]);
+
+  // Ekstrak dan normalisasi setiap tanggal individual dari array atau comma-separated string
+  const parseIndividualDateStrings = (rawList?: string[] | string | null): string[] => {
+    if (!rawList) return [];
+    const arr = Array.isArray(rawList) ? rawList : [rawList];
+    const results: string[] = [];
+
+    for (const item of arr) {
+      if (!item || typeof item !== "string") continue;
+      // Pecah jika dalam satu string terdapat beberapa tanggal yang digabung koma/spasi/newline
+      const parts = item
+        .split(/[,;\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const part of parts) {
+        if (!part) continue;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(part)) {
+          results.push(part);
+        } else if (/^\d{2}-\d{2}-\d{4}$/.test(part)) {
+          results.push(part.replace(/-/g, "/"));
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(part)) {
+          const [y, m, d] = part.split("-");
+          results.push(`${d}/${m}/${y}`);
+        } else {
+          try {
+            const d = new Date(part);
+            if (!isNaN(d.getTime())) {
+              const day = String(d.getDate()).padStart(2, "0");
+              const month = String(d.getMonth() + 1).padStart(2, "0");
+              const year = d.getFullYear();
+              results.push(`${day}/${month}/${year}`);
+            } else {
+              results.push(part);
+            }
+          } catch {
+            results.push(part);
+          }
+        }
+      }
+    }
+
+    return results;
+  };
+
+  const tanggalCutiList = useMemo(() => {
+    if (!printingLetterItem) return [];
+    if (printingLetterItem.selectedDates && printingLetterItem.selectedDates.length > 0) {
+      const parsed = parseIndividualDateStrings(printingLetterItem.selectedDates);
+      if (parsed.length > 0) return parsed;
+    }
+    if (printingLetterItem.startDate) {
+      if (printingLetterItem.startDate === printingLetterItem.endDate) {
+        return parseIndividualDateStrings([printingLetterItem.startDate]);
+      }
+      return [`${formatDateDDMMYYYY(printingLetterItem.startDate)} s/d ${formatDateDDMMYYYY(printingLetterItem.endDate)}`];
+    }
+    return [];
+  }, [printingLetterItem]);
+
+  // Kelompokkan menjadi baris-baris (maksimal 4 tanggal per baris ke kanan, max 3 baris ke bawah)
+  const tanggalCutiRows = useMemo(() => {
+    const list = tanggalCutiList;
+    if (list.length === 0) return [];
+    if (list.length === 1 && list[0].includes("s/d")) {
+      return [list];
+    }
+    const rows: string[][] = [];
+    for (let i = 0; i < list.length; i += 4) {
+      rows.push(list.slice(i, i + 4));
+    }
+    return rows;
+  }, [tanggalCutiList]);
+
+  // Singkat "Tata Usaha & Keuangan" menjadi "TUK" agar rapi & tidak melipat baris
+  const formatDeptForLetter = (deptName?: string | null) => {
+    if (!deptName) return "-";
+    const upper = deptName.trim().toUpperCase();
+    if (
+      upper.includes("TATA USAHA") ||
+      upper.includes("KEUANGAN") ||
+      upper.includes("TU &") ||
+      upper.includes("TU DAN") ||
+      upper === "TU" ||
+      upper === "TUK"
+    ) {
+      return "TUK";
+    }
+    return deptName;
+  };
+
+  const resolvedHead = resolveDeptHead(employee.department, signatories.departmentHeads);
+  const matchedDeptHead = printSignatoryOverride?.namaKepalaBagian
+    ? {
+        nama: printSignatoryOverride.namaKepalaBagian,
+        jabatan: printSignatoryOverride.jabatanKepalaBagian || resolvedHead?.jabatan || "",
+      }
+    : resolvedHead;
+
+  const namaPemimpin =
+    printSignatoryOverride?.namaPemimpin ||
+    signatories.namaPemimpin ||
+    "Pimpinan";
+  const jabatanPemimpin =
+    printSignatoryOverride?.jabatanPemimpin ||
+    signatories.jabatanPemimpin ||
+    "Pemimpin";
+  const namaKepalaBagian =
+    printSignatoryOverride?.namaKepalaBagian ||
+    matchedDeptHead?.nama ||
+    "-";
+  const jabatanKepalaBagian =
+    printSignatoryOverride?.jabatanKepalaBagian ||
+    matchedDeptHead?.jabatan ||
+    `Kepala Bagian ${formatDeptForLetter(employee.department?.name)}`;
+  const adminName = companyProfile.currentUserName || printingLetterItem?.createdByName || "Administrator";
+  const tanggalPermohonan = formatDateDDMMYYYY(printingLetterItem?.requestDate || new Date());
+
+  const renderSlipPermohonanCuti = (slipKey: string) => {
+    if (!printingLetterItem) return null;
+    return (
+      <div key={slipKey} className="w-full h-full text-black font-sans text-[11px] leading-tight select-none flex flex-col justify-between">
+        {/* KOP HEADER: LOGO KIRI, JUDUL DEAD-CENTER SIMETRIS (TIDAK NABRAK) */}
+        <div className="relative w-full flex items-center justify-center min-h-[30px] mb-1.5">
+          {/* LOGO PG TRANGKIL (POJOK KIRI ATAS, PROPORSIONAL & RESOLUSI TAJAM) */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center">
+            <Image
+              src="/assets/PGTrangkilLogo.png"
+              alt="Logo PG Trangkil"
+              width={140}
+              height={20}
+              priority
+              unoptimized
+              className="h-[20px] w-auto object-contain shrink-0"
+            />
+          </div>
+
+          {/* JUDUL RESMI (DEAD-CENTER TERHADAP KERTAS, DIKUNCI MAX-WIDTH AGAR BEBAS TABRAKAN) */}
+          <div className="text-center max-w-[390px] mx-auto px-1">
+            <h2 className="font-bold text-[11.5px] uppercase tracking-wide text-black leading-tight">
+              {isPelaksana
+                ? `PERMOHONAN CUTI KARYAWAN PELAKSANA BAGIAN ${formatDeptForLetter(employee.department.name).toUpperCase()}`
+                : "PERMOHONAN CUTI KARYAWAN PIMPINAN"}
+            </h2>
+          </div>
+        </div>
+
+        {/* BLOK DATA KARYAWAN & PERHITUNGAN SALDO (TRUE DEAD-CENTER KERTAS) */}
+        <div
+          className="w-fit self-center mx-auto text-[11px] text-black space-y-2 mt-1"
+          style={{ width: "fit-content" }}
+        >
+          {/* IDENTITAS */}
+          <div className="space-y-0.5">
+            <div className="grid grid-cols-[100px_10px_1fr]">
+              <span>Nama</span>
+              <span>:</span>
+              <span className="font-semibold text-black">{employee.name}</span>
+            </div>
+            <div className="grid grid-cols-[100px_10px_1fr]">
+              <span>Jabatan</span>
+              <span>:</span>
+              <span>{employee.position || "-"}</span>
+            </div>
+            <div className="grid grid-cols-[100px_10px_1fr]">
+              <span>Bagian</span>
+              <span>:</span>
+              <span>{formatDeptForLetter(employee.department.name)}</span>
+            </div>
+            <div className="grid grid-cols-[100px_10px_1fr]">
+              <span>Stasiun</span>
+              <span>:</span>
+              <span>{employee.stasiun || "-"}</span>
+            </div>
+            <div className="grid grid-cols-[100px_10px_1fr]">
+              <span>Keperluan</span>
+              <span>:</span>
+              <span>{printingLetterItem.purpose || "-"}</span>
+            </div>
+          </div>
+
+          {/* SISA SALDO YANG LALU */}
+          <div>
+            <p className="font-bold underline italic">Sisa Saldo yang lalu :</p>
+            <div className="space-y-0.5 mt-0.5">
+              <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                <span>- Cuti tahunan</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">{calculatedLeaveBalances.saldoSebelumAnnual}</span>
+                <span>hari</span>
+              </div>
+              <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                <span>- Cuti Besar</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">{calculatedLeaveBalances.saldoSebelumLongLeave}</span>
+                <span>hari</span>
+              </div>
+              {!isPelaksana && (
+                <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                  <span>- Inhaaldagen</span>
+                  <span>:</span>
+                  <span className="text-right font-mono pr-1.5">{calculatedLeaveBalances.saldoSebelumInhaldagen}</span>
+                  <span>hari</span>
+                </div>
+              )}
+              <div className="grid grid-cols-[100px_10px_1fr]">
+                <span />
+                <span />
+                <div className="w-[72px] border-b border-black my-0.5" />
+              </div>
+              <div className="grid grid-cols-[100px_10px_36px_1fr] font-bold">
+                <span>Jumlah</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">{calculatedLeaveBalances.saldoSebelumTotal}</span>
+                <span className="font-normal">hari</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PERMOHONAN CUTI */}
+          <div>
+            <p className="font-bold underline italic">Permohonan cuti :</p>
+            <div className="space-y-0.5 mt-0.5">
+              <div className="grid grid-cols-[100px_10px_1fr] items-start">
+                <span>- Tanggal</span>
+                <span>:</span>
+                <div className="font-medium text-black">
+                  {tanggalCutiRows.length === 0 ? (
+                    <span>-</span>
+                  ) : tanggalCutiRows.length === 1 && tanggalCutiRows[0][0].includes("s/d") ? (
+                    <span>{tanggalCutiRows[0][0]}</span>
+                  ) : (
+                    <div className="flex flex-col gap-y-1">
+                      {tanggalCutiRows.map((rowDates, rIdx) => {
+                        const isLastRow = rIdx === tanggalCutiRows.length - 1;
+                        return (
+                          <div
+                            key={rIdx}
+                            className="flex items-center gap-x-2 text-[10.5px] leading-tight font-medium flex-wrap"
+                          >
+                            {rowDates.map((d, cIdx) => {
+                              const isAbsoluteLast = isLastRow && cIdx === rowDates.length - 1;
+                              return (
+                                <span key={cIdx} className="whitespace-nowrap">
+                                  {d}{!isAbsoluteLast ? "," : ""}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                <span>- Cuti tahunan</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">
+                  {printingLetterItem.annualDays > 0 ? `-${printingLetterItem.annualDays}` : "-"}
+                </span>
+                <span>hari</span>
+              </div>
+              <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                <span>- Cuti Besar</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">
+                  {printingLetterItem.longLeaveDays > 0 ? `-${printingLetterItem.longLeaveDays}` : "-"}
+                </span>
+                <span>hari</span>
+              </div>
+              {!isPelaksana && (
+                <div className="grid grid-cols-[100px_10px_36px_1fr]">
+                  <span>- Inhaaldagen</span>
+                  <span>:</span>
+                  <span className="text-right font-mono pr-1.5">
+                    {printingLetterItem.inhaldagenDays > 0 ? `-${printingLetterItem.inhaldagenDays}` : "-"}
+                  </span>
+                  <span>hari</span>
+                </div>
+              )}
+              <div className="grid grid-cols-[100px_10px_1fr]">
+                <span />
+                <span />
+                <div className="w-[72px] border-b border-black my-0.5" />
+              </div>
+              <div className="grid grid-cols-[100px_10px_36px_1fr] font-bold">
+                <span className="whitespace-nowrap">Sisa cuti hari ini</span>
+                <span>:</span>
+                <span className="text-right font-mono pr-1.5">{calculatedLeaveBalances.sisaCutiHariIni}</span>
+                <span className="font-normal">hari</span>
+              </div>
+              <div className="grid grid-cols-[100px_10px_1fr]">
+                <span />
+                <span />
+                <div className="w-[72px] border-b border-black my-0.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TANDA TANGAN & FOOTER (JABATAN DITARIK KE ATAS, CATATAN DEKAT DI BAWAH TTD) */}
+        <div className="w-full text-[11px] text-black mt-3 flex-1 flex flex-col">
+          <div>
+            <div className="grid grid-cols-3 text-center mb-1 px-4">
+              <div className="col-span-2 text-center font-normal">
+                <span>Mengetahui / Menyetujui</span>
+              </div>
+              <div className="text-center font-normal">
+                <span>Trangkil, {tanggalPermohonan}</span>
+              </div>
+            </div>
+
+            {!isPelaksana ? (
+              <div className="grid grid-cols-3 text-center px-4">
+                <div>
+                  <p className="font-normal">{jabatanPemimpin}</p>
+                  <div className="h-20" />
+                  <p className="font-bold">{namaPemimpin}</p>
+                </div>
+                <div>
+                  <p className="font-normal">{jabatanKepalaBagian}</p>
+                  <div className="h-20" />
+                  <p className="font-bold">{namaKepalaBagian}</p>
+                </div>
+                <div>
+                  <p className="font-normal">Pemohon</p>
+                  <div className="h-20" />
+                  <p className="font-bold">{employee.name}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 text-center px-4">
+                <div>
+                  <p className="font-normal">{jabatanKepalaBagian}</p>
+                  <div className="h-20" />
+                  <p className="font-bold">{namaKepalaBagian}</p>
+                </div>
+                <div>
+                  <p className="font-normal">Kasi / Kasubsi</p>
+                  <div className="h-20" />
+                  <p className="font-bold">&nbsp;</p>
+                </div>
+                <div>
+                  <p className="font-normal">Pemohon</p>
+                  <div className="h-20" />
+                  <p className="font-bold">{employee.name}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-start mt-2.5 px-1">
+            <div>
+              <p className="underline italic">Catatan :</p>
+              {printingLetterItem.notes && (
+                <p className="text-[10px] text-slate-700 italic ml-2 mt-0.5">
+                  {printingLetterItem.notes}
+                </p>
+              )}
+            </div>
+            <div className="italic text-[10px] text-black text-right">
+              Admin : {adminName}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -383,7 +1019,8 @@ export function BalanceActivityCard({
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {actionButton}
               <Button
                 type="button"
                 variant="outline"
@@ -493,9 +1130,11 @@ export function BalanceActivityCard({
                 <TableBody className="divide-y divide-slate-100 text-xs">
                   {sortedHistory.map((item, idx) => {
                     const isTambah = item.transactionType === "TAMBAH_SALDO";
+                    const isKedaluwarsa = item.transactionType === "KEDALUWARSA";
+                    const isOtomatis = item.purpose?.startsWith("AUTO_") || item.uraian?.toLowerCase().includes("otomatis");
 
                     return (
-                      <TableRow key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                      <TableRow key={item.id} className={cn("transition-colors", isKedaluwarsa ? "bg-amber-50/20 hover:bg-amber-50/40" : "hover:bg-slate-50/70")}>
                         <TableCell className="text-center font-mono text-slate-400 font-medium">
                           {idx + 1}
                         </TableCell>
@@ -503,10 +1142,22 @@ export function BalanceActivityCard({
                           {formatDateIndo(item.requestDate)}
                         </TableCell>
                         <TableCell className="font-medium text-slate-800">
-                          {item.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{item.uraian || (isTambah ? "Penambahan Saldo" : isKedaluwarsa ? "Kedaluwarsa Kuota (Hangus)" : "Pengambilan Cuti")}</span>
+                            {isKedaluwarsa && (
+                              <Badge variant="outline" className="text-[10px] bg-amber-50 border-amber-200 text-amber-700 font-semibold px-1.5 py-0">
+                                Hangus
+                              </Badge>
+                            )}
+                            {isTambah && isOtomatis && (
+                              <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200 text-blue-700 font-semibold px-1.5 py-0">
+                                Otomatis SK
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {isTambah ? (
+                          {isTambah || isKedaluwarsa ? (
                             <span className="text-slate-300 font-mono">-</span>
                           ) : (
                             <span className="font-mono text-slate-700 text-xs">
@@ -520,6 +1171,8 @@ export function BalanceActivityCard({
                           {item.annualDays > 0 ? (
                             isTambah ? (
                               <span className="font-mono font-bold text-emerald-600">+{item.annualDays}</span>
+                            ) : isKedaluwarsa ? (
+                              <span className="font-mono font-bold text-amber-600">-{item.annualDays}</span>
                             ) : (
                               <span className="font-mono font-bold text-red-600">-{item.annualDays}</span>
                             )
@@ -531,6 +1184,8 @@ export function BalanceActivityCard({
                           {item.longLeaveDays > 0 ? (
                             isTambah ? (
                               <span className="font-mono font-bold text-emerald-600">+{item.longLeaveDays}</span>
+                            ) : isKedaluwarsa ? (
+                              <span className="font-mono font-bold text-amber-600">-{item.longLeaveDays}</span>
                             ) : (
                               <span className="font-mono font-bold text-red-600">-{item.longLeaveDays}</span>
                             )
@@ -543,6 +1198,8 @@ export function BalanceActivityCard({
                             {item.inhaldagenDays > 0 ? (
                               isTambah ? (
                                 <span className="font-mono font-bold text-emerald-600">+{item.inhaldagenDays}</span>
+                              ) : isKedaluwarsa ? (
+                                <span className="font-mono font-bold text-amber-600">-{item.inhaldagenDays}</span>
                               ) : (
                                 <span className="font-mono font-bold text-red-600">-{item.inhaldagenDays}</span>
                               )
@@ -552,7 +1209,7 @@ export function BalanceActivityCard({
                           </TableCell>
                         )}
                         <TableCell className="text-center">
-                          {isTambah ? (
+                          {isTambah || isKedaluwarsa ? (
                             <span className="text-slate-300 font-mono">-</span>
                           ) : (
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -997,110 +1654,28 @@ export function BalanceActivityCard({
         </DialogContent>
       </Dialog>
 
-      {/* ELEMEN CETAK SURAT IZIN CUTI (LANGSUNG CETAK TANPA POPUP / MODAL) */}
+      {/* ELEMEN CETAK SURAT IZIN CUTI (2 RANGKAP ATAS & BAWAH: TEPAT 50:50 WILAYAH KEKUASAAN) */}
       {typeof document !== "undefined" && printingLetterItem && createPortal(
-        <div className="hidden print:block print:w-full print:m-0 print:p-0 print-page-wrapper">
+        <div className="hidden print:block print:w-full print:m-0 print:p-0 print-leave-letter-page">
           <div
             id="printable-leave-letter"
-            className="text-slate-900 font-serif text-sm print:border-none print:shadow-none print:p-0 print:m-0 print:space-y-4 relative"
+            className="w-[210mm] text-black font-sans bg-white print:p-0 print:m-0 flex flex-col justify-between mx-auto"
+            style={{ width: "210mm", height: "276mm", maxHeight: "276mm" }}
           >
-            {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
-            <div className="border-b-2 border-black pb-2.5">
-              <div className="flex flex-col items-start gap-1">
-                <Image
-                  src="/assets/PGTrangkilLogo.png"
-                  alt="Logo PG Trangkil"
-                  width={180}
-                  height={36}
-                  priority
-                  className="h-9 w-auto object-contain"
-                />
-                <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
-                  {companyProfile.location}
-                </div>
-              </div>
+            {/* SLIP 1 (ATAS) - TEPAT 50% WILAYAH KEKUASAAN (138mm) */}
+            <div
+              className="w-full box-border border-b border-dashed border-slate-400 print:border-slate-400 overflow-hidden flex flex-col justify-between"
+              style={{ height: "138mm", maxHeight: "138mm", padding: "6mm 16mm 5mm 16mm" }}
+            >
+              {renderSlipPermohonanCuti("slip-top")}
             </div>
 
-            {/* JUDUL SURAT */}
-            <div className="text-center mt-3 mb-2">
-              <h4 className="font-bold text-base underline uppercase tracking-wide text-black">
-                SURAT IZIN PENGAMBILAN CUTI
-              </h4>
-            </div>
-
-            {/* ISI SURAT */}
-            <div className="space-y-3 font-sans text-xs text-slate-800 leading-relaxed">
-              <p>Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
-              <div className="grid grid-cols-[140px_10px_1fr] gap-y-1.5 pl-4">
-                <span className="font-medium text-slate-600">Nama</span>
-                <span>:</span>
-                <strong className="text-slate-900">{employee.name}</strong>
-
-                <span className="font-medium text-slate-600">NIP</span>
-                <span>:</span>
-                <span className="font-mono">{employee.employeeNumber}</span>
-
-                <span className="font-medium text-slate-600">Bagian</span>
-                <span>:</span>
-                <span>{employee.department.name}</span>
-
-                <span className="font-medium text-slate-600">Jabatan / Stasiun</span>
-                <span>:</span>
-                <span>{employee.position || "-"} ({employee.stasiun || "Umum"})</span>
-              </div>
-
-              <p className="pt-2">
-                Diberikan izin untuk melaksanakan <strong>{printingLetterItem.uraian || "Cuti"}</strong> selama{" "}
-                <strong>{printingLetterItem.totalDays} Hari Kerja</strong> pada tanggal:
-              </p>
-
-              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs font-bold text-blue-900 pl-4">
-                {printingLetterItem.selectedDates && printingLetterItem.selectedDates.length > 0
-                  ? printingLetterItem.selectedDates.join(", ")
-                  : `${formatDateIndo(printingLetterItem.startDate)} s/d ${formatDateIndo(printingLetterItem.endDate)}`}
-              </div>
-
-              <div className="grid grid-cols-[140px_10px_1fr] gap-y-1 pl-4 pt-1">
-                <span className="font-medium text-slate-600">Alasan / Keperluan</span>
-                <span>:</span>
-                <span>{printingLetterItem.purpose || "-"}</span>
-
-                <span className="font-medium text-slate-600">Rincian Saldo Terpakai</span>
-                <span>:</span>
-                <span>
-                  Tahunan: {printingLetterItem.annualDays} hr | Besar: {printingLetterItem.longLeaveDays} hr {!isPelaksana && `| Inhaldagen: ${printingLetterItem.inhaldagenDays} hr`}
-                </span>
-              </div>
-
-              <p className="pt-2">
-                Demikian surat izin cuti ini diberikan untuk dapat dipergunakan sebagaimana mestinya.
-              </p>
-            </div>
-
-            {/* TANDA TANGAN */}
-            <div className="grid grid-cols-2 gap-8 pt-8 text-center font-sans text-xs">
-              <div>
-                <p className="text-slate-600">Pemohon Cuti,</p>
-                <div className="h-16"></div>
-                <p className="font-bold text-slate-900 underline">{employee.name}</p>
-                <p className="text-slate-500 font-mono">NIP. {employee.employeeNumber}</p>
-              </div>
-              <div>
-                <p className="text-slate-600">
-                  {companyProfile.location.split(",")[0]?.trim() || "Pati"},{" "}
-                  {formatDateIndo(new Date().toISOString())}
-                </p>
-                <p className="text-slate-600 font-medium">{companyProfile.hrManagerTitle},</p>
-                <div className="h-16"></div>
-                <p className="font-bold text-slate-900 underline">{companyProfile.hrManagerName}</p>
-                <p className="text-slate-500 font-mono">NIP. {companyProfile.hrManagerNip}</p>
-              </div>
-            </div>
-
-            {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
-            <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
-              <div>{companyProfile.currentUserName}</div>
-              <div>{formatDateIndo(new Date())}</div>
+            {/* SLIP 2 (BAWAH) - TEPAT 50% WILAYAH KEKUASAAN (138mm) */}
+            <div
+              className="w-full box-border overflow-hidden flex flex-col justify-between"
+              style={{ height: "138mm", maxHeight: "138mm", padding: "6mm 16mm 5mm 16mm" }}
+            >
+              {renderSlipPermohonanCuti("slip-bottom")}
             </div>
           </div>
         </div>,
@@ -1137,7 +1712,7 @@ export function BalanceActivityCard({
                 KARTU HISTORI AKTIVITAS SALDO CUTI KARYAWAN
               </h1>
               <p className="text-[11px] text-black mt-0.5">
-                Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"} • Bagian: {employee.department.name}
+                Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
               </p>
             </div>
 
@@ -1171,36 +1746,44 @@ export function BalanceActivityCard({
                 </tr>
               </thead>
               <tbody>
-                {sortedHistory.map((h, i) => {
-                  const isTambah = h.transactionType === "TAMBAH_SALDO";
-                  return (
-                    <tr key={h.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="p-2 text-center font-mono">{i + 1}</td>
-                      <td className="p-2 text-center font-mono">{formatDateIndo(h.requestDate)}</td>
-                      <td className="p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}</td>
-                      <td className="p-2 font-mono">
-                        {isTambah ? "-" : (h.selectedDates && h.selectedDates.length > 0 ? h.selectedDates.join(", ") : `${formatDateIndo(h.startDate)} s/d ${formatDateIndo(h.endDate)}`)}
-                      </td>
-                      <td className="p-2 text-center font-mono font-bold">
-                        {h.annualDays > 0 ? (
-                          isTambah ? <span className="text-emerald-700">+{h.annualDays}</span> : <span className="text-red-600">-{h.annualDays}</span>
-                        ) : <span className="text-slate-400 font-normal">-</span>}
-                      </td>
-                      <td className="p-2 text-center font-mono font-bold">
-                        {h.longLeaveDays > 0 ? (
-                          isTambah ? <span className="text-emerald-700">+{h.longLeaveDays}</span> : <span className="text-red-600">-{h.longLeaveDays}</span>
-                        ) : <span className="text-slate-400 font-normal">-</span>}
-                      </td>
-                      {!isPelaksana && (
-                        <td className="p-2 text-center font-mono font-bold">
-                          {h.inhaldagenDays > 0 ? (
-                            isTambah ? <span className="text-emerald-700">+{h.inhaldagenDays}</span> : <span className="text-red-600">-{h.inhaldagenDays}</span>
+                {sortedHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={isPelaksana ? 6 : 7} className="border border-slate-300 p-4 text-center text-slate-500 italic">
+                      Belum ada riwayat aktivitas saldo cuti.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedHistory.map((h, i) => {
+                    const isTambah = h.transactionType === "TAMBAH_SALDO";
+                    return (
+                      <tr key={h.id} className="hover:bg-slate-50">
+                        <td className="border border-slate-300 p-2 text-center font-mono">{i + 1}</td>
+                        <td className="border border-slate-300 p-2 text-center font-mono">{formatDateIndo(h.requestDate)}</td>
+                        <td className="border border-slate-300 p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}</td>
+                        <td className="border border-slate-300 p-2 font-mono">
+                          {isTambah ? "-" : (h.selectedDates && h.selectedDates.length > 0 ? h.selectedDates.join(", ") : `${formatDateIndo(h.startDate)} s/d ${formatDateIndo(h.endDate)}`)}
+                        </td>
+                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">
+                          {h.annualDays > 0 ? (
+                            isTambah ? <span className="text-emerald-700">+{h.annualDays}</span> : <span className="text-red-600">-{h.annualDays}</span>
                           ) : <span className="text-slate-400 font-normal">-</span>}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">
+                          {h.longLeaveDays > 0 ? (
+                            isTambah ? <span className="text-emerald-700">+{h.longLeaveDays}</span> : <span className="text-red-600">-{h.longLeaveDays}</span>
+                          ) : <span className="text-slate-400 font-normal">-</span>}
+                        </td>
+                        {!isPelaksana && (
+                          <td className="border border-slate-300 p-2 text-center font-mono font-bold">
+                            {h.inhaldagenDays > 0 ? (
+                              isTambah ? <span className="text-emerald-700">+{h.inhaldagenDays}</span> : <span className="text-red-600">-{h.inhaldagenDays}</span>
+                            ) : <span className="text-slate-400 font-normal">-</span>}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
 
@@ -1209,21 +1792,6 @@ export function BalanceActivityCard({
               <span className="font-semibold text-slate-800">
                 Total Sisa Saldo Cuti Saat Ini: <strong className="font-mono text-blue-900">{employee.balances.total} Hari</strong> (Tahunan: {employee.balances.annual} hr, Besar: {employee.balances.longLeave} hr{!isPelaksana ? `, Inhaldagen: ${employee.balances.inhaldagen} hr` : ""})
               </span>
-            </div>
-
-            {/* Sign-off */}
-            <div className="grid grid-cols-2 gap-8 pt-8 text-center text-xs">
-              <div>
-                <p className="text-slate-600">Dicetak Oleh (Operator Cuti),</p>
-                <div className="h-14"></div>
-                <p className="font-bold text-slate-900 underline">( ............................................ )</p>
-              </div>
-              <div>
-                <p className="text-slate-600">Mengetahui, {companyProfile.hrManagerTitle}</p>
-                <div className="h-14"></div>
-                <p className="font-bold text-slate-900 underline">{companyProfile.hrManagerName}</p>
-                <p className="text-slate-500 font-mono text-[10px]">NIP. {companyProfile.hrManagerNip}</p>
-              </div>
             </div>
 
             {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}

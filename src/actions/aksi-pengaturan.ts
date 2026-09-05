@@ -48,9 +48,14 @@ export interface SystemSettingsData {
     longLeaveCarryOverUnit?: "HARI" | "BULAN" | "TAHUN";
 
     // Cuti Inhaldagen
+    inhaldagenName?: string;
+    inhaldagenAutoEnabled?: boolean;
+    inhaldagenExpiryYears?: number;
+    inhaldagenExpiryMonths: number;
+    inhaldagenExpiryUnit?: "HARI" | "BULAN" | "TAHUN";
+    inhaldagenStatus?: "AKTIF" | "NONAKTIF";
     defaultInhaldagenDays: number;
     inhaldagenEligibleYears: number;
-    inhaldagenExpiryMonths: number;
     // Umum & Akumulasi
     activePeriodYear: number;
     maxAccumulatedDays: number;
@@ -127,9 +132,15 @@ let systemConfigStore = {
     longLeaveExpiryUnit: "TAHUN" as "HARI" | "BULAN" | "TAHUN",
     longLeaveCarryOverUnit: "HARI" as "HARI" | "BULAN" | "TAHUN",
 
+    // Inhaldagen
+    inhaldagenName: "Cuti Inhaldagen",
+    inhaldagenAutoEnabled: true,
+    inhaldagenExpiryYears: 12,
+    inhaldagenExpiryMonths: 12,
+    inhaldagenExpiryUnit: "BULAN" as "HARI" | "BULAN" | "TAHUN",
+    inhaldagenStatus: "AKTIF" as "AKTIF" | "NONAKTIF",
     defaultInhaldagenDays: 6,
     inhaldagenEligibleYears: 0,
-    inhaldagenExpiryMonths: 12,
     activePeriodYear: 2026,
     maxAccumulatedDays: 36,
   },
@@ -174,6 +185,9 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
     let longLeaveRecord = await prisma.otomasiSaldoCuti.findUnique({
       where: { jenisCuti: "CUTI_BESAR" },
     });
+    let inhaldagenRecord = await prisma.otomasiSaldoCuti.findUnique({
+      where: { jenisCuti: "INHALDAGEN" },
+    });
 
     // Inisialisasi awal ke DB jika belum ada
     if (!annualRecord) {
@@ -211,6 +225,27 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
           satuanSiklus: "TAHUN",
           masaBerlaku: 3,
           satuanBerlaku: "TAHUN",
+          isCarryOver: false,
+          maxCarryOver: 0,
+          satuanCarryOver: "HARI",
+        },
+      });
+    }
+
+    if (!inhaldagenRecord) {
+      inhaldagenRecord = await prisma.otomasiSaldoCuti.create({
+        data: {
+          jenisCuti: "INHALDAGEN",
+          namaKebijakan: "Cuti Inhaldagen",
+          isOtomatisAktif: true,
+          saldoDiberikan: 0,
+          satuanSaldo: "HARI",
+          minMasaKerja: 0,
+          satuanMasaKerja: "TAHUN",
+          siklusUlang: 0,
+          satuanSiklus: "TAHUN",
+          masaBerlaku: 12,
+          satuanBerlaku: "BULAN",
           isCarryOver: false,
           maxCarryOver: 0,
           satuanCarryOver: "HARI",
@@ -283,9 +318,14 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
       longLeaveCarryOverUnit: (longLeaveRecord.satuanCarryOver || "HARI") as "HARI" | "BULAN" | "TAHUN",
       longLeaveStatus: (longLeaveRecord.isOtomatisAktif ? "AKTIF" : "NONAKTIF") as "AKTIF" | "NONAKTIF",
 
-      defaultInhaldagenDays: 6,
-      inhaldagenEligibleYears: 0,
-      inhaldagenExpiryMonths: 12,
+      inhaldagenName: inhaldagenRecord.namaKebijakan,
+      inhaldagenAutoEnabled: inhaldagenRecord.isOtomatisAktif,
+      inhaldagenExpiryYears: inhaldagenRecord.masaBerlaku,
+      inhaldagenExpiryMonths: inhaldagenRecord.satuanBerlaku === "TAHUN" ? inhaldagenRecord.masaBerlaku * 12 : inhaldagenRecord.masaBerlaku,
+      inhaldagenExpiryUnit: (inhaldagenRecord.satuanBerlaku || "BULAN") as "HARI" | "BULAN" | "TAHUN",
+      inhaldagenStatus: (inhaldagenRecord.isOtomatisAktif ? "AKTIF" : "NONAKTIF") as "AKTIF" | "NONAKTIF",
+      defaultInhaldagenDays: inhaldagenRecord.saldoDiberikan || 6,
+      inhaldagenEligibleYears: inhaldagenRecord.minMasaKerja || 0,
       activePeriodYear: 2026,
       maxAccumulatedDays: 36,
     };
@@ -391,10 +431,17 @@ export async function updateLeavePolicySettingsAction(payload: {
   longLeaveExpiryUnit?: "HARI" | "BULAN" | "TAHUN";
   longLeaveCarryOverUnit?: "HARI" | "BULAN" | "TAHUN";
 
+  // Inhaldagen
+  inhaldagenName?: string;
+  inhaldagenAutoEnabled?: boolean;
+  inhaldagenExpiryYears?: number;
+  inhaldagenExpiryMonths?: number;
+  inhaldagenExpiryUnit?: "HARI" | "BULAN" | "TAHUN";
+  inhaldagenStatus?: "AKTIF" | "NONAKTIF";
+
   // Fallback / legacy
   defaultInhaldagenDays?: number;
   inhaldagenEligibleYears?: number;
-  inhaldagenExpiryMonths?: number;
   activePeriodYear?: number;
   maxAccumulatedDays?: number;
 }): Promise<ActionResult<void>> {
@@ -473,6 +520,33 @@ export async function updateLeavePolicySettingsAction(payload: {
         isCarryOver: payload.longLeaveCarryOver !== undefined ? Boolean(payload.longLeaveCarryOver) : false,
         maxCarryOver: Number(payload.longLeaveMaxCarryOver) || 0,
         satuanCarryOver: payload.longLeaveCarryOverUnit || "HARI",
+      },
+    });
+
+    // 3. Simpan/Perbarui Inhaldagen di DB
+    await prisma.otomasiSaldoCuti.upsert({
+      where: { jenisCuti: "INHALDAGEN" },
+      update: {
+        namaKebijakan: payload.inhaldagenName || "Cuti Inhaldagen",
+        isOtomatisAktif: payload.inhaldagenAutoEnabled !== undefined ? Boolean(payload.inhaldagenAutoEnabled) : true,
+        masaBerlaku: Number(payload.inhaldagenExpiryYears) || 12,
+        satuanBerlaku: payload.inhaldagenExpiryUnit || "BULAN",
+      },
+      create: {
+        jenisCuti: "INHALDAGEN",
+        namaKebijakan: payload.inhaldagenName || "Cuti Inhaldagen",
+        isOtomatisAktif: payload.inhaldagenAutoEnabled !== undefined ? Boolean(payload.inhaldagenAutoEnabled) : true,
+        saldoDiberikan: 0,
+        satuanSaldo: "HARI",
+        minMasaKerja: 0,
+        satuanMasaKerja: "TAHUN",
+        siklusUlang: 0,
+        satuanSiklus: "TAHUN",
+        masaBerlaku: Number(payload.inhaldagenExpiryYears) || 12,
+        satuanBerlaku: payload.inhaldagenExpiryUnit || "BULAN",
+        isCarryOver: false,
+        maxCarryOver: 0,
+        satuanCarryOver: "HARI",
       },
     });
 
@@ -721,6 +795,10 @@ export async function updateSignatoriesAction(payload: {
     revalidatePath("/master-bagian");
     revalidatePath("/laporan-cuti");
     revalidatePath("/dashboard");
+    revalidatePath("/rincian-cuti");
+    revalidatePath("/ambil-cuti");
+    revalidatePath("/koreksi-cuti");
+    revalidatePath("/tambah-saldo-cuti");
 
     return {
       success: true,
@@ -765,11 +843,15 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
     isActive: boolean;
   }>;
 }>> {
-  await requireAuth();
-
   try {
     let leader = await prisma.penandatanganan.findFirst({
-      where: { kategori: "PEMIMPIN" },
+      where: {
+        OR: [
+          { kategori: "PEMIMPIN" },
+          { id: "PEMIMPIN_UTAMA" },
+        ],
+      },
+      orderBy: { urutan: "asc" },
     });
 
     if (!leader) {
@@ -801,7 +883,6 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
     const dbSignatories = await prisma.penandatanganan.findMany({
       where: {
         kategori: "BAGIAN",
-        departmentId: { not: null },
       },
       orderBy: { urutan: "asc" },
       include: {
@@ -809,7 +890,7 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
       },
     });
 
-    const validSignatories = dbSignatories.filter((s) => s.department !== null);
+    const validSignatories = dbSignatories.filter((s) => s.department !== null || Boolean(s.departmentId));
 
     return {
       success: true,

@@ -103,7 +103,7 @@ export function KomponenPenandatangan() {
     const availableDept = allDepartments.find((d) => !usedDeptIds.has(d.id));
 
     if (!availableDept) {
-      toast.warning("Semua bagian sudah memiliki pimpinan / pejabat penandatangan.");
+      toast.warning("Semua bagian sudah memiliki kepala bagian / pejabat penandatangan.");
       return;
     }
 
@@ -209,7 +209,7 @@ export function KomponenPenandatangan() {
             Pejabat Penandatanganan Dokumen Cuti
           </CardTitle>
           <CardDescription className="text-xs text-[#6B7280]">
-            Pengaturan nama dan jabatan pimpinan unit kerja serta pimpinan bagian yang dicantumkan pada kolom tanda tangan dokumen cuti.
+            Pengaturan nama dan jabatan pimpinan unit kerja serta kepala bagian yang dicantumkan pada kolom tanda tangan dokumen cuti.
           </CardDescription>
         </CardHeader>
 
@@ -260,11 +260,11 @@ export function KomponenPenandatangan() {
               <div className="flex items-center gap-2">
                 <Building2 className="h-3.5 w-3.5 text-[#0789D1]" />
                 <h3 className="text-xs font-bold text-[#263238]">
-                  Pimpinan Bagian / Penandatangan Dokumen
+                  Kepala Bagian / Penandatangan Dokumen
                 </h3>
               </div>
               <span className="text-[11px] text-[#6B7280]">
-                Pilih bagian pada selector di kolom nama untuk menentukan pimpinan masing-masing bagian
+                Pilih bagian pada selector di kolom nama untuk menentukan kepala bagian masing-masing
               </span>
             </div>
 
@@ -273,7 +273,7 @@ export function KomponenPenandatangan() {
               {signatoryRows.length === 0 ? (
                 <div className="py-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
                   <p className="text-xs text-slate-500">
-                    Belum ada baris penandatangan bagian yang ditambahkan.
+                    Belum ada baris penandatangan kepala bagian yang ditambahkan.
                   </p>
                   <Button
                     type="button"
@@ -292,10 +292,10 @@ export function KomponenPenandatangan() {
                       key={row.tempId}
                       className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-2.5 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/70 transition-colors"
                     >
-                      {/* Kolom 1: Nama Pimpinan dengan Selector Master Bagian terintegrasi di kanan */}
+                      {/* Kolom 1: Nama Kepala Bagian dengan Selector Master Bagian terintegrasi di kanan */}
                       <div className="sm:col-span-6 space-y-1.5">
                         <Label className="text-[11px] font-semibold text-[#263238] flex items-center justify-between">
-                          <span>Nama Pimpinan / TTD #{index + 1}</span>
+                          <span>Nama Kepala Bagian / TTD #{index + 1}</span>
                         </Label>
                         <div className="relative flex items-center">
                           <Input
@@ -304,7 +304,7 @@ export function KomponenPenandatangan() {
                             onChange={(e) =>
                               handleRowFieldChange(index, "namaPimpinan", e.target.value)
                             }
-                            placeholder="Nama & gelar pimpinan"
+                            placeholder="Nama & gelar kepala bagian"
                             className="h-9 text-xs pr-36 font-medium bg-white"
                           />
                           <div className="absolute right-1 top-1 bottom-1 flex items-center">
@@ -382,7 +382,7 @@ export function KomponenPenandatangan() {
                 }`}
                 title={
                   isAllDepartmentsUsed
-                    ? "Semua bagian sudah memiliki pejabat penandatangan"
+                    ? "Semua bagian sudah memiliki kepala bagian penandatangan"
                     : "Tambah baris penandatangan"
                 }
               >

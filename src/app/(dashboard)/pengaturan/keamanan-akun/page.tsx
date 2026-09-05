@@ -176,10 +176,10 @@ export default function PengaturanKeamananAkunPage() {
   return (
     <div className="space-y-6">
       {/* Grid Utama: Card Profil di Kiri & Card Edit di Kanan */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* ================= CARD PROFIL DI KIRI ================= */}
-        <Card className="lg:col-span-4 border-slate-200/80 shadow-xs overflow-hidden bg-white">
-          <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50">
+        <Card className="lg:col-span-4 border-slate-200/80 shadow-xs overflow-hidden bg-white h-full flex flex-col justify-between">
+          <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Shield className="h-4 w-4 text-[#0084c7]" />
               Profil Pengguna
@@ -189,89 +189,92 @@ export default function PengaturanKeamananAkunPage() {
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="p-5 flex flex-col items-center text-center">
-            {/* Avatar Interaktif dengan Ikon Kamera & Klik untuk Pop-up Crop */}
-            <div
-              className="relative group cursor-pointer mb-3"
-              onClick={() => fileInputRef.current?.click()}
-              title="Klik untuk memilih dan memotong foto profil"
-            >
-              <div className="w-24 h-24 rounded-full ring-4 ring-sky-50 shadow-md overflow-hidden bg-slate-100 flex items-center justify-center transition-transform group-hover:scale-102">
-                {photoPreview ? (
-                  <img
-                    src={photoPreview}
-                    alt={fullName || username}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-3xl font-extrabold flex items-center justify-center select-none shadow-inner">
-                    {getInitials(fullName || username)}
+          <CardContent className="p-5 flex-1 flex flex-col items-center justify-between text-center">
+            {/* Area Tengah / Avatar & Kredensial */}
+            <div className="flex flex-col items-center w-full my-auto py-2">
+              {/* Avatar Interaktif dengan Ikon Kamera & Klik untuk Pop-up Crop */}
+              <div
+                className="relative group cursor-pointer mb-3"
+                onClick={() => fileInputRef.current?.click()}
+                title="Klik untuk memilih dan memotong foto profil"
+              >
+                <div className="w-24 h-24 rounded-full ring-4 ring-sky-50 shadow-md overflow-hidden bg-slate-100 flex items-center justify-center transition-transform group-hover:scale-102">
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt={fullName || username}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-3xl font-extrabold flex items-center justify-center select-none shadow-inner">
+                      {getInitials(fullName || username)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Overlay Hover */}
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white backdrop-blur-2xs">
+                  <Camera className="h-5 w-5" />
+                  <span className="text-[10px] font-semibold mt-0.5">Ubah</span>
+                </div>
+
+                {/* Badge Kamera Kecil di Sudut Avatar */}
+                <button
+                  type="button"
+                  aria-label="Pilih foto profil"
+                  className="absolute bottom-0 right-0 p-1.5 bg-[#0084c7] text-white rounded-full shadow-md hover:bg-[#0073ad] transition-colors border-2 border-white cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Status Loading Unggah Foto */}
+                {isPendingPhoto && (
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-2xs">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
                   </div>
                 )}
               </div>
 
-              {/* Overlay Hover */}
-              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white backdrop-blur-2xs">
-                <Camera className="h-5 w-5" />
-                <span className="text-[10px] font-semibold mt-0.5">Ubah</span>
-              </div>
+              {/* Nama Lengkap & Username */}
+              <h2 className="text-base font-bold text-slate-900 leading-tight truncate max-w-full">
+                {fullName || "Nama Pengguna"}
+              </h2>
+              <p className="text-xs font-mono font-medium text-slate-500 mt-0.5">
+                @{username || "username"}
+              </p>
 
-              {/* Badge Kamera Kecil di Sudut Avatar */}
-              <button
-                type="button"
-                aria-label="Pilih foto profil"
-                className="absolute bottom-0 right-0 p-1.5 bg-[#0084c7] text-white rounded-full shadow-md hover:bg-[#0073ad] transition-colors border-2 border-white cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-
-              {/* Status Loading Unggah Foto */}
-              {isPendingPhoto && (
-                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-2xs">
-                  <Loader2 className="h-6 w-6 animate-spin text-white" />
-                </div>
-              )}
-            </div>
-
-            {/* Nama Lengkap & Username */}
-            <h2 className="text-base font-bold text-slate-900 leading-tight truncate max-w-full">
-              {fullName || "Nama Pengguna"}
-            </h2>
-            <p className="text-xs font-mono font-medium text-slate-500 mt-0.5">
-              @{username || "username"}
-            </p>
-
-            {/* Badges Role & Status */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 mb-4">
-              <Badge
-                variant={currentUser?.role === "ADMIN_UTAMA" ? "default" : "secondary"}
-                className="text-[10px] px-2.5 py-0.5 font-semibold gap-1"
-              >
-                <Shield className="h-3 w-3" />
-                {currentUser?.role === "ADMIN_UTAMA"
-                  ? "Admin Utama (ALL)"
-                  : `Admin Bagian ${currentUser?.department || ""}`}
-              </Badge>
-
-              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-semibold">
-                <CheckCircle2 className="h-3 w-3" />
-                Aktif
-              </Badge>
-
-              {currentUser?.department && (
-                <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200 gap-1 font-medium">
-                  <Building2 className="h-3 w-3 text-slate-400" />
-                  {currentUser.department}
+              {/* Badges Role & Status */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                <Badge
+                  variant={currentUser?.role === "ADMIN_UTAMA" ? "default" : "secondary"}
+                  className="text-[10px] px-2.5 py-0.5 font-semibold gap-1"
+                >
+                  <Shield className="h-3 w-3" />
+                  {currentUser?.role === "ADMIN_UTAMA"
+                    ? "Admin Utama (ALL)"
+                    : `Admin Bagian ${currentUser?.department || ""}`}
                 </Badge>
-              )}
+
+                <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-semibold">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Aktif
+                </Badge>
+
+                {currentUser?.department && (
+                  <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200 gap-1 font-medium">
+                    <Building2 className="h-3 w-3 text-slate-400" />
+                    {currentUser.department}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Tombol Aksi Cepat Foto Profil */}
-            <div className="w-full flex flex-col gap-2 pt-3 border-t border-slate-100">
+            <div className="w-full flex flex-col gap-2 pt-3 border-t border-slate-100 mt-auto">
               <Button
                 type="button"
                 variant="outline"
@@ -311,19 +314,19 @@ export default function PengaturanKeamananAkunPage() {
         </Card>
 
         {/* ================= CARD INFORMASI AKUN DI KANAN ================= */}
-        <div className="lg:col-span-8">
-          <Card className="border-slate-200/80 shadow-xs bg-white">
-            <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <UserCog className="h-4 w-4 text-[#0084c7]" />
-                Pengaturan Informasi Akun & Keamanan
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                Kelola identitas akun, username login, serta kata sandi Anda.
-              </CardDescription>
-            </CardHeader>
+        <Card className="lg:col-span-8 border-slate-200/80 shadow-xs overflow-hidden bg-white h-full flex flex-col justify-between">
+          <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
+            <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <UserCog className="h-4 w-4 text-[#0084c7]" />
+              Pengaturan Informasi Akun & Keamanan
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Kelola identitas akun, username login, serta kata sandi Anda.
+            </CardDescription>
+          </CardHeader>
 
-            <CardContent className="p-5 sm:p-6 space-y-3.5">
+          <CardContent className="p-5 sm:p-6 flex-1 flex flex-col justify-between gap-4">
+            <div className="space-y-3.5 my-auto">
               {/* ITEM 1: NAMA LENGKAP & GELAR */}
               <button
                 type="button"
@@ -407,9 +410,25 @@ export default function PengaturanKeamananAkunPage() {
                   </div>
                 </div>
               </button>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            {/* Footer Status Keamanan yang Sejajar dengan Footer Card Kiri */}
+            <div className="pt-3 border-t border-slate-100 mt-auto flex items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-6 w-6 rounded-md bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800 text-[11px] truncate">Kredensial Terenkripsi</p>
+                  <p className="text-[10px] text-slate-400 truncate">Kata sandi tersimpan aman dengan enkripsi hash</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200 shrink-0 font-medium py-0.5">
+                Sesi Terverifikasi
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* MODAL 1: UBAH NAMA LENGKAP */}

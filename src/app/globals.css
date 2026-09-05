@@ -66,6 +66,18 @@
     @apply bg-background text-foreground font-sans antialiased text-sm;
   }
 
+  /* Sembunyikan Next.js Dev Indicator / Badge Overlay */
+  nextjs-portal,
+  [data-nextjs-dev-overlay-container],
+  [data-next-badge],
+  [data-nextjs-toast],
+  [data-nextjs-dialog-overlay] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   /* Custom Slim Sky Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
@@ -201,9 +213,71 @@
     padding: 0 !important;
   }
 
-  /* Sembunyikan konten latar belakang dashboard saat modal cetak sedang aktif */
-  body:has(#printable-leave-letter) [data-main-dashboard],
-  body:has(#printable-history-sheet) [data-main-dashboard] {
+  .print-leave-letter-page {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 276mm !important;
+    max-height: 276mm !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  /* Hindari pemotongan sudut tabel saat dicetak (Print Mode) */
+  .print-page-wrapper table {
+    border-collapse: collapse !important;
+    border-radius: 0 !important;
+  }
+
+  .print-page-wrapper div:has(> table) {
+    border-radius: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+  }
+
+  /* Sembunyikan ikon sortir tabel dan elemen interaktif saat dicetak */
+  th svg,
+  .sort-icon {
+    display: none !important;
+  }
+
+  /* Sembunyikan notifikasi toast (Sonner), dialog overlay, dan elemen popup saat dicetak */
+  [data-sonner-toaster],
+  [data-sonner-toaster] *,
+  [data-sonner-toast],
+  [data-sonner-toast] *,
+  [data-sonner-toast-wrapper],
+  [data-sonner-toast-wrapper] *,
+  section:has([data-sonner-toaster]),
+  section:has([data-sonner-toast]),
+  section[aria-label*="Notification"],
+  section[aria-label*="Notification"] *,
+  [aria-live="polite"],
+  [aria-live="polite"] *,
+  [role="status"],
+  [role="status"] *,
+  ol[data-sonner-toaster],
+  li[data-sonner-toast],
+  .toaster,
+  .sonner-toast {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Pastikan HANYA dokumen cetak yang tampil di kertas, sembunyikan semua elemen lain di body */
+  body:has(#printable-leave-letter) > :not(.print-leave-letter-page),
+  body:has(#printable-history-sheet) > :not(.print-page-wrapper) {
     display: none !important;
   }
 }

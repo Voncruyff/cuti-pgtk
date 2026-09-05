@@ -157,13 +157,16 @@ export function TabelKaryawan({
   };
 
   const renderSortIcon = (field: string) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />;
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
-    ) : (
-      <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0" />
+    return (
+      <span className="inline-flex print:hidden">
+        {sortField !== field ? (
+          <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0 print:hidden" />
+        ) : sortDirection === "asc" ? (
+          <ArrowUp className="h-3 w-3 text-[#0789D1] font-bold shrink-0 print:hidden" />
+        ) : (
+          <ArrowDown className="h-3 w-3 text-[#0789D1] font-bold shrink-0 print:hidden" />
+        )}
+      </span>
     );
   };
   const stasiunUntukFilterBagian = stasiun.filter((s) => {

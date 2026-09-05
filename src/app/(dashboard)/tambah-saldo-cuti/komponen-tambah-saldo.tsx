@@ -326,37 +326,51 @@ export function KomponenTambahSaldo() {
             return (
               <div className="pt-2 border-t border-slate-100 space-y-2.5 animate-in fade-in-50 duration-200">
                 <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-slate-900 text-sm">
-                      {selectedEmployee.employeeNumber}
-                    </span>
-                    <span className="text-slate-400 font-normal text-sm">-</span>
-                    <span className="font-bold text-slate-900 text-sm">
-                      {selectedEmployee.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-600">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-medium ${
-                      isPelaksana
-                        ? "bg-amber-50 text-amber-900 border-amber-200 font-semibold"
-                        : "bg-indigo-50 text-indigo-900 border-indigo-200 font-semibold"
-                    }`}>
-                      Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 px-2 py-0.5 rounded-md border border-sky-200/80 font-medium">
-                      <Building2 className="h-3 w-3 text-[#0093dc]" />
-                      {selectedEmployee.department.name}
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200 font-medium">
-                      <Factory className="h-3 w-3 text-slate-600" />
-                      Stasiun: {selectedEmployee.stasiun && selectedEmployee.stasiun !== "-" ? selectedEmployee.stasiun : "Semua Stasiun"}
-                    </span>
-                    {selectedEmployee.position && selectedEmployee.position !== "-" && (
-                      <span className="inline-flex items-center gap-1 bg-indigo-50/80 text-indigo-800 px-2 py-0.5 rounded-md border border-indigo-200/80 font-medium">
-                        <Briefcase className="h-3 w-3 text-indigo-600" />
-                        {selectedEmployee.position}
-                      </span>
-                    )}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-slate-900 text-sm">
+                          {selectedEmployee.employeeNumber}
+                        </span>
+                        <span className="text-slate-400 font-normal text-sm">-</span>
+                        <span className="font-bold text-slate-900 text-sm">
+                          {selectedEmployee.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-600">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-medium ${
+                          isPelaksana
+                            ? "bg-amber-50 text-amber-900 border-amber-200 font-semibold"
+                            : "bg-indigo-50 text-indigo-900 border-indigo-200 font-semibold"
+                        }`}>
+                          Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 px-2 py-0.5 rounded-md border border-sky-200/80 font-medium">
+                          <Building2 className="h-3 w-3 text-[#0093dc]" />
+                          {selectedEmployee.department.name}
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200 font-medium">
+                          <Factory className="h-3 w-3 text-slate-600" />
+                          Stasiun: {selectedEmployee.stasiun && selectedEmployee.stasiun !== "-" ? selectedEmployee.stasiun : "Semua Stasiun"}
+                        </span>
+                        {selectedEmployee.position && selectedEmployee.position !== "-" && (
+                          <span className="inline-flex items-center gap-1 bg-indigo-50/80 text-indigo-800 px-2 py-0.5 rounded-md border border-indigo-200/80 font-medium">
+                            <Briefcase className="h-3 w-3 text-indigo-600" />
+                            {selectedEmployee.position}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleOpenAddModal}
+                      className="font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer gap-1.5 h-8 text-xs shrink-0 self-start sm:self-center"
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" />
+                      Tambah Saldo
+                    </Button>
                   </div>
                 </div>
 
@@ -423,11 +437,11 @@ export function KomponenTambahSaldo() {
           actionButton={
             <Button
               type="button"
-              size="default"
+              size="sm"
               onClick={handleOpenAddModal}
-              className="font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
+              className="font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer gap-1.5 h-8 text-xs"
             >
-              <PlusCircle className="h-4 w-4" />
+              <PlusCircle className="h-3.5 w-3.5" />
               Tambah Saldo
             </Button>
           }

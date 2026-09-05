@@ -294,7 +294,7 @@ export interface EmployeeLeaveHistoryItem {
   id: string;
   requestNumber: string;
   employeeId: string;
-  transactionType?: "AMBIL_CUTI" | "TAMBAH_SALDO";
+  transactionType?: "AMBIL_CUTI" | "TAMBAH_SALDO" | "KEDALUWARSA";
   uraian?: string;
   requestDate: string;
   startDate: string;
@@ -334,9 +334,15 @@ export async function getEmployeeLeaveRequestsAction(
 
         if (rows && rows.length > 0) {
           const items: EmployeeLeaveHistoryItem[] = rows.map((r) => {
-            const datesList = r.tgl_cuti ? r.tgl_cuti.split(", ").map((s: string) => s.trim()) : [];
+            const datesList = r.tgl_cuti
+              ? r.tgl_cuti
+                  .split(/[,;\n\r]+/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+              : [];
             const reqDate = r.tgl_transaksi ? new Date(r.tgl_transaksi) : new Date(r.created_at);
             const isTambah = r.jenis_transaksi === "TAMBAH_SALDO";
+            const isKedaluwarsa = r.jenis_transaksi === "KEDALUWARSA";
 
             const types: string[] = [];
             if (Number(r.cuti_tahunan) > 0) types.push("Cuti Tahunan");
@@ -344,6 +350,8 @@ export async function getEmployeeLeaveRequestsAction(
             if (Number(r.inhaldagen) > 0) types.push("Inhaldagen");
             const fallbackUraian = isTambah 
               ? `Penambahan Saldo ${types.join(" & ") || "Cuti"}`
+              : isKedaluwarsa
+              ? `Kedaluwarsa Kuota ${types.join(" & ") || "Cuti"} (Hangus)`
               : `Pengambilan ${types.join(" & ") || "Cuti"}`;
 
             const computedUraian = (r.uraian && String(r.uraian).trim() !== "") ? r.uraian : fallbackUraian;
@@ -352,7 +360,7 @@ export async function getEmployeeLeaveRequestsAction(
               id: r.id,
               requestNumber: `CT-${r.nip}`,
               employeeId: employee.id,
-              transactionType: (r.jenis_transaksi as "AMBIL_CUTI" | "TAMBAH_SALDO") || "AMBIL_CUTI",
+              transactionType: (r.jenis_transaksi as "AMBIL_CUTI" | "TAMBAH_SALDO" | "KEDALUWARSA") || "AMBIL_CUTI",
               uraian: computedUraian,
               requestDate: reqDate.toISOString(),
               startDate: reqDate.toISOString(),
@@ -362,7 +370,7 @@ export async function getEmployeeLeaveRequestsAction(
               annualDays: Number(r.cuti_tahunan) || 0,
               longLeaveDays: Number(r.cuti_besar) || 0,
               inhaldagenDays: Number(r.inhaldagen) || 0,
-              purpose: r.keperluan || (isTambah ? "Penambahan Saldo" : "-"),
+              purpose: r.keperluan || (isTambah ? "Penambahan Saldo" : isKedaluwarsa ? "Kedaluwarsa Kuota (Hangus)" : "-"),
               notes: null,
               status: "APPROVED",
               createdByName: "Admin",
