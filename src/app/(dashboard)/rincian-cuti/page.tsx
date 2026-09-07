@@ -531,20 +531,20 @@ export default function HalamanRincianCuti() {
                 <Button
                   type="button"
                   variant="outline"
-                  size="default"
-                  className="font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
+                  size="sm"
+                  className="font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-300 h-8 text-xs gap-1.5 shadow-2xs"
                 >
-                  <PlusCircle className="h-4 w-4 text-emerald-600" />
+                  <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
                   Tambah Saldo
                 </Button>
               </Link>
               <Link href="/cuti/buat">
                 <Button
                   type="button"
-                  size="default"
-                  className="font-semibold shadow-xs"
+                  size="sm"
+                  className="font-semibold shadow-2xs h-8 text-xs gap-1.5"
                 >
-                  <CalendarDays className="h-4 w-4" />
+                  <CalendarDays className="h-3.5 w-3.5" />
                   Ambil Cuti
                 </Button>
               </Link>

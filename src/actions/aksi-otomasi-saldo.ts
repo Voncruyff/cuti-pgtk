@@ -52,11 +52,14 @@ export interface AccrualExecutionResult {
 export async function executeAutomatedLeaveAccrualsAction(options?: {
   forceEmployeeId?: string;
   isSystemCall?: boolean;
+  asOfDate?: Date | string;
+  monthFilter?: number; // 0-11, hanya proses karyawan yang ulang tahun di bulan ini
 }): Promise<AccrualExecutionResult> {
-  const currentUser = await getCurrentUser();
+  const isSystem = Boolean(options?.isSystemCall);
+  const currentUser = isSystem ? null : await getCurrentUser();
 
-  // Jika bukan pemanggilan internal sistem (cron), pastikan user terautentikasi dan memiliki hak akses
-  if (!options?.isSystemCall && (!currentUser || currentUser.role !== "ADMIN_UTAMA")) {
+  // Jika bukan pemanggilan internal sistem (cron/skrip), pastikan user terautentikasi dan memiliki hak akses
+  if (!isSystem && (!currentUser || currentUser.role !== "ADMIN_UTAMA")) {
     return {
       success: false,
       message: "Hanya Admin Utama yang memiliki hak akses untuk menjalankan eksekusi otomatisasi saldo.",
@@ -137,7 +140,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
       };
     }
 
-    const today = new Date();
+    const today = options?.asOfDate ? new Date(options.asOfDate) : new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth(); // 0-indexed (0 = Jan)
     const currentDate = today.getDate();
@@ -156,6 +159,11 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
       const apptYear = appt.getFullYear();
       const apptMonth = appt.getMonth();
       const apptDay = appt.getDate();
+
+      // Jika ada filter bulan khusus (untuk simulasi per bulan), lewati karyawan dengan bulan lain
+      if (options?.monthFilter !== undefined && apptMonth !== options.monthFilter) {
+        continue;
+      }
 
       // Apakah hari ini sudah mencapai / melewati hari ulang tahun pengangkatan tahun ini?
       const hasPassedAnniversaryThisYear =
@@ -177,8 +185,10 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
       let inhaldagenExpired = 0;
       const notes: string[] = [];
 
-      // Tanggal efektif transaksi (tepat pada tanggal & bulan pengangkatan tahun tersebut)
-      const effectiveDate = new Date(latestAnniversaryYear, apptMonth, apptDay, 8, 0, 0);
+      // Tanggal efektif transaksi (tepat pada tanggal & bulan pengangkatan tahun tersebut dengan jam UTC teratur)
+      const expireDate = new Date(Date.UTC(latestAnniversaryYear, apptMonth, apptDay, 7, 0, 0));
+      const effectiveDate = new Date(Date.UTC(latestAnniversaryYear, apptMonth, apptDay, 8, 0, 0));
+      const longLeaveDate = new Date(Date.UTC(latestAnniversaryYear, apptMonth, apptDay, 9, 0, 0));
 
       // ----------------------------------------------------
       // A. EKSEKUSI CUTI TAHUNAN
@@ -212,21 +222,21 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
           await prisma.$transaction(async (tx: any) => {
             // 1. Jika ada kuota yang kedaluwarsa (hangus), catat di aktivitas_saldo
             if (annualExpired > 0) {
-              const expireTxId = `exp-ann-${emp.nip}-${Date.now()}`;
+              const expireTxId = `exp-ann-${emp.nip}-${latestAnniversaryYear}`;
               await tx.$executeRaw`
                 INSERT INTO aktivitas_saldo (
                   id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
                 ) VALUES (
                   ${expireTxId}, ${emp.nip}, ${emp.nama}, 'KEDALUWARSA', 
                   ${`Kedaluwarsa Kuota Cuti Tahunan (Sisa periode sebelumnya hangus sebanyak ${annualExpired} hari)`}, 
-                  ${effectiveDate}, NULL, ${annualExpired}, 0, 0, ${annualExpired}, 
-                  ${`AUTO_EXPIRE_ANNUAL_${latestAnniversaryYear}`}, NOW(), NOW()
+                  ${expireDate}, NULL, ${annualExpired}, 0, 0, ${annualExpired}, 
+                  ${`AUTO_EXPIRE_ANNUAL_${latestAnniversaryYear}`}, ${expireDate}, ${expireDate}
                 )
               `;
             }
 
             // 2. Catat penambahan kuota hak cuti tahunan baru
-            const accrualTxId = `acc-ann-${emp.nip}-${Date.now()}`;
+            const accrualTxId = `acc-ann-${emp.nip}-${latestAnniversaryYear}`;
             await tx.$executeRaw`
               INSERT INTO aktivitas_saldo (
                 id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
@@ -234,7 +244,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
                 ${accrualTxId}, ${emp.nip}, ${emp.nama}, 'TAMBAH_SALDO', 
                 ${`Hak Cuti Tahunan Otomatis (Masa Kerja ${completedYears} Thn, SK: ${formatDateIndo(emp.appointmentDate)})`}, 
                 ${effectiveDate}, NULL, ${annualAdded}, 0, 0, ${annualAdded}, 
-                ${`AUTO_ACCRUAL_ANNUAL_${latestAnniversaryYear}`}, NOW(), NOW()
+                ${`AUTO_ACCRUAL_ANNUAL_${latestAnniversaryYear}`}, ${effectiveDate}, ${effectiveDate}
               )
             `;
 
@@ -294,15 +304,15 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
             longLeaveAdded = typeof longLeavePolicy.saldoDiberikan === "number" ? longLeavePolicy.saldoDiberikan : 30;
 
             await prisma.$transaction(async (tx: any) => {
-              const accrualTxId = `acc-lng-${emp.nip}-${Date.now()}`;
+              const accrualTxId = `acc-lng-${emp.nip}-${latestAnniversaryYear}`;
               await tx.$executeRaw`
                 INSERT INTO aktivitas_saldo (
                   id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
                 ) VALUES (
                   ${accrualTxId}, ${emp.nip}, ${emp.nama}, 'TAMBAH_SALDO', 
                   ${`Hak Cuti Besar Otomatis (Siklus ke-${completedYears / 6}, Masa Kerja ${completedYears} Thn)`}, 
-                  ${effectiveDate}, NULL, 0, ${longLeaveAdded}, 0, ${longLeaveAdded}, 
-                  ${longLeaveCycleKey}, NOW(), NOW()
+                  ${longLeaveDate}, NULL, 0, ${longLeaveAdded}, 0, ${longLeaveAdded}, 
+                  ${longLeaveCycleKey}, ${longLeaveDate}, ${longLeaveDate}
                 )
               `;
 
@@ -372,7 +382,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
 
               if (longLeaveExpired > 0) {
                 await prisma.$transaction(async (tx: any) => {
-                  const expTxId = `exp-lng-${emp.nip}-${Date.now()}`;
+                  const expTxId = `exp-lng-${emp.nip}-${expiryLimitDate.getFullYear()}`;
                   await tx.$executeRaw`
                     INSERT INTO aktivitas_saldo (
                       id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
@@ -380,7 +390,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
                       ${expTxId}, ${emp.nip}, ${emp.nama}, 'KEDALUWARSA', 
                       ${`Kedaluwarsa Kuota Cuti Besar (Masa berlaku ${longLeaveValidityYears} tahun telah habis)`}, 
                       ${expiryLimitDate}, NULL, 0, ${longLeaveExpired}, 0, ${longLeaveExpired}, 
-                      ${expireCheckKey}, NOW(), NOW()
+                      ${expireCheckKey}, ${expiryLimitDate}, ${expiryLimitDate}
                     )
                   `;
 
@@ -536,10 +546,12 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
       });
     }
 
-    revalidatePath("/(dashboard)/pengaturan", "page");
-    revalidatePath("/(dashboard)/tambah-saldo-cuti", "page");
-    revalidatePath("/(dashboard)/master-karyawan", "page");
-    revalidatePath("/(dashboard)/ambil-cuti", "page");
+    if (!isSystem) {
+      revalidatePath("/(dashboard)/pengaturan", "page");
+      revalidatePath("/(dashboard)/tambah-saldo-cuti", "page");
+      revalidatePath("/(dashboard)/master-karyawan", "page");
+      revalidatePath("/(dashboard)/ambil-cuti", "page");
+    }
 
     return {
       success: true,

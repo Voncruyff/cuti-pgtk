@@ -93,7 +93,7 @@ export function ModalBatalkanCuti({
               <span className="font-mono text-slate-800 text-right font-semibold">
                 {item.selectedDates && item.selectedDates.length > 0
                   ? item.selectedDates.join(", ")
-                  : `${formatDateIndo(item.startDate)} s/d ${formatDateIndo(item.endDate)}`}
+                  : (item.startDate ? formatDateIndo(item.startDate) : "-")}
               </span>
             </div>
             <div className="flex items-center justify-between">

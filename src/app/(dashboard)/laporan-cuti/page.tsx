@@ -64,7 +64,7 @@ function parseDatesList(tglCutiStr?: string, startDate?: string, endDate?: strin
   }
   if (startDate && startDate !== "-") {
     if (endDate && endDate !== "-" && endDate !== startDate) {
-      return [`${formatDateIndo(startDate)} s/d ${formatDateIndo(endDate)}`];
+      return [formatDateIndo(startDate), formatDateIndo(endDate)];
     }
     return [formatDateIndo(startDate)];
   }
@@ -499,7 +499,7 @@ export default function HalamanLaporan() {
             `"${item.bagian}"`,
             `"${item.stasiun}"`,
             `"${item.tglTransaksi ? item.tglTransaksi.split("T")[0] : item.requestDate ? item.requestDate.split("T")[0] : "-"}"`,
-            `"${(item.tglCuti && item.tglCuti.length > 0 ? item.tglCuti : item.startDate ? `${item.startDate.split("T")[0]} s/d ${item.endDate.split("T")[0]}` : "-").replace(/"/g, '""')}"`,
+            `"${(item.tglCuti && item.tglCuti.length > 0 ? item.tglCuti : item.startDate ? (item.endDate && item.endDate !== item.startDate ? `${item.startDate.split("T")[0]}, ${item.endDate.split("T")[0]}` : item.startDate.split("T")[0]) : "-").replace(/"/g, '""')}"`,
             item.annualDays > 0 ? -item.annualDays : 0,
             item.longLeaveDays > 0 ? -item.longLeaveDays : 0,
             item.inhaldagenDays > 0 ? -item.inhaldagenDays : 0,

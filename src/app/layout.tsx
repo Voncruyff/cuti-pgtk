@@ -24,6 +24,11 @@ export const metadata: Metadata = {
     template: `%s | ${appName}`,
   },
   description: appDesc,
+  icons: {
+    icon: "/assets/KebonAgungLogoSquare.png?v=2",
+    shortcut: "/assets/KebonAgungLogoSquare.png?v=2",
+    apple: "/assets/KebonAgungLogoSquare.png?v=2",
+  },
 };
 
 export default function RootLayout({
@@ -34,6 +39,9 @@ export default function RootLayout({
   return (
     <html lang="id" className={plusJakarta.variable}>
       <head>
+        <link rel="icon" href="/assets/KebonAgungLogoSquare.png?v=2" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/assets/KebonAgungLogoSquare.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/assets/KebonAgungLogoSquare.png?v=2" />
         <script
           dangerouslySetInnerHTML={{
             __html: `if(typeof window!=='undefined'&&'serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}`,

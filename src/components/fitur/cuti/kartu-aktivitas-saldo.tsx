@@ -737,7 +737,7 @@ export function BalanceActivityCard({
       if (printingLetterItem.startDate === printingLetterItem.endDate) {
         return parseIndividualDateStrings([printingLetterItem.startDate]);
       }
-      return [`${formatDateDDMMYYYY(printingLetterItem.startDate)} s/d ${formatDateDDMMYYYY(printingLetterItem.endDate)}`];
+      return parseIndividualDateStrings([printingLetterItem.startDate, printingLetterItem.endDate]);
     }
     return [];
   }, [printingLetterItem]);
@@ -746,9 +746,6 @@ export function BalanceActivityCard({
   const tanggalCutiRows = useMemo(() => {
     const list = tanggalCutiList;
     if (list.length === 0) return [];
-    if (list.length === 1 && list[0].includes("s/d")) {
-      return [list];
-    }
     const rows: string[][] = [];
     for (let i = 0; i < list.length; i += 4) {
       rows.push(list.slice(i, i + 4));
@@ -911,8 +908,6 @@ export function BalanceActivityCard({
                 <div className="font-medium text-black">
                   {tanggalCutiRows.length === 0 ? (
                     <span>-</span>
-                  ) : tanggalCutiRows.length === 1 && tanggalCutiRows[0][0].includes("s/d") ? (
-                    <span>{tanggalCutiRows[0][0]}</span>
                   ) : (
                     <div className="flex flex-col gap-y-1">
                       {tanggalCutiRows.map((rowDates, rIdx) => {
@@ -1056,14 +1051,14 @@ export function BalanceActivityCard({
     <>
       <Card className="border-slate-200/80 bg-white shadow-xs rounded-xl overflow-hidden transition-all duration-200">
         <CardHeader className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/40">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
                 <History className="h-4 w-4 text-slate-600 shrink-0" />
-                <CardTitle className="text-sm sm:text-base font-semibold text-slate-800">
+                <CardTitle className="text-sm sm:text-base font-semibold text-slate-800 tracking-tight truncate">
                   Riwayat Aktivitas Saldo — <span className="font-bold text-slate-900">{employee.name}</span>
                 </CardTitle>
-                <Badge variant="outline" className="text-[11px] font-mono bg-white border-slate-200 text-slate-600 px-2 py-0.5">
+                <Badge variant="outline" className="shrink-0 whitespace-nowrap text-[11px] font-mono bg-white border-slate-200 text-slate-600 px-2.5 py-0.5 shadow-2xs">
                   {filterType !== "ALL" ? (
                     <>
                       <span className={filterType === "MASUK" ? "text-emerald-700 font-bold" : "text-red-700 font-bold"}>
@@ -1076,52 +1071,20 @@ export function BalanceActivityCard({
                   )}
                 </Badge>
               </div>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
+              <CardDescription className="text-xs text-slate-500 mt-1">
                 Catatan mutasi penambahan dan penggunaan saldo cuti karyawan
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Selector Filter Saldo Masuk & Keluar */}
-              <div className="relative inline-flex items-center">
-                <Filter
-                  className={cn(
-                    "absolute left-2.5 h-3.5 w-3.5 pointer-events-none transition-colors",
-                    filterType === "MASUK"
-                      ? "text-emerald-600"
-                      : filterType === "KELUAR"
-                      ? "text-red-600"
-                      : "text-slate-400"
-                  )}
-                />
-                <select
-                  id="filter-aktivitas-saldo"
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as FilterSaldoType)}
-                  aria-label="Filter jenis saldo"
-                  className={cn(
-                    "h-8 pl-8 pr-7 text-xs font-medium rounded-lg border shadow-2xs transition-all cursor-pointer appearance-none focus:outline-none focus:ring-1",
-                    filterType === "MASUK"
-                      ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 font-semibold focus:ring-emerald-400 focus:border-emerald-400"
-                      : filterType === "KELUAR"
-                      ? "bg-red-50/90 border-red-300 text-red-800 font-semibold focus:ring-red-400 focus:border-red-400"
-                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-[#0093dc] focus:border-[#0093dc]"
-                  )}
-                >
-                  <option value="ALL">Semua Mutasi ({history.length})</option>
-                  <option value="MASUK">Saldo Masuk ({countMasuk})</option>
-                  <option value="KELUAR">Saldo Keluar ({countKeluar})</option>
-                </select>
-                <ChevronDown className="absolute right-2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              </div>
-
+            {/* Kelompok Tombol Aksi Utama (Sejajar dan Konsisten di Baris Atas) */}
+            <div className="flex items-center gap-2 shrink-0">
               {actionButton}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handlePrintHistory}
-                className="font-medium gap-1.5 h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50"
+                className="font-medium gap-1.5 h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs shrink-0"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Cetak Histori Saldo
@@ -1129,6 +1092,83 @@ export function BalanceActivityCard({
             </div>
           </div>
         </CardHeader>
+
+        {/* Sub-toolbar Filter Khusus Mutasi (Rapi, Luas, dan Tidak Berdesakan) */}
+        <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+              <Filter className="h-3.5 w-3.5 text-slate-400" />
+              Filter Mutasi:
+            </span>
+
+            {/* Selector Dropdown */}
+            <div className="relative inline-flex items-center">
+              <select
+                id="filter-aktivitas-saldo"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as FilterSaldoType)}
+                aria-label="Filter jenis saldo"
+                className={cn(
+                  "h-8 pl-3 pr-8 text-xs font-medium rounded-lg border shadow-2xs transition-all cursor-pointer appearance-none focus:outline-none focus:ring-1",
+                  filterType === "MASUK"
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold focus:ring-emerald-400"
+                    : filterType === "KELUAR"
+                    ? "bg-red-50 border-red-300 text-red-800 font-semibold focus:ring-red-400"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-[#0093dc]"
+                )}
+              >
+                <option value="ALL">Semua Mutasi ({history.length})</option>
+                <option value="MASUK">Saldo Masuk ({countMasuk})</option>
+                <option value="KELUAR">Saldo Keluar ({countKeluar})</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            </div>
+
+            {/* Segmented Quick Toggle */}
+            <div className="inline-flex p-0.5 bg-slate-200/70 rounded-lg text-[11px] font-medium shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setFilterType("ALL")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  filterType === "ALL"
+                    ? "bg-white text-slate-800 font-semibold shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                Semua ({history.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType("MASUK")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  filterType === "MASUK"
+                    ? "bg-emerald-600 text-white font-semibold shadow-2xs"
+                    : "text-slate-600 hover:text-emerald-700"
+                )}
+              >
+                Masuk ({countMasuk})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType("KELUAR")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  filterType === "KELUAR"
+                    ? "bg-red-600 text-white font-semibold shadow-2xs"
+                    : "text-slate-600 hover:text-red-700"
+                )}
+              >
+                Keluar ({countKeluar})
+              </button>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 font-medium select-none">
+            Menampilkan <strong className="text-slate-700">{filteredHistory.length}</strong> dari {history.length} catatan mutasi
+          </div>
+        </div>
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -1274,7 +1314,7 @@ export function BalanceActivityCard({
                             <span className="font-mono text-slate-700 text-xs">
                               {item.selectedDates && item.selectedDates.length > 0
                                 ? item.selectedDates.join(", ")
-                                : `${formatDateIndo(item.startDate)} s/d ${formatDateIndo(item.endDate)}`}
+                                : formatDateIndo(item.startDate)}
                             </span>
                           )}
                         </TableCell>
@@ -1695,7 +1735,7 @@ export function BalanceActivityCard({
                   <span className="font-mono text-slate-800 text-right font-semibold">
                     {voidingLeaveItem.selectedDates && voidingLeaveItem.selectedDates.length > 0
                       ? voidingLeaveItem.selectedDates.join(", ")
-                      : `${formatDateIndo(voidingLeaveItem.startDate)} s/d ${formatDateIndo(voidingLeaveItem.endDate)}`}
+                      : formatDateIndo(voidingLeaveItem.startDate)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -1867,13 +1907,18 @@ export function BalanceActivityCard({
                 ) : (
                   sortedHistory.map((h, i) => {
                     const isTambah = h.transactionType === "TAMBAH_SALDO";
+                    const isKedaluwarsa = h.transactionType === "KEDALUWARSA";
                     return (
                       <tr key={h.id} className="hover:bg-slate-50">
                         <td className="border border-slate-300 p-2 text-center font-mono">{i + 1}</td>
                         <td className="border border-slate-300 p-2 text-center font-mono">{formatDateIndo(h.requestDate)}</td>
-                        <td className="border border-slate-300 p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : "Pengambilan Cuti")}</td>
+                        <td className="border border-slate-300 p-2 font-medium">{h.uraian || (isTambah ? "Penambahan Saldo" : isKedaluwarsa ? "Kedaluwarsa Kuota (Hangus)" : "Pengambilan Cuti")}</td>
                         <td className="border border-slate-300 p-2 font-mono">
-                          {isTambah ? "-" : (h.selectedDates && h.selectedDates.length > 0 ? h.selectedDates.join(", ") : `${formatDateIndo(h.startDate)} s/d ${formatDateIndo(h.endDate)}`)}
+                          {isTambah || isKedaluwarsa
+                            ? "-"
+                            : (h.selectedDates && h.selectedDates.length > 0
+                                ? h.selectedDates.join(", ")
+                                : formatDateIndo(h.startDate))}
                         </td>
                         <td className="border border-slate-300 p-2 text-center font-mono font-bold">
                           {h.annualDays > 0 ? (
