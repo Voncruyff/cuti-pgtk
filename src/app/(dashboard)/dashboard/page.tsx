@@ -129,29 +129,67 @@ export default async function HalamanDashboard(props: {
       keperluan: row.keperluan || row.uraian || "-",
     }));
 
-    // 2. Ambil Transaksi Mutasi Terbaru
-    const baris: Record<string, unknown>[] = await prisma.$queryRaw`
-      SELECT a.id, a.nip, COALESCE(k.nama, a.nama) as nama, a.jenis_transaksi, a.uraian, a.tgl_transaksi, a.tgl_cuti, 
-             a.cuti_tahunan, a.cuti_besar, a.inhaldagen, a.total_hari, a.keperluan, a.created_at,
-             k.bagian, k.stasiun, k.category, k.jabatan
-      FROM aktivitas_saldo a
-      LEFT JOIN karyawan k ON a.nip = k.nip
-      ORDER BY a.tgl_transaksi DESC
-      LIMIT 7
-    `;
-
-    transaksiBuilanIni = baris.filter(
-      (r) => new Date(String(r.tgl_transaksi || r.created_at)) >= startOfMonth
-    ).length;
+    // 2. Hitung Cuti / Transaksi Bulan Ini (difilter sesuai bagian jika Admin Bagian)
+    const monthWhere: any = {
+      OR: [
+        { tglTransaksi: { gte: startOfMonth } },
+        { createdAt: { gte: startOfMonth } },
+      ],
+    };
 
     if (allowedDeptNames.length > 0) {
-      daftarTransaksiTerbaru = baris.filter((r) => {
-        const rowDept = String(r.bagian || "");
-        return isDepartmentMatch(rowDept, allowedDeptNames);
-      });
-    } else {
-      daftarTransaksiTerbaru = baris;
+      monthWhere.employee = {
+        OR: allowedDeptNames.map((name) => ({
+          bagian: { contains: name },
+        })),
+      };
     }
+
+    transaksiBuilanIni = await prisma.balanceActivity.count({
+      where: monthWhere,
+    });
+
+    // 3. Ambil Transaksi Mutasi Terbaru (difilter sesuai bagian jika Admin Bagian)
+    const recentWhere: any = {};
+    if (allowedDeptNames.length > 0) {
+      recentWhere.employee = {
+        OR: allowedDeptNames.map((name) => ({
+          bagian: { contains: name },
+        })),
+      };
+    }
+
+    const recentActivities = await prisma.balanceActivity.findMany({
+      where: recentWhere,
+      include: {
+        employee: true,
+      },
+      orderBy: [
+        { tglTransaksi: "desc" },
+        { createdAt: "desc" },
+      ],
+      take: 7,
+    });
+
+    daftarTransaksiTerbaru = recentActivities.map((r) => ({
+      id: r.id,
+      nip: r.nip,
+      nama: r.employee?.nama || r.nama || "Karyawan",
+      jenis_transaksi: r.jenisTransaksi,
+      uraian: r.uraian,
+      tgl_transaksi: r.tglTransaksi,
+      tgl_cuti: r.tglCuti,
+      cuti_tahunan: r.cutiTahunan,
+      cuti_besar: r.cutiBesar,
+      inhaldagen: r.inhaldagen,
+      total_hari: r.totalHari,
+      keperluan: r.keperluan,
+      created_at: r.createdAt,
+      bagian: r.employee?.bagian || "-",
+      stasiun: r.employee?.stasiun || "-",
+      category: r.employee?.category || "PIMPINAN",
+      jabatan: r.employee?.jabatan || "-",
+    }));
   } catch {
     totalKaryawanAktif = 0;
     totalPimpinan = 0;
