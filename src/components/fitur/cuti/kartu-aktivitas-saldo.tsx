@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   Loader2,
   Wallet,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -302,8 +304,59 @@ export function BalanceActivityCard({
     }
   };
 
+  // Filter Saldo Masuk & Saldo Keluar via Selector
+  type FilterSaldoType = "ALL" | "MASUK" | "KELUAR";
+  const [filterType, setFilterType] = useState<FilterSaldoType>("ALL");
+
+  // Reset filter saat berganti karyawan
+  useEffect(() => {
+    setFilterType("ALL");
+  }, [employee.id]);
+
+  const isSaldoMasuk = (item: EmployeeLeaveHistoryItem): boolean => {
+    if (item.transactionType === "TAMBAH_SALDO") return true;
+    if (item.transactionType === "AMBIL_CUTI" || item.transactionType === "KEDALUWARSA") return false;
+    const uraianLower = (item.uraian || "").toLowerCase();
+    const purposeLower = (item.purpose || "").toLowerCase();
+    return (
+      uraianLower.includes("tambah") ||
+      uraianLower.includes("penambahan") ||
+      purposeLower.includes("tambah")
+    );
+  };
+
+  const isSaldoKeluar = (item: EmployeeLeaveHistoryItem): boolean => {
+    if (item.transactionType === "AMBIL_CUTI" || item.transactionType === "KEDALUWARSA") return true;
+    if (item.transactionType === "TAMBAH_SALDO") return false;
+    const uraianLower = (item.uraian || "").toLowerCase();
+    return (
+      uraianLower.includes("ambil") ||
+      uraianLower.includes("pengambilan") ||
+      uraianLower.includes("hangus") ||
+      uraianLower.includes("kedaluwarsa")
+    );
+  };
+
+  const countMasuk = useMemo(() => {
+    return history.filter(isSaldoMasuk).length;
+  }, [history]);
+
+  const countKeluar = useMemo(() => {
+    return history.filter(isSaldoKeluar).length;
+  }, [history]);
+
+  const filteredHistory = useMemo(() => {
+    if (filterType === "MASUK") {
+      return history.filter(isSaldoMasuk);
+    }
+    if (filterType === "KELUAR") {
+      return history.filter(isSaldoKeluar);
+    }
+    return history;
+  }, [history, filterType]);
+
   const sortedHistory = useMemo(() => {
-    return [...history].sort((a, b) => {
+    return [...filteredHistory].sort((a, b) => {
       let comparison = 0;
       if (sortField === "date" || sortField === "no") {
         const dateA = new Date(a.requestDate).getTime();
@@ -326,7 +379,7 @@ export function BalanceActivityCard({
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [history, sortField, sortOrder]);
+  }, [filteredHistory, sortField, sortOrder]);
 
   const renderSortIcon = (field: SortField) => {
     return (
@@ -1011,7 +1064,16 @@ export function BalanceActivityCard({
                   Riwayat Aktivitas Saldo — <span className="font-bold text-slate-900">{employee.name}</span>
                 </CardTitle>
                 <Badge variant="outline" className="text-[11px] font-mono bg-white border-slate-200 text-slate-600 px-2 py-0.5">
-                  {history.length} Data
+                  {filterType !== "ALL" ? (
+                    <>
+                      <span className={filterType === "MASUK" ? "text-emerald-700 font-bold" : "text-red-700 font-bold"}>
+                        {filteredHistory.length}
+                      </span>
+                      <span className="text-slate-400"> / {history.length} Data</span>
+                    </>
+                  ) : (
+                    `${history.length} Data`
+                  )}
                 </Badge>
               </div>
               <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -1020,6 +1082,39 @@ export function BalanceActivityCard({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Selector Filter Saldo Masuk & Keluar */}
+              <div className="relative inline-flex items-center">
+                <Filter
+                  className={cn(
+                    "absolute left-2.5 h-3.5 w-3.5 pointer-events-none transition-colors",
+                    filterType === "MASUK"
+                      ? "text-emerald-600"
+                      : filterType === "KELUAR"
+                      ? "text-red-600"
+                      : "text-slate-400"
+                  )}
+                />
+                <select
+                  id="filter-aktivitas-saldo"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as FilterSaldoType)}
+                  aria-label="Filter jenis saldo"
+                  className={cn(
+                    "h-8 pl-8 pr-7 text-xs font-medium rounded-lg border shadow-2xs transition-all cursor-pointer appearance-none focus:outline-none focus:ring-1",
+                    filterType === "MASUK"
+                      ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 font-semibold focus:ring-emerald-400 focus:border-emerald-400"
+                      : filterType === "KELUAR"
+                      ? "bg-red-50/90 border-red-300 text-red-800 font-semibold focus:ring-red-400 focus:border-red-400"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-[#0093dc] focus:border-[#0093dc]"
+                  )}
+                >
+                  <option value="ALL">Semua Mutasi ({history.length})</option>
+                  <option value="MASUK">Saldo Masuk ({countMasuk})</option>
+                  <option value="KELUAR">Saldo Keluar ({countKeluar})</option>
+                </select>
+                <ChevronDown className="absolute right-2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              </div>
+
               {actionButton}
               <Button
                 type="button"
@@ -1046,6 +1141,22 @@ export function BalanceActivityCard({
               <History className="h-8 w-8 mx-auto stroke-1 text-slate-300" />
               <p className="text-xs font-medium text-slate-500">Belum ada riwayat aktivitas saldo untuk karyawan ini.</p>
               <p className="text-[11px] text-slate-400">Gunakan tombol di atas untuk mengajukan cuti atau menambah saldo.</p>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 space-y-2">
+              <Filter className="h-8 w-8 mx-auto stroke-1 text-slate-300" />
+              <p className="text-xs font-medium text-slate-600">
+                Tidak ada data {filterType === "MASUK" ? "saldo masuk" : "saldo keluar"} untuk karyawan ini.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFilterType("ALL")}
+                className="mt-1 h-7 text-xs text-slate-600 border-slate-200 hover:bg-slate-50"
+              >
+                Tampilkan Semua Mutasi
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1713,6 +1824,7 @@ export function BalanceActivityCard({
               </h1>
               <p className="text-[11px] text-black mt-0.5">
                 Kategori: {isPelaksana ? "Pelaksana" : "Pimpinan"}
+                {filterType === "MASUK" ? " • (Filter: Saldo Masuk)" : filterType === "KELUAR" ? " • (Filter: Saldo Keluar)" : ""}
               </p>
             </div>
 
