@@ -57,8 +57,7 @@ cuti-pgtk/
 │
 ├── prisma/                          # Layer Basis Data (ORM Prisma & MySQL)
 │   ├── schema.prisma                # Definisi skema tabel, relasi antar-entitas, dan enum
-│   ├── seed.ts                      # Script seeding awal (Akun default Admin & Master Data)
-│   └── seed-settings.ts             # Script seeding konfigurasi automasi saldo & profil pabrik
+│   └── seed.ts                      # Script seeding awal mandiri (Akun Login, 5 Bagian, 28 Stasiun, & Konfigurasi)
 │
 ├── public/                          # Berkas Statis Publik
 │   ├── assets/                      # Logo resmi PG Trangkil & PT Kebon Agung
