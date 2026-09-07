@@ -3,42 +3,108 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// =====================================================================
+// DATA MASTER BAGIAN (DEPARTEMEN) PG TRANGKIL
+// =====================================================================
+interface DepartmentSeedItem {
+  id: string;
+  code: string;
+  name: string;
+  namaPimpinan: string | null;
+  nipPimpinan: string | null;
+  jabatanPimpinan: string | null;
+}
+
+const departmentsData: DepartmentSeedItem[] = [
+  {
+    id: "dept-pimpinan",
+    code: "PIMPINAN",
+    name: "Pimpinan",
+    namaPimpinan: "Ir. Bambang Santoso, M.M.",
+    nipPimpinan: null,
+    jabatanPimpinan: "General Manager",
+  },
+  {
+    id: "dept-tuk",
+    code: "TUK",
+    name: "Tata Usaha & Keuangan (TUK)",
+    namaPimpinan: "Teguh Arifin",
+    nipPimpinan: null,
+    jabatanPimpinan: "Pjs. Kepala Bagian TUK",
+  },
+  {
+    id: "dept-tan",
+    code: "TAN",
+    name: "Tanaman (TAN)",
+    namaPimpinan: "Hendra",
+    nipPimpinan: null,
+    jabatanPimpinan: "Kepala Bagian Tanaman",
+  },
+  {
+    id: "dept-tek",
+    code: "TEK",
+    name: "Teknik (TEK)",
+    namaPimpinan: "Luki",
+    nipPimpinan: null,
+    jabatanPimpinan: "Kepala Bagian Teknik",
+  },
+  {
+    id: "dept-pab",
+    code: "PAB",
+    name: "Pabrikasi (PAB)",
+    namaPimpinan: "Joko",
+    nipPimpinan: null,
+    jabatanPimpinan: "Kepala Bagian Pabrikasi",
+  },
+];
+
+// =====================================================================
+// DATA MASTER 28 STASIUN PABRIK PG TRANGKIL
+// =====================================================================
 interface StationSeedItem {
   no: number;
   kobag: string;
   nabag: string;
-  bagian: string;
+  departmentCode: string;
+  departmentId: string;
 }
 
 const stationsData: StationSeedItem[] = [
-  { no: 1, kobag: "14000", nabag: "PIMPINAN DAN ADMINISTRASI", bagian: "TUK" },
-  { no: 2, kobag: "14002", nabag: "POLIKLINIK", bagian: "TUK" },
-  { no: 3, kobag: "14003", nabag: "MESS & PESANGGRAHAN", bagian: "TUK" },
-  { no: 4, kobag: "14004", nabag: "GUDANG GULA & TETES", bagian: "TUK" },
-  { no: 5, kobag: "14005", nabag: "GUDANG PERLENGKAPAN", bagian: "TUK" },
-  { no: 6, kobag: "14006", nabag: "KEAMANAN/SATPAM", bagian: "TUK" },
-  { no: 7, kobag: "25000", nabag: "B.U. INSTALASI", bagian: "Teknik" },
-  { no: 8, kobag: "25002", nabag: "GILINGAN", bagian: "Teknik" },
-  { no: 9, kobag: "25010", nabag: "KETEL", bagian: "Teknik" },
-  { no: 10, kobag: "25011", nabag: "LISTRIK", bagian: "Teknik" },
-  { no: 11, kobag: "25012", nabag: "BENGKEL/BESALI", bagian: "Teknik" },
-  { no: 12, kobag: "25030", nabag: "B.U. KENDARAAN", bagian: "TUK" },
-  { no: 13, kobag: "25040", nabag: "B.U. BANGUNAN", bagian: "TUK" },
-  { no: 14, kobag: "35020", nabag: "B.U. PABRIKASI", bagian: "Pabrikasi" },
-  { no: 15, kobag: "35022", nabag: "QUALITY CONTROL", bagian: "Pabrikasi" },
-  { no: 16, kobag: "35023", nabag: "PEMURNIAN NIRA", bagian: "Pabrikasi" },
-  { no: 17, kobag: "35024", nabag: "PENGUAPAN", bagian: "Pabrikasi" },
-  { no: 18, kobag: "35025", nabag: "MASAKAN", bagian: "Pabrikasi" },
-  { no: 19, kobag: "35026", nabag: "D R K", bagian: "Pabrikasi" },
-  { no: 20, kobag: "35027", nabag: "PUTERAN", bagian: "Pabrikasi" },
-  { no: 21, kobag: "35028", nabag: "PEMBUNGKUSAN GULA", bagian: "Pabrikasi" },
-  { no: 22, kobag: "35029", nabag: "PENGELOLAAN LINGK.", bagian: "Pabrikasi" },
-  { no: 23, kobag: "46000", nabag: "B.U. TANAMAN", bagian: "Tanaman" },
-  { no: 24, kobag: "46002", nabag: "BIMBINGAN PETANI TR", bagian: "Tanaman" },
-  { no: 25, kobag: "46003", nabag: "LABORAT HAMA/PARASIT", bagian: "Tanaman" },
-  { no: 26, kobag: "46004", nabag: "TRAKTOR", bagian: "Tanaman" },
-  { no: 27, kobag: "46020", nabag: "TEBANGAN TEBU", bagian: "Tanaman" },
-  { no: 28, kobag: "46030", nabag: "B.U. ANGKUTAN TEBU", bagian: "Tanaman" },
+  // --- 1. Bagian TUK (8 Stasiun) ---
+  { no: 1, kobag: "14000", nabag: "PIMPINAN DAN ADMINISTRASI", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 2, kobag: "14002", nabag: "POLIKLINIK", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 3, kobag: "14003", nabag: "MESS & PESANGGRAHAN", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 4, kobag: "14004", nabag: "GUDANG GULA & TETES", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 5, kobag: "14005", nabag: "GUDANG PERLENGKAPAN", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 6, kobag: "14006", nabag: "KEAMANAN/SATPAM", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 7, kobag: "25030", nabag: "B.U. KENDARAAN", departmentCode: "TUK", departmentId: "dept-tuk" },
+  { no: 8, kobag: "25040", nabag: "B.U. BANGUNAN", departmentCode: "TUK", departmentId: "dept-tuk" },
+
+  // --- 2. Bagian Teknik (5 Stasiun) ---
+  { no: 9,  kobag: "25000", nabag: "B.U. INSTALASI", departmentCode: "TEK", departmentId: "dept-tek" },
+  { no: 10, kobag: "25002", nabag: "GILINGAN", departmentCode: "TEK", departmentId: "dept-tek" },
+  { no: 11, kobag: "25010", nabag: "KETEL", departmentCode: "TEK", departmentId: "dept-tek" },
+  { no: 12, kobag: "25011", nabag: "LISTRIK", departmentCode: "TEK", departmentId: "dept-tek" },
+  { no: 13, kobag: "25012", nabag: "BENGKEL/BESALI", departmentCode: "TEK", departmentId: "dept-tek" },
+
+  // --- 3. Bagian Pabrikasi (9 Stasiun) ---
+  { no: 14, kobag: "35020", nabag: "B.U. PABRIKASI", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 15, kobag: "35022", nabag: "QUALITY CONTROL", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 16, kobag: "35023", nabag: "PEMURNIAN NIRA", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 17, kobag: "35024", nabag: "PENGUAPAN", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 18, kobag: "35025", nabag: "MASAKAN", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 19, kobag: "35026", nabag: "D R K", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 20, kobag: "35027", nabag: "PUTERAN", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 21, kobag: "35028", nabag: "PEMBUNGKUSAN GULA", departmentCode: "PAB", departmentId: "dept-pab" },
+  { no: 22, kobag: "35029", nabag: "PENGELOLAAN LINGK.", departmentCode: "PAB", departmentId: "dept-pab" },
+
+  // --- 4. Bagian Tanaman (6 Stasiun) ---
+  { no: 23, kobag: "46000", nabag: "B.U. TANAMAN", departmentCode: "TAN", departmentId: "dept-tan" },
+  { no: 24, kobag: "46002", nabag: "BIMBINGAN PETANI TR", departmentCode: "TAN", departmentId: "dept-tan" },
+  { no: 25, kobag: "46003", nabag: "LABORAT HAMA/PARASIT", departmentCode: "TAN", departmentId: "dept-tan" },
+  { no: 26, kobag: "46004", nabag: "TRAKTOR", departmentCode: "TAN", departmentId: "dept-tan" },
+  { no: 27, kobag: "46020", nabag: "TEBANGAN TEBU", departmentCode: "TAN", departmentId: "dept-tan" },
+  { no: 28, kobag: "46030", nabag: "B.U. ANGKUTAN TEBU", departmentCode: "TAN", departmentId: "dept-tan" },
 ];
 
 async function main() {
@@ -47,30 +113,62 @@ async function main() {
   const saltRounds = 10;
   const defaultPasswordHash = await bcrypt.hash("admin123", saltRounds);
 
-  // ----------------------------------------------------
+  // =====================================================================
   // 1. SEED 5 BAGIAN / DEPARTEMEN UTAMA PG TRANGKIL
-  // ----------------------------------------------------
-  console.log("📦 Inisialisasi 5 Bagian Utama...");
-  const depts = [
-    { id: "dept-pimpinan", code: "PIMPINAN", name: "Pimpinan" },
-    { id: "dept-tuk", code: "TUK", name: "Tata Usaha & Keuangan (TUK)" },
-    { id: "dept-tan", code: "TAN", name: "Tanaman (TAN)" },
-    { id: "dept-tek", code: "TEK", name: "Teknik (TEK)" },
-    { id: "dept-pab", code: "PAB", name: "Pabrikasi (PAB)" },
-  ];
-
-  for (const dept of depts) {
-    await prisma.department.upsert({
+  // =====================================================================
+  console.log("\n📦 1. Mengisi Data Master 5 Bagian PG Trangkil...");
+  for (const dept of departmentsData) {
+    const res = await prisma.department.upsert({
       where: { code: dept.code },
-      update: { name: dept.name, isActive: true },
-      create: { id: dept.id, code: dept.code, name: dept.name, isActive: true },
+      update: {
+        name: dept.name,
+        namaPimpinan: dept.namaPimpinan,
+        nipPimpinan: dept.nipPimpinan,
+        jabatanPimpinan: dept.jabatanPimpinan,
+        isActive: true,
+      },
+      create: {
+        id: dept.id,
+        code: dept.code,
+        name: dept.name,
+        namaPimpinan: dept.namaPimpinan,
+        nipPimpinan: dept.nipPimpinan,
+        jabatanPimpinan: dept.jabatanPimpinan,
+        isActive: true,
+      },
     });
+    console.log(`   ✓ [${res.code}] ${res.name} (Pimpinan: ${res.namaPimpinan || "-"}, Jabatan: ${res.jabatanPimpinan || "-"})`);
   }
 
-  // ----------------------------------------------------
-  // 2. SEED AKUN PENGGUNA (LOGIN STANDAR)
-  // ----------------------------------------------------
-  console.log("👤 Inisialisasi Akun Pengguna Standar...");
+  // =====================================================================
+  // 2. SEED 28 MASTER STASIUN PABRIK PG TRANGKIL
+  // =====================================================================
+  console.log("\n🏭 2. Mengisi Data Master 28 Stasiun Pabrik PG Trangkil...");
+  let countStasiun = 0;
+  for (const item of stationsData) {
+    const res = await prisma.station.upsert({
+      where: { code: item.kobag },
+      update: {
+        name: item.nabag,
+        departmentId: item.departmentId,
+        isActive: true,
+      },
+      create: {
+        code: item.kobag,
+        name: item.nabag,
+        departmentId: item.departmentId,
+        isActive: true,
+      },
+    });
+    countStasiun++;
+    console.log(`   ✓ [KOBAG: ${res.code}] ${res.name.padEnd(26)} -> Bagian: ${item.departmentCode}`);
+  }
+  console.log(`   Total Stasiun Berhasil Di-seed: ${countStasiun} stasiun.`);
+
+  // =====================================================================
+  // 3. SEED AKUN PENGGUNA (LOGIN STANDAR SISTEM)
+  // =====================================================================
+  console.log("\n👤 3. Mengisi Akun Login Standar (Password: admin123)...");
   const users = [
     {
       username: "admin",
@@ -122,50 +220,13 @@ async function main() {
         isActive: true,
       },
     });
+    console.log(`   ✓ User: ${u.username.padEnd(10)} | Role: ${u.role.padEnd(12)} | Bagian: ${u.department}`);
   }
 
-  // ----------------------------------------------------
-  // 3. SEED 28 MASTER STASIUN PABRIK
-  // ----------------------------------------------------
-  console.log("🏭 Inisialisasi 28 Master Stasiun...");
-  const existingDepts = await prisma.department.findMany();
-  const findDeptId = (bagianLabel: string): string | null => {
-    const target = bagianLabel.trim().toLowerCase();
-    const match = existingDepts.find((d) => {
-      const code = d.code.toLowerCase();
-      const name = d.name.toLowerCase();
-      return (
-        code === target ||
-        name === target ||
-        name.includes(target) ||
-        target.includes(code)
-      );
-    });
-    return match ? match.id : null;
-  };
-
-  for (const item of stationsData) {
-    const deptId = findDeptId(item.bagian);
-    await prisma.station.upsert({
-      where: { code: item.kobag },
-      update: {
-        name: item.nabag,
-        departmentId: deptId,
-        isActive: true,
-      },
-      create: {
-        code: item.kobag,
-        name: item.nabag,
-        departmentId: deptId,
-        isActive: true,
-      },
-    });
-  }
-
-  // ----------------------------------------------------
+  // =====================================================================
   // 4. SEED KEBIJAKAN OTOMASI SALDO CUTI
-  // ----------------------------------------------------
-  console.log("⚙️ Inisialisasi Kebijakan Otomasi Saldo Cuti...");
+  // =====================================================================
+  console.log("\n⚙️ 4. Mengisi Konfigurasi Otomasi Saldo Cuti...");
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "CUTI_TAHUNAN" },
     update: {},
@@ -186,6 +247,7 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
+  console.log("   ✓ Kebijakan Cuti Tahunan (12 hari/tahun, carry-over maks 6 hari)");
 
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "CUTI_BESAR" },
@@ -207,6 +269,7 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
+  console.log("   ✓ Kebijakan Cuti Besar (30 hari setiap kelipatan 6 tahun, masa berlaku 3 tahun)");
 
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "INHALDAGEN" },
@@ -228,11 +291,12 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
+  console.log("   ✓ Kebijakan Inhaldagen (Masa berlaku 12 bulan)");
 
-  // ----------------------------------------------------
-  // 5. SEED PROFIL PERUSAHAAN (KOP SURAT)
-  // ----------------------------------------------------
-  console.log("🏢 Inisialisasi Profil Perusahaan...");
+  // =====================================================================
+  // 5. SEED PROFIL PERUSAHAAN (KOP SURAT DOKUMEN CETAK)
+  // =====================================================================
+  console.log("\n🏢 5. Mengisi Profil Perusahaan PG Trangkil...");
   await prisma.profilPerusahaan.upsert({
     where: { id: "DEFAULT_PROFILE" },
     update: {},
@@ -243,14 +307,19 @@ async function main() {
       location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
     },
   });
+  console.log("   ✓ Profil: PT KEBON AGUNG - PABRIK GULA TRANGKIL");
 
-  // ----------------------------------------------------
-  // 6. SEED PENANDATANGANAN SURAT RESMI
-  // ----------------------------------------------------
-  console.log("✍️ Inisialisasi Data Penandatanganan...");
+  // =====================================================================
+  // 6. SEED DATA PENANDATANGANAN RESMI (LEAVE LETTER & LAPORAN)
+  // =====================================================================
+  console.log("\n✍️ 6. Mengisi Data Penandatanganan Resmi...");
+  // Pimpinan Utama / General Manager
   await prisma.penandatanganan.upsert({
     where: { id: "PEMIMPIN_UTAMA" },
-    update: {},
+    update: {
+      nama: "Ir. Bambang Santoso, M.M.",
+      jabatan: "General Manager",
+    },
     create: {
       id: "PEMIMPIN_UTAMA",
       kategori: "PEMIMPIN",
@@ -260,13 +329,38 @@ async function main() {
     },
   });
 
-  console.log("🎉 Seeding awal sistem selesai dengan sukses!");
-  console.log("   Akun default login (Password: admin123):");
-  console.log("   - admin    (Admin Utama, Departemen ALL)");
-  console.log("   - admintuk (Admin Bagian TUK)");
-  console.log("   - admintan (Admin Bagian Tanaman)");
-  console.log("   - admintek (Admin Bagian Teknik)");
-  console.log("   - adminpab (Admin Bagian Pabrikasi)");
+  // Penandatangan per bagian
+  const signers = [
+    { id: "sig-tuk", deptId: "dept-tuk", nama: "Teguh Arifin", jabatan: "Pjs. Kepala Bagian TUK", urutan: 1 },
+    { id: "sig-tan", deptId: "dept-tan", nama: "Hendra", jabatan: "Kepala Bagian Tanaman", urutan: 2 },
+    { id: "sig-tek", deptId: "dept-tek", nama: "Luki", jabatan: "Kepala Bagian Teknik", urutan: 3 },
+    { id: "sig-pab", deptId: "dept-pab", nama: "Joko", jabatan: "Kepala Bagian Pabrikasi", urutan: 4 },
+  ];
+
+  for (const s of signers) {
+    await prisma.penandatanganan.upsert({
+      where: { id: s.id },
+      update: {
+        nama: s.nama,
+        jabatan: s.jabatan,
+        departmentId: s.deptId,
+        urutan: s.urutan,
+      },
+      create: {
+        id: s.id,
+        kategori: "BAGIAN",
+        nama: s.nama,
+        jabatan: s.jabatan,
+        departmentId: s.deptId,
+        urutan: s.urutan,
+      },
+    });
+  }
+  console.log("   ✓ Penandatangan GM & 4 Kepala Bagian terdaftar.");
+
+  console.log("\n=====================================================================");
+  console.log("🎉 SEEDING BERHASIL: 5 Bagian, 28 Stasiun, 5 Akun, Konfigurasi & Profil Siap!");
+  console.log("=====================================================================\n");
 }
 
 main()
