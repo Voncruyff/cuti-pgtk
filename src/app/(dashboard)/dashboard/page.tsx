@@ -328,7 +328,7 @@ export default async function HalamanDashboard(props: {
             </div>
 
             <Link
-              href="/kelola-user"
+              href="/master-karyawan"
               className="text-xs font-medium text-slate-500 hover:text-slate-900 pt-2 border-t border-slate-100 inline-flex items-center justify-between"
             >
               <span>Data Karyawan</span>
