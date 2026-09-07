@@ -177,11 +177,81 @@
   }
 }
 
+/* At-Rule @page Standar Dokumen Cetak Resmi A4: Mengunci margin 100% konsisten di semua halaman */
+@page {
+  size: A4 portrait;
+  margin-top: 12mm;
+  margin-bottom: 14mm;
+  margin-left: 15mm;
+  margin-right: 15mm;
+  @top-left {
+    content: "";
+  }
+  @top-center {
+    content: "";
+  }
+  @top-right {
+    content: "";
+  }
+}
+
+@page leaveLetterPage {
+  size: 210mm 297mm;
+  margin: 0 !important;
+  @top-left {
+    content: "";
+  }
+  @top-center {
+    content: "";
+  }
+  @top-right {
+    content: "";
+  }
+  @bottom-left {
+    content: "";
+  }
+  @bottom-right {
+    content: "";
+  }
+}
+
 /* Print CSS */
 @media print {
   @page {
-    margin: 0;
-    size: auto;
+    size: A4 portrait;
+    margin-top: 12mm;
+    margin-bottom: 14mm;
+    margin-left: 15mm;
+    margin-right: 15mm;
+    @top-left {
+      content: "";
+    }
+    @top-center {
+      content: "";
+    }
+    @top-right {
+      content: "";
+    }
+  }
+
+  @page leaveLetterPage {
+    size: 210mm 297mm;
+    margin: 0 !important;
+    @top-left {
+      content: "";
+    }
+    @top-center {
+      content: "";
+    }
+    @top-right {
+      content: "";
+    }
+    @bottom-left {
+      content: "";
+    }
+    @bottom-right {
+      content: "";
+    }
   }
 
   .no-print {
@@ -199,8 +269,17 @@
     height: auto !important;
   }
 
+  /* Pastikan seluruh wrapper kontainer tidak memotong overflow atau transform saat dicetak */
+  [data-main-dashboard],
+  [data-main-dashboard] *,
+  .print-page-wrapper,
+  .print-page-wrapper * {
+    overflow: visible !important;
+    transform: none !important;
+  }
+
   .print-page-wrapper {
-    padding: 12mm 15mm !important;
+    padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -214,12 +293,13 @@
   }
 
   .print-leave-letter-page {
+    page: leaveLetterPage !important;
     padding: 0 !important;
     margin: 0 auto !important;
     width: 210mm !important;
     max-width: 210mm !important;
-    height: 276mm !important;
-    max-height: 276mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
     box-sizing: border-box !important;
     background: white !important;
     page-break-after: avoid !important;
@@ -229,10 +309,58 @@
     overflow: hidden !important;
   }
 
+  /* Footer DOM disembunyikan dalam cetak karena dicetak otomatis via margin boxes @bottom-left & @bottom-right */
+  .print-footer-margin {
+    display: none !important;
+  }
+
   /* Hindari pemotongan sudut tabel saat dicetak (Print Mode) */
   .print-page-wrapper table {
+    width: 100% !important;
     border-collapse: collapse !important;
     border-radius: 0 !important;
+    border: none !important;
+    margin-bottom: 0 !important;
+  }
+
+  .print-page-wrapper thead {
+    display: table-header-group !important;
+  }
+
+  .print-page-wrapper thead th {
+    border: 1px solid black !important;
+  }
+
+  /* Spacer buatan tidak diperlukan lagi karena @page mengunci margin atas 12mm di setiap halaman */
+  .print-page-wrapper thead tr.print-page-top-spacer,
+  .print-page-wrapper thead th.print-page-top-spacer {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Kop Surat di Halaman 1: Jarak rapat dan proporsional ke tabel */
+  .print-page-wrapper .print-kop-surat {
+    margin-bottom: 2.5mm !important;
+  }
+
+  .print-page-wrapper tbody td {
+    border: 1px solid black !important;
+  }
+
+  /* Spacer tfoot buatan tidak diperlukan lagi karena @page mengunci margin bawah 14mm */
+  .print-page-wrapper tfoot {
+    display: none !important;
+  }
+
+  .print-page-wrapper tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-page-wrapper tbody tr:last-child td {
+    border-bottom: 1px solid black !important;
   }
 
   .print-page-wrapper div:has(> table) {

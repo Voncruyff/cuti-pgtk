@@ -33,6 +33,7 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
@@ -449,9 +450,14 @@ export default function HalamanLaporan() {
     });
   }, [filteredUsageItems, usageSortField, usageSortOrder]);
 
-  // Print Handler
+  // Print Handler (Matikan judul tab browser saat dialog print dibuka)
   const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = "\u200E";
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
   };
 
   // Export to Excel / CSV Handler
@@ -531,7 +537,40 @@ export default function HalamanLaporan() {
   };
 
   return (
-    <div className="space-y-6 w-full pb-12 print-page-wrapper print:p-0 print:m-0 print:space-y-0 print:max-w-none">
+    <div className="space-y-6 w-full pb-12 print-page-wrapper print:m-0 print:space-y-0 print:max-w-none">
+      {/* Aturan @page cetak presisi: Margin 12mm atas, 14mm bawah, 15mm samping, dengan footer & nomor halaman otomatis */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: A4 portrait;
+          margin-top: 12mm;
+          margin-bottom: 14mm;
+          margin-left: 15mm;
+          margin-right: 15mm;
+          @top-left {
+            content: "";
+          }
+          @top-center {
+            content: "";
+          }
+          @top-right {
+            content: "";
+          }
+          @bottom-left {
+            content: "Admin : ${pencetakName}\\ATanggal Cetak : ${formatDateIndo(new Date())}";
+            white-space: pre-line;
+            font-size: 8pt;
+            font-family: sans-serif;
+            vertical-align: top;
+          }
+          @bottom-right {
+            content: ${(activeTab === "BALANCES" ? sortedBalanceItems.length : sortedUsageItems.length) > 20 ? 'counter(page)' : '""'};
+            font-size: 8pt;
+            font-family: sans-serif;
+            vertical-align: top;
+          }
+        }
+      `}} />
+
       {/* Top Header (Print: Hidden) */}
       <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-3">
         <div>
@@ -566,10 +605,10 @@ export default function HalamanLaporan() {
         </div>
       </div>
 
-      {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN */}
-      <div className="hidden print:block mb-4">
+      {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN (Hanya di Halaman Pertama) */}
+      <div className="hidden print:block print-kop-surat mb-2">
         {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
-        <div className="border-b-2 border-black pb-2.5">
+        <div className="border-b-2 border-black pb-2">
           <div className="flex flex-col items-start gap-1">
             <Image
               src="/assets/PGTrangkilLogo.png"
@@ -577,6 +616,7 @@ export default function HalamanLaporan() {
               width={180}
               height={36}
               priority
+              unoptimized
               className="h-9 w-auto object-contain"
             />
             <div className="text-[9px] text-black leading-tight mt-0.5">
@@ -586,7 +626,7 @@ export default function HalamanLaporan() {
         </div>
 
         {/* Judul Dokumen Resmi Laporan Cuti */}
-        <div className="text-center mt-3 mb-2">
+        <div className="text-center mt-2.5 mb-1">
           <h1 className="text-sm font-black uppercase text-black tracking-wide">
             {activeTab === "BALANCES"
               ? "LAPORAN REKAPITULASI POSISI SALDO CUTI KARYAWAN"
@@ -785,6 +825,9 @@ export default function HalamanLaporan() {
             <div className="overflow-x-auto print:overflow-visible">
               <Table className="print:w-full print:border-collapse print:border print:border-black print:text-black">
                 <TableHeader>
+                  <TableRow className="hidden print:table-row print-page-top-spacer border-0 print:border-none">
+                    <TableHead colSpan={9} className="print-header-spacer print-page-top-spacer border-0 print:border-none p-0" />
+                  </TableRow>
                   <TableRow className="bg-slate-50/80 text-[11px] print:bg-slate-100 print:text-black print:border-b print:border-black">
                     <TableHead
                       className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
@@ -927,6 +970,11 @@ export default function HalamanLaporan() {
                     ))
                   )}
                 </TableBody>
+                <TableFooter className="hidden print:table-footer-group bg-transparent border-0 print:border-none">
+                  <TableRow className="border-0 print:border-none">
+                    <TableCell colSpan={9} className="border-0 print:border-none bg-transparent p-0" />
+                  </TableRow>
+                </TableFooter>
               </Table>
             </div>
           ) : (
@@ -934,6 +982,9 @@ export default function HalamanLaporan() {
             <div className="overflow-x-auto print:overflow-visible">
               <Table className="print:w-full print:border-collapse print:border print:border-black print:text-black">
                 <TableHeader>
+                  <TableRow className="hidden print:table-row print-page-top-spacer border-0 print:border-none">
+                    <TableHead colSpan={10} className="print-header-spacer print-page-top-spacer border-0 print:border-none p-0" />
+                  </TableRow>
                   <TableRow className="bg-slate-50/80 text-[11px] print:bg-slate-100 print:text-black print:border-b print:border-black">
                     <TableHead
                       className="w-12 text-center font-bold cursor-pointer select-none hover:bg-slate-100 transition-colors group print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold"
@@ -1159,16 +1210,21 @@ export default function HalamanLaporan() {
                     ))
                   )}
                 </TableBody>
+                <TableFooter className="hidden print:table-footer-group bg-transparent border-0 print:border-none">
+                  <TableRow className="border-0 print:border-none">
+                    <TableCell colSpan={10} className="border-0 print:border-none bg-transparent p-0" />
+                  </TableRow>
+                </TableFooter>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
-      <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
-        <div>{pencetakName}</div>
-        <div>{formatDateIndo(new Date())}</div>
+      {/* FOOTER MARGIN RESMI: POJOK KIRI BAWAH KERTAS DI SETIAP HALAMAN */}
+      <div className="hidden print:block print-footer-margin text-left text-[9px] text-black font-sans leading-tight">
+        <div>Admin : {pencetakName}</div>
+        <div>Tanggal Cetak : {formatDateIndo(new Date())}</div>
       </div>
 
       {/* MODAL POPUP: RINCIAN TANGGAL CUTI */}

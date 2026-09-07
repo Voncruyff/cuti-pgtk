@@ -49,5 +49,27 @@ export function PenyesuaiJudulHalaman() {
     }
   }, [pathname]);
 
+  // Sembunyikan judul tab dokumen saat dialog cetak terbuka agar tidak dicetak oleh browser di pojok kanan atas
+  useEffect(() => {
+    let savedTitle = "";
+    const handleBeforePrint = () => {
+      savedTitle = document.title;
+      document.title = "\u200E"; // Karakter transparan LTR agar header judul kosong jika browser memaksakan cetak header
+    };
+    const handleAfterPrint = () => {
+      if (savedTitle) {
+        document.title = savedTitle;
+      }
+    };
+
+    window.addEventListener("beforeprint", handleBeforePrint);
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, []);
+
   return null;
 }

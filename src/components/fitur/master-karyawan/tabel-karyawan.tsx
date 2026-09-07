@@ -31,6 +31,7 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
@@ -253,11 +254,44 @@ export function TabelKaryawan({
   };
 
   return (
-    <div className="space-y-6 w-full pb-12 print-page-wrapper print:p-0 print:m-0 print:space-y-0 print:max-w-none">
-      {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN */}
-      <div className="hidden print:block mb-4">
+    <div className="space-y-6 w-full pb-12 print-page-wrapper print:m-0 print:space-y-0 print:max-w-none">
+      {/* Aturan @page cetak presisi: Margin 12mm atas, 14mm bawah, 15mm samping, dengan footer & nomor halaman otomatis */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: A4 portrait;
+          margin-top: 12mm;
+          margin-bottom: 14mm;
+          margin-left: 15mm;
+          margin-right: 15mm;
+          @top-left {
+            content: "";
+          }
+          @top-center {
+            content: "";
+          }
+          @top-right {
+            content: "";
+          }
+          @bottom-left {
+            content: "Admin : ${companyProfile.currentUserName}\\ATanggal Cetak : ${formatDateIndo(new Date())}";
+            white-space: pre-line;
+            font-size: 8pt;
+            font-family: sans-serif;
+            vertical-align: top;
+          }
+          @bottom-right {
+            content: ${sortedKaryawan.length > 20 ? 'counter(page)' : '""'};
+            font-size: 8pt;
+            font-family: sans-serif;
+            vertical-align: top;
+          }
+        }
+      `}} />
+
+      {/* PRINT-ONLY OFFICIAL KOP SURAT PERUSAHAAN (Hanya di Halaman Pertama) */}
+      <div className="hidden print:block print-kop-surat mb-2">
         {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
-        <div className="border-b-2 border-black pb-2.5">
+        <div className="border-b-2 border-black pb-2">
           <div className="flex flex-col items-start gap-1">
             <Image
               src="/assets/PGTrangkilLogo.png"
@@ -265,6 +299,7 @@ export function TabelKaryawan({
               width={180}
               height={36}
               priority
+              unoptimized
               className="h-9 w-auto object-contain"
             />
             <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
@@ -274,7 +309,7 @@ export function TabelKaryawan({
         </div>
 
         {/* Judul Dokumen Resmi */}
-        <div className="text-center mt-3 mb-2">
+        <div className="text-center mt-2.5 mb-1">
           <h1 className="text-sm font-black uppercase text-black tracking-wide">
             DAFTAR DATA MASTER KARYAWAN PG TRANGKIL
           </h1>
@@ -405,7 +440,14 @@ export function TabelKaryawan({
               type="button"
               variant="outline"
               size="default"
-              onClick={() => window.print()}
+              onClick={() => {
+                const orig = document.title;
+                document.title = "\u200E";
+                window.print();
+                setTimeout(() => {
+                  document.title = orig;
+                }, 1000);
+              }}
               className="h-9 px-3.5 text-xs font-semibold gap-2 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
             >
               <Printer className="h-4 w-4 text-slate-600" />
@@ -550,6 +592,9 @@ export function TabelKaryawan({
             <div className="overflow-x-auto print:overflow-visible">
               <Table className="print:w-full print:border-collapse print:border print:border-black print:text-black">
                 <TableHeader>
+                  <TableRow className="hidden print:table-row print-page-top-spacer border-0 print:border-none">
+                    <TableHead colSpan={canManage ? 8 : 7} className="print-header-spacer print-page-top-spacer border-0 print:border-none p-0" />
+                  </TableRow>
                   <TableRow className="bg-slate-50/80 text-[11px] print:bg-slate-100 print:text-black print:border-b print:border-black">
                     <TableHead className="w-12 text-center font-bold print:border print:border-black print:text-black print:bg-slate-100 print:text-[10px] print:p-1.5 print:font-bold">NO</TableHead>
                     <TableHead
@@ -655,16 +700,21 @@ export function TabelKaryawan({
                     </TableRow>
                   ))}
                 </TableBody>
+                <TableFooter className="hidden print:table-footer-group bg-transparent border-0 print:border-none">
+                  <TableRow className="border-0 print:border-none">
+                    <TableCell colSpan={7} className="border-0 print:border-none bg-transparent p-0" />
+                  </TableRow>
+                </TableFooter>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
-      <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
-        <div>{companyProfile.currentUserName}</div>
-        <div>{formatDateIndo(new Date())}</div>
+      {/* FOOTER MARGIN RESMI: POJOK KIRI BAWAH KERTAS DI SETIAP HALAMAN */}
+      <div className="hidden print:block print-footer-margin text-left text-[9px] text-black font-sans leading-tight">
+        <div>Admin : {companyProfile.currentUserName}</div>
+        <div>Tanggal Cetak : {formatDateIndo(new Date())}</div>
       </div>
     </div>
   );

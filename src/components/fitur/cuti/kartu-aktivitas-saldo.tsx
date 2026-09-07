@@ -489,9 +489,28 @@ export function BalanceActivityCard({
     }
     setPrintingLetterItem(null);
     setIsPrintingHistory(true);
-    setTimeout(() => {
-      window.print();
-    }, 100);
+
+    // Pastikan gambar logo ter-load sempurna sebelum dialog print dibuka
+    const img = new window.Image();
+    img.src = "/assets/PGTrangkilLogo.png";
+    const triggerPrint = () => {
+      setTimeout(() => {
+        const orig = document.title;
+        document.title = "\u200E";
+        window.print();
+        setTimeout(() => {
+          document.title = orig;
+        }, 1000);
+      }, 150);
+    };
+
+    if (img.complete) {
+      triggerPrint();
+    } else {
+      img.onload = triggerPrint;
+      img.onerror = triggerPrint;
+      setTimeout(triggerPrint, 350);
+    }
   };
 
   // Bersihkan state cetak saat jendela cetak ditutup
@@ -1808,23 +1827,43 @@ export function BalanceActivityCard({
       {/* ELEMEN CETAK SURAT IZIN CUTI (2 RANGKAP ATAS & BAWAH: TEPAT 50:50 WILAYAH KEKUASAAN) */}
       {typeof document !== "undefined" && printingLetterItem && createPortal(
         <div className="hidden print:block print:w-full print:m-0 print:p-0 print-leave-letter-page">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @page leaveLetterPage {
+              size: 210mm 297mm !important;
+              margin: 0 !important;
+              @top-left { content: ""; }
+              @top-center { content: ""; }
+              @top-right { content: ""; }
+              @bottom-left { content: ""; }
+              @bottom-right { content: ""; }
+            }
+            @page {
+              size: 210mm 297mm !important;
+              margin: 0 !important;
+              @top-left { content: ""; }
+              @top-center { content: ""; }
+              @top-right { content: ""; }
+              @bottom-left { content: ""; }
+              @bottom-right { content: ""; }
+            }
+          `}} />
           <div
             id="printable-leave-letter"
-            className="w-[210mm] text-black font-sans bg-white print:p-0 print:m-0 flex flex-col justify-between mx-auto"
-            style={{ width: "210mm", height: "276mm", maxHeight: "276mm" }}
+            className="w-[210mm] text-black font-sans bg-white print:p-0 print:m-0 flex flex-col justify-between mx-auto box-border overflow-hidden"
+            style={{ width: "210mm", height: "297mm", maxHeight: "297mm" }}
           >
-            {/* SLIP 1 (ATAS) - TEPAT 50% WILAYAH KEKUASAAN (138mm) */}
+            {/* SLIP 1 (ATAS) - TEPAT 50% WILAYAH KEKUASAAN (148.5mm) */}
             <div
               className="w-full box-border border-b border-dashed border-slate-400 print:border-slate-400 overflow-hidden flex flex-col justify-between"
-              style={{ height: "138mm", maxHeight: "138mm", padding: "6mm 16mm 5mm 16mm" }}
+              style={{ height: "148.5mm", maxHeight: "148.5mm", padding: "7mm 16mm 6mm 16mm" }}
             >
               {renderSlipPermohonanCuti("slip-top")}
             </div>
 
-            {/* SLIP 2 (BAWAH) - TEPAT 50% WILAYAH KEKUASAAN (138mm) */}
+            {/* SLIP 2 (BAWAH) - TEPAT 50% WILAYAH KEKUASAAN (148.5mm) */}
             <div
               className="w-full box-border overflow-hidden flex flex-col justify-between"
-              style={{ height: "138mm", maxHeight: "138mm", padding: "6mm 16mm 5mm 16mm" }}
+              style={{ height: "148.5mm", maxHeight: "148.5mm", padding: "7mm 16mm 6mm 16mm" }}
             >
               {renderSlipPermohonanCuti("slip-bottom")}
             </div>
@@ -1835,13 +1874,45 @@ export function BalanceActivityCard({
 
       {/* ELEMEN CETAK LEMBAR REKAP AKTIVITAS SALDO (LANGSUNG CETAK TANPA POPUP / MODAL) */}
       {typeof document !== "undefined" && isPrintingHistory && createPortal(
-        <div className="hidden print:block print:w-full print:m-0 print:p-0 print-page-wrapper">
+        <div className="hidden print:block print:w-full print:m-0 print-page-wrapper">
+          {/* Aturan @page cetak presisi: Margin 12mm atas, 14mm bawah, 15mm samping, dengan footer & nomor halaman otomatis */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @page {
+              size: A4 portrait;
+              margin-top: 12mm;
+              margin-bottom: 14mm;
+              margin-left: 15mm;
+              margin-right: 15mm;
+              @top-left {
+                content: "";
+              }
+              @top-center {
+                content: "";
+              }
+              @top-right {
+                content: "";
+              }
+              @bottom-left {
+                content: "Admin : ${companyProfile.currentUserName}\\ATanggal Cetak : ${formatDateIndo(new Date())}";
+                white-space: pre-line;
+                font-size: 8pt;
+                font-family: sans-serif;
+                vertical-align: top;
+              }
+              @bottom-right {
+                content: ${sortedHistory.length > 18 ? 'counter(page)' : '""'};
+                font-size: 8pt;
+                font-family: sans-serif;
+                vertical-align: top;
+              }
+            }
+          `}} />
           <div
             id="printable-history-sheet"
             className="text-slate-900 text-xs font-sans print:border-none print:shadow-none print:p-0 print:m-0 print:space-y-3 relative"
           >
-            {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya */}
-            <div className="border-b-2 border-black pb-2.5">
+            {/* Header Kop: Logo PG Trangkil di Kiri & Alamat di Bawahnya (Hanya di Halaman Pertama) */}
+            <div className="border-b-2 border-black pb-2">
               <div className="flex flex-col items-start gap-1">
                 <Image
                   src="/assets/PGTrangkilLogo.png"
@@ -1849,6 +1920,7 @@ export function BalanceActivityCard({
                   width={180}
                   height={36}
                   priority
+                  unoptimized
                   className="h-9 w-auto object-contain"
                 />
                 <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
@@ -1858,7 +1930,7 @@ export function BalanceActivityCard({
             </div>
 
             {/* Judul Dokumen Resmi */}
-            <div className="text-center mt-3 mb-2">
+            <div className="text-center mt-2.5 mb-1">
               <h1 className="text-sm font-black uppercase text-black tracking-wide">
                 KARTU HISTORI AKTIVITAS SALDO CUTI KARYAWAN
               </h1>
@@ -1869,7 +1941,7 @@ export function BalanceActivityCard({
             </div>
 
             {/* Info Pegawai */}
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded border border-slate-200 text-xs">
+            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded border border-slate-200 text-xs print-kop-surat">
               <div>
                 <span className="text-slate-500 block text-[11px]">Nama Karyawan:</span>
                 <strong className="text-slate-900 text-sm">{employee.name}</strong>
@@ -1885,6 +1957,9 @@ export function BalanceActivityCard({
             {/* Tabel Histori */}
             <table className="w-full border-collapse border border-slate-300 text-xs">
               <thead>
+                <tr className="hidden print:table-row print-page-top-spacer border-0 print:border-none">
+                  <th colSpan={isPelaksana ? 6 : 7} className="print-header-spacer print-page-top-spacer border-0 print:border-none p-0" />
+                </tr>
                 <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
                   <th className="border border-slate-300 p-2 text-center w-10">No</th>
                   <th className="border border-slate-300 p-2 text-center w-28">Tgl Transaksi</th>
@@ -1942,6 +2017,11 @@ export function BalanceActivityCard({
                   })
                 )}
               </tbody>
+              <tfoot className="hidden print:table-footer-group bg-transparent border-0 print:border-none">
+                <tr className="border-0 print:border-none">
+                  <td colSpan={isPelaksana ? 6 : 7} className="border-0 print:border-none bg-transparent p-0" />
+                </tr>
+              </tfoot>
             </table>
 
             {/* Sisa Saldo Terkini */}
@@ -1951,10 +2031,10 @@ export function BalanceActivityCard({
               </span>
             </div>
 
-            {/* PRINT-ONLY FOOTER: POJOK KIRI BAWAH KERTAS (HANYA NAMA & TANGGAL TANPA LABEL) */}
-            <div className="hidden print:block print:fixed print:bottom-3 print:left-4 text-left text-[9px] text-black font-sans leading-tight">
-              <div>{companyProfile.currentUserName}</div>
-              <div>{formatDateIndo(new Date())}</div>
+            {/* FOOTER MARGIN RESMI: POJOK KIRI BAWAH KERTAS DI SETIAP HALAMAN */}
+            <div className="hidden print:block print-footer-margin text-left text-[9px] text-black font-sans leading-tight">
+              <div>Admin : {companyProfile.currentUserName}</div>
+              <div>Tanggal Cetak : {formatDateIndo(new Date())}</div>
             </div>
           </div>
         </div>,
