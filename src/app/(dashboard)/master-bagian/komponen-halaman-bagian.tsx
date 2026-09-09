@@ -18,10 +18,14 @@ import {
   deleteDepartmentAction,
 } from "@/actions/aksi-bagian";
 
-export function KomponenHalamanBagian() {
+interface KomponenHalamanBagianProps {
+  initialData?: ItemBagian[];
+}
+
+export function KomponenHalamanBagian({ initialData }: KomponenHalamanBagianProps = {}) {
   const [isPending, startTransition] = useTransition();
-  const [bagian, setBagian] = useState<ItemBagian[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [bagian, setBagian] = useState<ItemBagian[]>(initialData || []);
+  const [isLoading, setIsLoading] = useState(!initialData);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modal Tambah
@@ -55,8 +59,10 @@ export function KomponenHalamanBagian() {
   };
 
   useEffect(() => {
-    muatData();
-  }, []);
+    if (!initialData) {
+      muatData();
+    }
+  }, [initialData]);
 
   const handleTambah = (e: React.FormEvent) => {
     e.preventDefault();

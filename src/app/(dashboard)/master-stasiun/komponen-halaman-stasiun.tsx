@@ -20,11 +20,19 @@ import {
   type PilihanBagianStasiun,
 } from "@/components/fitur/master-stasiun/komponen-stasiun";
 
-export function KomponenHalamanStasiun() {
+interface KomponenHalamanStasiunProps {
+  initialStations?: StationItem[];
+  initialDepartments?: PilihanBagianStasiun[];
+}
+
+export function KomponenHalamanStasiun({
+  initialStations,
+  initialDepartments,
+}: KomponenHalamanStasiunProps = {}) {
   const [isPending, startTransition] = useTransition();
-  const [stasiun, setStasiun] = useState<StationItem[]>([]);
-  const [bagian, setBagian] = useState<PilihanBagianStasiun[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [stasiun, setStasiun] = useState<StationItem[]>(initialStations || []);
+  const [bagian, setBagian] = useState<PilihanBagianStasiun[]>(initialDepartments || []);
+  const [isLoading, setIsLoading] = useState(!initialStations);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterBagian, setFilterBagian] = useState("ALL");
@@ -33,7 +41,7 @@ export function KomponenHalamanStasiun() {
   const [isTambahTerbuka, setIsTambahTerbuka] = useState(false);
   const [kode, setKode] = useState("");
   const [nama, setNama] = useState("");
-  const [bagianId, setBagianId] = useState("");
+  const [bagianId, setBagianId] = useState(() => (initialDepartments && initialDepartments.length > 0 ? initialDepartments[0].id : ""));
 
   // Modal Edit
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
@@ -67,9 +75,11 @@ export function KomponenHalamanStasiun() {
   };
 
   useEffect(() => {
-    muatData();
+    if (!initialStations || !initialDepartments) {
+      muatData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialStations, initialDepartments]);
 
   const handleTambah = (e: React.FormEvent) => {
     e.preventDefault();

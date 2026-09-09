@@ -26,20 +26,32 @@ import type { SessionUser } from "@/types/autentikasi";
 
 interface KomponenMasterKaryawanProps {
   user: SessionUser;
+  initialData?: Awaited<ReturnType<typeof getEmployeePageDataAction>>;
 }
 
-export function KomponenMasterKaryawan({ user }: KomponenMasterKaryawanProps) {
+export function KomponenMasterKaryawan({ user, initialData }: KomponenMasterKaryawanProps) {
   const [isPending, startTransition] = useTransition();
-  const [karyawan, setKaryawan] = useState<ItemKaryawan[]>([]);
-  const [bagian, setBagian] = useState<PilihanBagian[]>([]);
-  const [stasiun, setStasiun] = useState<PilihanStasiun[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [karyawan, setKaryawan] = useState<ItemKaryawan[]>(
+    (initialData?.employees as unknown as ItemKaryawan[]) || []
+  );
+  const [bagian, setBagian] = useState<PilihanBagian[]>(
+    (initialData?.departments as PilihanBagian[]) || []
+  );
+  const [stasiun, setStasiun] = useState<PilihanStasiun[]>(
+    (initialData?.stations as PilihanStasiun[]) || []
+  );
+  const [isLoading, setIsLoading] = useState(!initialData);
 
   const canManage = user.role === "ADMIN_UTAMA";
 
   // Filter States
   const [tabKategori, setTabKategori] = useState<"ALL" | "PIMPINAN" | "PELAKSANA">("ALL");
-  const [filterBagian, setFilterBagian] = useState("ALL");
+  const [filterBagian, setFilterBagian] = useState(() => {
+    if (user.role === "ADMIN_BAGIAN" && initialData?.departments && initialData.departments.length > 0) {
+      return initialData.departments[0].id;
+    }
+    return "ALL";
+  });
   const [filterStasiun, setFilterStasiun] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -88,8 +100,10 @@ export function KomponenMasterKaryawan({ user }: KomponenMasterKaryawanProps) {
   };
 
   useEffect(() => {
-    muatData();
-  }, []);
+    if (!initialData) {
+      muatData();
+    }
+  }, [initialData]);
 
   const resetFormTambah = () => {
     setNip("");

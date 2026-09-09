@@ -49,6 +49,10 @@ export interface AccrualExecutionResult {
  * 3. INHALDAGEN:
  *    - Masa berlaku default 12 bulan sejak tanggal penugasan.
  */
+// Throttle timer untuk panggilan otomatis latar belakang (dari layout dashboard)
+let lastSystemAutoAccrualRun = 0;
+const SYSTEM_ACCRUAL_THROTTLE_MS = 30 * 60 * 1000; // 30 menit
+
 export async function executeAutomatedLeaveAccrualsAction(options?: {
   forceEmployeeId?: string;
   isSystemCall?: boolean;
@@ -56,6 +60,19 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
   monthFilter?: number; // 0-11, hanya proses karyawan yang ulang tahun di bulan ini
 }): Promise<AccrualExecutionResult> {
   const isSystem = Boolean(options?.isSystemCall);
+
+  // Jika dipanggil otomatis oleh sistem (misal saat render layout), batasi maksimal 1x per 30 menit
+  if (isSystem && !options?.forceEmployeeId) {
+    const now = Date.now();
+    if (now - lastSystemAutoAccrualRun < SYSTEM_ACCRUAL_THROTTLE_MS) {
+      return {
+        success: true,
+        message: "Pemeriksaan otomatisasi saldo dilewati (sudah dijalankan dalam 30 menit terakhir).",
+      };
+    }
+    lastSystemAutoAccrualRun = now;
+  }
+
   const currentUser = isSystem ? null : await getCurrentUser();
 
   // Jika bukan pemanggilan internal sistem (cron/skrip), pastikan user terautentikasi dan memiliki hak akses

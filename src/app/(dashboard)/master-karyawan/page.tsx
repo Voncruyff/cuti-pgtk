@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireAuth } from "@/lib/auth/session";
+import { getEmployeePageDataAction } from "@/actions/aksi-karyawan";
 import { KomponenMasterKaryawan } from "./komponen-master-karyawan";
 
 export const metadata: Metadata = {
@@ -8,6 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default async function HalamanMasterKaryawan() {
-  const user = await requireAuth();
-  return <KomponenMasterKaryawan user={user} />;
+  const [user, pageData] = await Promise.all([
+    requireAuth(),
+    getEmployeePageDataAction(),
+  ]);
+
+  return (
+    <KomponenMasterKaryawan
+      user={user}
+      initialData={pageData.success ? pageData : undefined}
+    />
+  );
 }
