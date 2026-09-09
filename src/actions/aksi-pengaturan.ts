@@ -776,19 +776,6 @@ export async function updateSignatoriesAction(payload: {
       }
     }
 
-    // 4. Sinkronkan juga field pimpinan di tabel Department (bagian)
-    const allDepts = await prisma.department.findMany();
-    for (const dept of allDepts) {
-      const sig = rawSignatories.find((s) => s.departmentId === dept.id);
-      await prisma.department.update({
-        where: { id: dept.id },
-        data: {
-          namaPimpinan: sig?.nama?.trim() || null,
-          jabatanPimpinan: sig?.jabatan?.trim() || null,
-        },
-      });
-    }
-
     revalidatePath("/settings");
     revalidatePath("/pengaturan");
     revalidatePath("/pengaturan/penandatangan");
@@ -873,9 +860,6 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
         id: true,
         code: true,
         name: true,
-        namaPimpinan: true,
-        nipPimpinan: true,
-        jabatanPimpinan: true,
         isActive: true,
       },
     });
@@ -912,15 +896,18 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
           code: d.code,
           name: d.name,
         })),
-        departmentSignatories: allDepts.map((d) => ({
-          id: d.id,
-          code: d.code,
-          name: d.name,
-          namaPimpinan: d.namaPimpinan || "",
-          nipPimpinan: d.nipPimpinan || "",
-          jabatanPimpinan: d.jabatanPimpinan || `Kepala Bagian ${d.name}`,
-          isActive: d.isActive,
-        })),
+        departmentSignatories: allDepts.map((d) => {
+          const sig = validSignatories.find((s) => s.departmentId === d.id);
+          return {
+            id: d.id,
+            code: d.code,
+            name: d.name,
+            namaPimpinan: sig?.nama || "",
+            nipPimpinan: "",
+            jabatanPimpinan: sig?.jabatan || `Kepala Bagian ${d.name}`,
+            isActive: d.isActive,
+          };
+        }),
       },
     };
   } catch (error: any) {

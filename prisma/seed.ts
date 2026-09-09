@@ -10,51 +10,28 @@ interface DepartmentSeedItem {
   id: string;
   code: string;
   name: string;
-  namaPimpinan: string | null;
-  nipPimpinan: string | null;
-  jabatanPimpinan: string | null;
 }
 
 const departmentsData: DepartmentSeedItem[] = [
   {
-    id: "dept-pimpinan",
-    code: "PIMPINAN",
-    name: "Pimpinan",
-    namaPimpinan: "Ir. Bambang Santoso, M.M.",
-    nipPimpinan: null,
-    jabatanPimpinan: "General Manager",
-  },
-  {
     id: "dept-tuk",
     code: "TUK",
     name: "Tata Usaha & Keuangan (TUK)",
-    namaPimpinan: "Teguh Arifin",
-    nipPimpinan: null,
-    jabatanPimpinan: "Pjs. Kepala Bagian TUK",
   },
   {
     id: "dept-tan",
     code: "TAN",
     name: "Tanaman (TAN)",
-    namaPimpinan: "Hendra",
-    nipPimpinan: null,
-    jabatanPimpinan: "Kepala Bagian Tanaman",
   },
   {
     id: "dept-tek",
     code: "TEK",
     name: "Teknik (TEK)",
-    namaPimpinan: "Luki",
-    nipPimpinan: null,
-    jabatanPimpinan: "Kepala Bagian Teknik",
   },
   {
     id: "dept-pab",
     code: "PAB",
     name: "Pabrikasi (PAB)",
-    namaPimpinan: "Joko",
-    nipPimpinan: null,
-    jabatanPimpinan: "Kepala Bagian Pabrikasi",
   },
 ];
 
@@ -81,7 +58,7 @@ const stationsData: StationSeedItem[] = [
   { no: 8, kobag: "25040", nabag: "B.U. BANGUNAN", departmentCode: "TUK", departmentId: "dept-tuk" },
 
   // --- 2. Bagian Teknik (5 Stasiun) ---
-  { no: 9,  kobag: "25000", nabag: "B.U. INSTALASI", departmentCode: "TEK", departmentId: "dept-tek" },
+  { no: 9, kobag: "25000", nabag: "B.U. INSTALASI", departmentCode: "TEK", departmentId: "dept-tek" },
   { no: 10, kobag: "25002", nabag: "GILINGAN", departmentCode: "TEK", departmentId: "dept-tek" },
   { no: 11, kobag: "25010", nabag: "KETEL", departmentCode: "TEK", departmentId: "dept-tek" },
   { no: 12, kobag: "25011", nabag: "LISTRIK", departmentCode: "TEK", departmentId: "dept-tek" },
@@ -114,30 +91,24 @@ async function main() {
   const defaultPasswordHash = await bcrypt.hash("admin123", saltRounds);
 
   // =====================================================================
-  // 1. SEED 5 BAGIAN / DEPARTEMEN UTAMA PG TRANGKIL
+  // 1. SEED 4 BAGIAN / DEPARTEMEN UTAMA PG TRANGKIL
   // =====================================================================
-  console.log("\n📦 1. Mengisi Data Master 5 Bagian PG Trangkil...");
+  console.log("\n📦 1. Mengisi Data Master 4 Bagian PG Trangkil...");
   for (const dept of departmentsData) {
     const res = await prisma.department.upsert({
       where: { code: dept.code },
       update: {
         name: dept.name,
-        namaPimpinan: dept.namaPimpinan,
-        nipPimpinan: dept.nipPimpinan,
-        jabatanPimpinan: dept.jabatanPimpinan,
         isActive: true,
       },
       create: {
         id: dept.id,
         code: dept.code,
         name: dept.name,
-        namaPimpinan: dept.namaPimpinan,
-        nipPimpinan: dept.nipPimpinan,
-        jabatanPimpinan: dept.jabatanPimpinan,
         isActive: true,
       },
     });
-    console.log(`   ✓ [${res.code}] ${res.name} (Pimpinan: ${res.namaPimpinan || "-"}, Jabatan: ${res.jabatanPimpinan || "-"})`);
+    console.log(`   ✓ [${res.code}] ${res.name}`);
   }
 
   // =====================================================================
@@ -359,7 +330,7 @@ async function main() {
   console.log("   ✓ Penandatangan GM & 4 Kepala Bagian terdaftar.");
 
   console.log("\n=====================================================================");
-  console.log("🎉 SEEDING BERHASIL: 5 Bagian, 28 Stasiun, 5 Akun, Konfigurasi & Profil Siap!");
+  console.log("🎉 SEEDING BERHASIL: 4 Bagian, 28 Stasiun, 5 Akun, Konfigurasi & Profil Siap!");
   console.log("=====================================================================\n");
 }
 
