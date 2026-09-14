@@ -374,10 +374,10 @@ export default async function HalamanDashboard(props: {
             </Link>
           </div>
 
-          {/* Bento Card: Cuti Bulan Ini */}
+          {/* Bento Card: Aktivitas Cuti */}
           <div className="bg-white border border-slate-200/80 rounded-[22px] p-5 shadow-2xs flex flex-col justify-between flex-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Cuti Bulan Ini</span>
+              <span className="text-xs font-semibold text-slate-500">Aktivitas Cuti</span>
               <span className="text-[10px] text-slate-400">{namaBulanSekarang}</span>
             </div>
 
