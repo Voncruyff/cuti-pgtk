@@ -8,7 +8,8 @@ import {
   Loader2,
   Building2,
   User,
-  ShieldCheck,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -20,16 +21,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   getSignatoriesAction,
   updateSignatoriesAction,
 } from "@/actions/aksi-pengaturan";
 
-interface DepartmentSignatoryRow {
+interface DepartmentInfo {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface SignatoryRow {
+  tempId: string;
   departmentId: string;
-  departmentCode: string;
-  departmentName: string;
   namaPimpinan: string;
   jabatanPimpinan: string;
 }
@@ -39,11 +44,12 @@ export function KomponenPenandatangan() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Form State: Pemimpin Unit
-  const [namaPemimpin, setNamaPemimpin] = useState("Ir. Bambang Santoso, M.M.");
+  const [namaPemimpin, setNamaPemimpin] = useState("");
   const [jabatanPemimpin, setJabatanPemimpin] = useState("General Manager");
 
-  // Form State: 1 Pejabat Penandatangan Resmi per Bagian
-  const [signatoryRows, setSignatoryRows] = useState<DepartmentSignatoryRow[]>([]);
+  // Form State: Master Bagian & Dynamic Rows
+  const [allDepartments, setAllDepartments] = useState<DepartmentInfo[]>([]);
+  const [signatoryRows, setSignatoryRows] = useState<SignatoryRow[]>([]);
 
   useEffect(() => {
     loadData();
@@ -57,37 +63,105 @@ export function KomponenPenandatangan() {
       setJabatanPemimpin(res.data.leader.jabatanPemimpin || "General Manager");
 
       const depts = res.data.allDepartments || [];
+      setAllDepartments(depts);
+
       const sigs = res.data.signatories || [];
-
-      // Setiap bagian di Master Bagian memiliki tepat 1 entri penandatangan resmi
-      const rows: DepartmentSignatoryRow[] = depts.map((d) => {
-        const found = sigs.find((s) => s.departmentId === d.id);
-        return {
-          departmentId: d.id,
-          departmentCode: d.code,
-          departmentName: d.name,
-          namaPimpinan: found?.nama || "",
-          jabatanPimpinan: found?.jabatan || `Kepala Bagian ${d.name}`,
-        };
-      });
-
-      setSignatoryRows(rows);
+      if (sigs.length > 0) {
+        setSignatoryRows(
+          sigs.map((s) => ({
+            tempId: s.id,
+            departmentId: s.departmentId,
+            namaPimpinan: s.nama,
+            jabatanPimpinan: s.jabatan,
+          }))
+        );
+      } else if (depts.length > 0) {
+        setSignatoryRows([
+          {
+            tempId: `row-${Date.now()}`,
+            departmentId: depts[0].id,
+            namaPimpinan: "",
+            jabatanPimpinan: `Kepala Bagian ${depts[0].name}`,
+          },
+        ]);
+      }
     } else {
       toast.error(res.message || "Gagal memuat data penandatanganan.");
     }
     setIsLoading(false);
   };
 
-  // Ubah input nama atau jabatan untuk bagian tertentu
+  // Cek apakah seluruh bagian yang ada di Master Bagian sudah terpakai
+  const isAllDepartmentsUsed =
+    allDepartments.length > 0 &&
+    allDepartments.every((d) => signatoryRows.some((r) => r.departmentId === d.id));
+
+  // Tambah baris TTD baru
+  const handleAddRow = () => {
+    // Cari bagian yang belum dipilih di baris yang sudah ada
+    const usedDeptIds = new Set(signatoryRows.map((r) => r.departmentId));
+    const availableDept = allDepartments.find((d) => !usedDeptIds.has(d.id));
+
+    if (!availableDept) {
+      toast.warning("Semua bagian sudah memiliki kepala bagian / pejabat penandatangan.");
+      return;
+    }
+
+    const defaultDeptId = availableDept.id;
+    const defaultJabatan = `Kepala Bagian ${availableDept.name}`;
+
+    setSignatoryRows((prev) => [
+      ...prev,
+      {
+        tempId: `row-${Date.now()}-${Math.random()}`,
+        departmentId: defaultDeptId,
+        namaPimpinan: "",
+        jabatanPimpinan: defaultJabatan,
+      },
+    ]);
+  };
+
+  // Hapus baris TTD
+  const handleRemoveRow = (indexToRemove: number) => {
+    setSignatoryRows((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  // Ubah bagian pada selector dropdown suatu baris
+  const handleDepartmentChange = (index: number, newDeptId: string) => {
+    const isAlreadyUsedElsewhere = signatoryRows.some(
+      (r, i) => i !== index && r.departmentId === newDeptId
+    );
+    if (isAlreadyUsedElsewhere) {
+      toast.warning("Bagian ini sudah dipilih pada baris penandatangan lain.");
+      return;
+    }
+
+    const selectedDept = allDepartments.find((d) => d.id === newDeptId);
+    setSignatoryRows((prev) =>
+      prev.map((row, i) => {
+        if (i === index) {
+          const autoTitle = selectedDept ? `Kepala Bagian ${selectedDept.name}` : "";
+          const shouldUpdateJabatan =
+            !row.jabatanPimpinan || row.jabatanPimpinan.startsWith("Kepala Bagian");
+          return {
+            ...row,
+            departmentId: newDeptId,
+            jabatanPimpinan: shouldUpdateJabatan ? autoTitle : row.jabatanPimpinan,
+          };
+        }
+        return row;
+      })
+    );
+  };
+
+  // Ubah input nama atau jabatan suatu baris
   const handleRowFieldChange = (
-    deptId: string,
+    index: number,
     field: "namaPimpinan" | "jabatanPimpinan",
     value: string
   ) => {
     setSignatoryRows((prev) =>
-      prev.map((row) =>
-        row.departmentId === deptId ? { ...row, [field]: value } : row
-      )
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
     );
   };
 
@@ -105,8 +179,8 @@ export function KomponenPenandatangan() {
       });
 
       if (res.success) {
-        toast.success(res.message || "Data penandatanganan berhasil disimpan.");
-        await loadData();
+        toast.success(res.message || "Data penandatanganan berhasil disimpan ke database.");
+        loadData();
       } else {
         toast.error(res.message || "Gagal memperbarui data penandatanganan.");
       }
@@ -119,7 +193,7 @@ export function KomponenPenandatangan() {
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-7 w-7 animate-spin text-[#0789D1]" />
           <p className="text-xs font-semibold text-slate-600">
-            Memuat data penandatanganan resmi...
+            Memuat data penandatanganan...
           </p>
         </div>
       </div>
@@ -135,17 +209,17 @@ export function KomponenPenandatangan() {
             Pejabat Penandatanganan Dokumen Cuti
           </CardTitle>
           <CardDescription className="text-xs text-[#6B7280]">
-            Pengaturan nama dan jabatan pimpinan unit kerja serta kepala bagian untuk pengesahan formulir permohonan dan laporan cuti.
+            Pengaturan nama dan jabatan pimpinan unit kerja serta kepala bagian yang dicantumkan pada kolom tanda tangan dokumen cuti.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-5 space-y-6">
-          {/* SEKSI 1: PEMIMPIN UNIT KERJA / PABRIK */}
+          {/* SEKSI 1: PEMIMPIN UNIT KERJA / PABRIK (TANPA NIP) */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
               <User className="h-3.5 w-3.5 text-[#0789D1]" />
               <h3 className="text-xs font-bold text-[#263238]">
-                Pemimpin Unit Kerja / Pabrik Gula
+                Pemimpin Unit Kerja / Pabrik
               </h3>
             </div>
 
@@ -158,9 +232,8 @@ export function KomponenPenandatangan() {
                   type="text"
                   value={namaPemimpin}
                   onChange={(e) => setNamaPemimpin(e.target.value)}
-                  className="h-9 text-xs font-medium bg-white"
+                  className="h-9 text-xs font-bold"
                   placeholder="Contoh: Ir. Bambang Santoso, M.M."
-                  required
                 />
               </div>
 
@@ -172,7 +245,7 @@ export function KomponenPenandatangan() {
                   type="text"
                   value={jabatanPemimpin}
                   onChange={(e) => setJabatanPemimpin(e.target.value)}
-                  className="h-9 text-xs bg-white"
+                  className="h-9 text-xs"
                   placeholder="Contoh: General Manager"
                   required
                 />
@@ -180,72 +253,89 @@ export function KomponenPenandatangan() {
             </div>
           </div>
 
-          {/* SEKSI 2: 1 KEPALA BAGIAN RESMI UNTUK SETIAP BAGIAN KERJA */}
+          {/* SEKSI 2: PIMPINAN BAGIAN DENGAN TOMBOL + UNTUK TAMBAH TTD LAIN DI BAWAH (TANPA NIP) */}
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-2">
                 <Building2 className="h-3.5 w-3.5 text-[#0789D1]" />
                 <h3 className="text-xs font-bold text-[#263238]">
-                  Kepala Bagian / Penandatangan Dokumen Tiap Bagian
+                  Kepala Bagian / Penandatangan Dokumen
                 </h3>
               </div>
               <span className="text-[11px] text-[#6B7280]">
-                Setiap bagian kerja memiliki tepat 1 pejabat penandatangan resmi
+                Pilih bagian pada selector di kolom nama untuk menentukan kepala bagian masing-masing
               </span>
             </div>
 
-            {/* DAFTAR BAGIAN (1 BAGIAN = 1 TTD RESMI) */}
+            {/* DAFTAR BARIS PENANDATANGAN */}
             <div className="space-y-3">
               {signatoryRows.length === 0 ? (
                 <div className="py-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
                   <p className="text-xs text-slate-500">
-                    Belum ada data bagian di Master Bagian. Silakan tambahkan bagian terlebih dahulu.
+                    Belum ada baris penandatangan kepala bagian yang ditambahkan.
                   </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddRow}
+                    className="mt-2 text-xs text-[#0789D1] border-[#0789D1]/30 hover:bg-sky-50"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Tambah TTD
+                  </Button>
                 </div>
               ) : (
                 signatoryRows.map((row, index) => {
                   return (
                     <div
-                      key={row.departmentId}
-                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-3 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50/80 transition-colors"
+                      key={row.tempId}
+                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-2.5 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/70 transition-colors"
                     >
-                      {/* Kolom Info Bagian */}
-                      <div className="sm:col-span-3 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <Badge
-                            variant="default"
-                            className="text-[10px] font-mono font-bold bg-[#0789D1] text-white px-2 py-0.5"
-                          >
-                            {row.departmentCode}
-                          </Badge>
-                          <span className="text-xs font-bold text-slate-900 truncate">
-                            {row.departmentName}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-400">
-                          TTD #{index + 1} • Kepala Bagian
-                        </p>
-                      </div>
-
-                      {/* Kolom 1: Nama Kepala Bagian & Gelar */}
-                      <div className="sm:col-span-5 space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-[#263238]">
-                          Nama Kepala Bagian & Gelar
+                      {/* Kolom 1: Nama Kepala Bagian dengan Selector Master Bagian terintegrasi di kanan */}
+                      <div className="sm:col-span-6 space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-[#263238] flex items-center justify-between">
+                          <span>Nama Kepala Bagian / TTD #{index + 1}</span>
                         </Label>
-                        <Input
-                          type="text"
-                          value={row.namaPimpinan}
-                          onChange={(e) =>
-                            handleRowFieldChange(row.departmentId, "namaPimpinan", e.target.value)
-                          }
-                          placeholder={`Nama & gelar Kepala Bagian ${row.departmentCode}`}
-                          className="h-9 text-xs font-medium bg-white"
-                          required
-                        />
+                        <div className="relative flex items-center">
+                          <Input
+                            type="text"
+                            value={row.namaPimpinan}
+                            onChange={(e) =>
+                              handleRowFieldChange(index, "namaPimpinan", e.target.value)
+                            }
+                            placeholder="Nama & gelar kepala bagian"
+                            className="h-9 text-xs pr-36 font-medium bg-white"
+                          />
+                          <div className="absolute right-1 top-1 bottom-1 flex items-center">
+                            <select
+                              value={row.departmentId}
+                              onChange={(e) =>
+                                handleDepartmentChange(index, e.target.value)
+                              }
+                              className="h-7 rounded border border-slate-200/80 bg-slate-50 px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 focus:border-[#0084c7] focus:outline-none focus:ring-1 focus:ring-[#0084c7] cursor-pointer transition-colors max-w-[135px]"
+                              title="Pilih Master Bagian"
+                            >
+                              {allDepartments.map((d) => {
+                                const isUsedElsewhere = signatoryRows.some(
+                                  (r, i) => i !== index && r.departmentId === d.id
+                                );
+                                return (
+                                  <option
+                                    key={d.id}
+                                    value={d.id}
+                                    disabled={isUsedElsewhere}
+                                  >
+                                    {d.code} - {d.name} {isUsedElsewhere ? "(Sudah terdaftar)" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Kolom 2: Jabatan Resmi */}
-                      <div className="sm:col-span-4 space-y-1.5">
+                      {/* Kolom 2: Jabatan Pimpinan */}
+                      <div className="sm:col-span-5 space-y-1.5">
                         <Label className="text-[11px] font-semibold text-[#263238]">
                           Jabatan
                         </Label>
@@ -253,27 +343,56 @@ export function KomponenPenandatangan() {
                           type="text"
                           value={row.jabatanPimpinan}
                           onChange={(e) =>
-                            handleRowFieldChange(row.departmentId, "jabatanPimpinan", e.target.value)
+                            handleRowFieldChange(index, "jabatanPimpinan", e.target.value)
                           }
-                          placeholder={`Contoh: Kepala Bagian ${row.departmentName}`}
+                          placeholder="Contoh: Kepala Bagian Tanaman"
                           className="h-9 text-xs bg-white"
-                          required
                         />
+                      </div>
+
+                      {/* Kolom 3: Tombol Hapus Baris */}
+                      <div className="sm:col-span-1 flex items-center justify-end sm:justify-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveRow(index)}
+                          className="h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                          title="Hapus baris penandatangan ini"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   );
                 })
               )}
+
+              {/* TOMBOL + TAMBAH TTD LAIN DI BAWAH */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddRow}
+                disabled={isAllDepartmentsUsed}
+                className={`w-full border-dashed text-xs font-semibold h-9 rounded-xl flex items-center justify-center gap-1.5 transition-all mt-2 ${
+                  isAllDepartmentsUsed
+                    ? "border-slate-200 bg-slate-100/80 text-slate-400 cursor-not-allowed opacity-60 select-none shadow-none"
+                    : "border-sky-300 hover:border-[#0789D1] bg-sky-50/30 text-[#0789D1] hover:bg-sky-50 hover:text-[#005B96] cursor-pointer"
+                }`}
+                title={
+                  isAllDepartmentsUsed
+                    ? "Semua bagian sudah memiliki kepala bagian penandatangan"
+                    : "Tambah baris penandatangan"
+                }
+              >
+                <Plus className="h-4 w-4" />
+                Tambah TTD
+              </Button>
             </div>
           </div>
 
           {/* ACTION FOOTER */}
-          <div className="flex items-center justify-between pt-3 border-t border-[#E8F5FC]">
-            <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              <span>Perubahan tanda tangan akan otomatis diterapkan pada lembar cetak cuti & laporan.</span>
-            </div>
-
+          <div className="flex items-center justify-end pt-3 border-t border-[#E8F5FC]">
             <Button
               type="submit"
               disabled={isPending}

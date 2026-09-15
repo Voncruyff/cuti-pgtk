@@ -277,7 +277,7 @@ export async function getSystemSettingsAction(): Promise<ActionResult<SystemSett
         data: {
           id: "PEMIMPIN_UTAMA",
           kategori: "PEMIMPIN",
-          nama: "Ir. Bambang Santoso, M.M.",
+          nama: "",
           jabatan: "General Manager",
           urutan: 0,
         },
@@ -725,12 +725,15 @@ export async function updateSignatoriesAction(payload: {
     const existingLeader = await prisma.penandatanganan.findFirst({
       where: { kategori: "PEMIMPIN" },
     });
+    const cleanLeaderName = payload.namaPemimpin !== undefined ? payload.namaPemimpin.trim() : "";
+    const cleanLeaderTitle = payload.jabatanPemimpin ? payload.jabatanPemimpin.trim() : "General Manager";
+
     if (existingLeader) {
       await prisma.penandatanganan.update({
         where: { id: existingLeader.id },
         data: {
-          nama: payload.namaPemimpin.trim() || "Ir. Bambang Santoso, M.M.",
-          jabatan: payload.jabatanPemimpin.trim() || "General Manager",
+          nama: cleanLeaderName,
+          jabatan: cleanLeaderTitle,
         },
       });
     } else {
@@ -738,8 +741,8 @@ export async function updateSignatoriesAction(payload: {
         data: {
           id: "PEMIMPIN_UTAMA",
           kategori: "PEMIMPIN",
-          nama: payload.namaPemimpin.trim() || "Ir. Bambang Santoso, M.M.",
-          jabatan: payload.jabatanPemimpin.trim() || "General Manager",
+          nama: cleanLeaderName,
+          jabatan: cleanLeaderTitle,
           urutan: 0,
         },
       });
