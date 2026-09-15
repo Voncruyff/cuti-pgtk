@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import Link from "next/link";
-import { Factory } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   TabelKaryawan,
   type ItemKaryawan,
@@ -214,18 +211,6 @@ export function KomponenMasterKaryawan({ user, initialData }: KomponenMasterKary
 
   return (
     <>
-      {/* Tombol pintasan Master Stasiun (HANYA UNTUK ADMIN UTAMA) */}
-      {canManage && (
-        <div className="flex items-center gap-2 mb-4 print:hidden">
-          <Link href="/master-stasiun">
-            <Button variant="outline" size="default" className="font-medium text-slate-700 cursor-pointer">
-              <Factory className="h-4 w-4 text-slate-500" />
-              Master Stasiun
-            </Button>
-          </Link>
-        </div>
-      )}
-
       <TabelKaryawan
         karyawan={karyawan}
         bagian={bagian}
