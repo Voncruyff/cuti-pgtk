@@ -187,12 +187,29 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
         currentMonth > apptMonth ||
         (currentMonth === apptMonth && currentDate >= apptDay);
 
-      // Tahun siklus acuan: jika sudah lewat hari-H tahun ini -> gunakan tahun ini, jika belum -> gunakan tahun sebelumnya
-      const latestAnniversaryYear = hasPassedAnniversaryThisYear
-        ? currentYear
-        : currentYear - 1;
+      // JIKA BELUM MELEWATI HARI-H TAHUN INI, LEWATI (JANGAN TIME TRAVEL KE TAHUN SEBELUMNYA!)
+      if (!hasPassedAnniversaryThisYear) {
+        upToDateCount++;
+        executionDetails.push({
+          nip: emp.nip,
+          nama: emp.nama,
+          tglPengangkatan: formatDateIndo(emp.appointmentDate),
+          masaKerjaTahun: Math.max(0, currentYear - apptYear - 1),
+          cutiTahunanDitambah: 0,
+          cutiTahunanKedaluwarsa: 0,
+          cutiBesarDitambah: 0,
+          cutiBesarKedaluwarsa: 0,
+          inhaldagenKedaluwarsa: 0,
+          status: "UP_TO_DATE",
+          keterangan: `Menunggu hari ulang tahun pengangkatan tahun berjalan (${apptDay}-${apptMonth + 1}-${currentYear}).`,
+        });
+        continue;
+      }
 
-      // Masa kerja genap pada ulang tahun pengangkatan terakhir
+      // Tahun siklus adalah tahun berjalan saat ini (TIDAK PERNAH mundur ke tahun lalu!)
+      const latestAnniversaryYear = currentYear;
+
+      // Masa kerja genap pada ulang tahun pengangkatan tahun ini
       const completedYears = latestAnniversaryYear - apptYear;
 
       let annualAdded = 0;

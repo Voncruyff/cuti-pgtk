@@ -23,9 +23,14 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { open, toggleCollapse, isCollapsed } = useSidebar();
   const onOpenMobileMenu = propOnOpen || open;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [user.fotoProfil]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -152,11 +157,12 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
           aria-label="Menu Pengguna"
         >
           {/* Avatar (Foto Profil atau Inisial) */}
-          {user.fotoProfil ? (
+          {user.fotoProfil && !imageError ? (
             <img
               src={user.fotoProfil}
               alt={user.fullName || user.username}
               className="h-8 w-8 rounded-full object-cover border border-[#E8F5FC] shadow-xs select-none shrink-0"
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#0789D1] to-[#005B96] text-white text-xs font-bold shadow-xs select-none shrink-0">
@@ -199,11 +205,12 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
             >
               {/* Header User Detail di dalam dropdown */}
               <div className="px-3.5 py-3 border-b border-[#E8F5FC] flex items-center gap-3">
-              {user.fotoProfil ? (
+              {user.fotoProfil && !imageError ? (
                 <img
                   src={user.fotoProfil}
                   alt={user.fullName || user.username}
                   className="h-10 w-10 rounded-full object-cover border border-[#E8F5FC] shadow-2xs shrink-0"
+                  onError={() => setImageError(true)}
                 />
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#0789D1] to-[#005B96] text-white text-xs font-bold shadow-2xs shrink-0 select-none">

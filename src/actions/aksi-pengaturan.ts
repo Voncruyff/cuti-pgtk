@@ -744,12 +744,12 @@ export async function updateSignatoriesAction(payload: {
       });
     }
 
-    // 2. Bersihkan penandatangan bagian lama di tabel penandatanganan
+    // 2. Bersihkan seluruh penandatangan bagian lama di tabel penandatanganan
     await prisma.penandatanganan.deleteMany({
       where: { kategori: "BAGIAN" },
     });
 
-    // 3. Masukkan penandatangan bagian baru ke tabel penandatanganan
+    // 3. Masukkan penandatangan bagian baru (1 bagian = 1 penandatangan resmi)
     const rawSignatories =
       payload.signatories ||
       payload.departmentSignatories?.map((d) => ({
@@ -761,14 +761,18 @@ export async function updateSignatoriesAction(payload: {
 
     if (rawSignatories && rawSignatories.length > 0) {
       let urutan = 1;
+      const seenDeptIds = new Set<string>();
       for (const sig of rawSignatories) {
-        if (sig.nama && sig.nama.trim() !== "") {
+        const cleanDeptId = sig.departmentId?.trim();
+        if (cleanDeptId && !seenDeptIds.has(cleanDeptId)) {
+          seenDeptIds.add(cleanDeptId);
           await prisma.penandatanganan.create({
             data: {
+              id: `sig-${cleanDeptId}`,
               kategori: "BAGIAN",
-              nama: sig.nama.trim(),
-              jabatan: sig.jabatan?.trim() || "Kepala Bagian",
-              departmentId: sig.departmentId || null,
+              nama: (sig.nama || "").trim(),
+              jabatan: (sig.jabatan || "").trim() || "Kepala Bagian",
+              departmentId: cleanDeptId,
               urutan: urutan++,
             },
           });
@@ -876,6 +880,35 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
 
     const validSignatories = dbSignatories.filter((s) => s.department !== null || Boolean(s.departmentId));
 
+    // Pastikan tepat 1 penandatangan resmi per bagian kerja (1 department = 1 signatory)
+    const uniqueSignatoriesPerDept = allDepts.map((d, index) => {
+      const matching = validSignatories.filter((s) => s.departmentId === d.id);
+      let chosen = matching[0];
+
+      // Jika ada duplikasi dari database, utamakan entri kustom pengguna
+      if (matching.length > 1) {
+        const customEntry = matching.find(
+          (m) =>
+            m.nama &&
+            m.nama !== "Teguh Arifin" &&
+            m.nama !== "Hendra" &&
+            m.nama !== "Luki" &&
+            m.nama !== "Joko"
+        );
+        chosen = customEntry || matching[matching.length - 1];
+      }
+
+      return {
+        id: chosen?.id || `sig-${d.id}`,
+        departmentId: d.id,
+        departmentCode: d.code,
+        departmentName: d.name,
+        nama: chosen?.nama || "",
+        jabatan: chosen?.jabatan || `Kepala Bagian ${d.name}`,
+        urutan: chosen?.urutan ?? index + 1,
+      };
+    });
+
     return {
       success: true,
       data: {
@@ -883,31 +916,21 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
           namaPemimpin: leader.nama,
           jabatanPemimpin: leader.jabatan,
         },
-        signatories: validSignatories.map((s) => ({
-          id: s.id,
-          departmentId: s.departmentId || "",
-          departmentCode: s.department?.code || "",
-          departmentName: s.department?.name || "",
-          nama: s.nama,
-          jabatan: s.jabatan,
-        })),
+        signatories: uniqueSignatoriesPerDept,
         allDepartments: allDepts.map((d) => ({
           id: d.id,
           code: d.code,
           name: d.name,
         })),
-        departmentSignatories: allDepts.map((d) => {
-          const sig = validSignatories.find((s) => s.departmentId === d.id);
-          return {
-            id: d.id,
-            code: d.code,
-            name: d.name,
-            namaPimpinan: sig?.nama || "",
-            nipPimpinan: "",
-            jabatanPimpinan: sig?.jabatan || `Kepala Bagian ${d.name}`,
-            isActive: d.isActive,
-          };
-        }),
+        departmentSignatories: uniqueSignatoriesPerDept.map((s) => ({
+          id: s.departmentId,
+          code: s.departmentCode,
+          name: s.departmentName,
+          namaPimpinan: s.nama,
+          nipPimpinan: "",
+          jabatanPimpinan: s.jabatan,
+          isActive: true,
+        })),
       },
     };
   } catch (error: any) {

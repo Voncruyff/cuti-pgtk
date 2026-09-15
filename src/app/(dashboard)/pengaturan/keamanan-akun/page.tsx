@@ -54,6 +54,7 @@ export default function PengaturanKeamananAkunPage() {
   // Profile Photo State & Crop Modal
   const [isPendingPhoto, startTransitionPhoto] = useTransition();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [cropModalImage, setCropModalImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +72,7 @@ export default function PengaturanKeamananAkunPage() {
       setUsername(u.username);
       setFullName(u.fullName);
       setPhotoPreview(u.fotoProfil || null);
+      setImageError(false);
     } else {
       toast.error(res.message || "Gagal memuat info kredensial pengguna.");
     }
@@ -199,11 +201,12 @@ export default function PengaturanKeamananAkunPage() {
                 title="Klik untuk memilih dan memotong foto profil"
               >
                 <div className="w-24 h-24 rounded-full ring-4 ring-sky-50 shadow-md overflow-hidden bg-slate-100 flex items-center justify-center transition-transform group-hover:scale-102">
-                  {photoPreview ? (
+                  {photoPreview && !imageError ? (
                     <img
                       src={photoPreview}
                       alt={fullName || username}
                       className="w-full h-full object-cover"
+                      onError={() => setImageError(true)}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-3xl font-extrabold flex items-center justify-center select-none shadow-inner">

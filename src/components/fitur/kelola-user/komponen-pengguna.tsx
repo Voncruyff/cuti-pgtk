@@ -390,12 +390,22 @@ export function TabelPengguna({
                             src={u.fotoProfil}
                             alt={u.fullName}
                             className="h-7 w-7 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              const fallback = e.currentTarget.parentElement?.querySelector(".avatar-initials-fallback");
+                              if (fallback) {
+                                (fallback as HTMLElement).style.display = "flex";
+                              }
+                            }}
                           />
-                        ) : (
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-[10px] font-bold shadow-2xs shrink-0 select-none">
-                            {u.fullName.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
+                        ) : null}
+                        <div
+                          className={`avatar-initials-fallback h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#0084c7] to-[#0093dc] text-white text-[10px] font-bold shadow-2xs shrink-0 select-none ${
+                            u.fotoProfil ? "hidden" : "flex"
+                          }`}
+                        >
+                          {u.fullName.slice(0, 2).toUpperCase()}
+                        </div>
                         <span>{u.fullName}</span>
                       </div>
                     </TableCell>

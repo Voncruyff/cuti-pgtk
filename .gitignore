@@ -34,5 +34,11 @@ next-env.d.ts
 # Uploads
 /public/uploads/*
 !/public/uploads/**/.gitkeep
+/uploads/*
+!/uploads/**/.gitkeep
+
+# Database backups
+*.sql
+
 .meta-panel-trigger
 meta.bat

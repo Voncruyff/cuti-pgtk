@@ -309,23 +309,21 @@ async function main() {
   ];
 
   for (const s of signers) {
-    await prisma.penandatanganan.upsert({
-      where: { id: s.id },
-      update: {
-        nama: s.nama,
-        jabatan: s.jabatan,
-        departmentId: s.deptId,
-        urutan: s.urutan,
-      },
-      create: {
-        id: s.id,
-        kategori: "BAGIAN",
-        nama: s.nama,
-        jabatan: s.jabatan,
-        departmentId: s.deptId,
-        urutan: s.urutan,
-      },
+    const existing = await prisma.penandatanganan.findFirst({
+      where: { departmentId: s.deptId },
     });
+    if (!existing) {
+      await prisma.penandatanganan.create({
+        data: {
+          id: s.id,
+          kategori: "BAGIAN",
+          nama: s.nama,
+          jabatan: s.jabatan,
+          departmentId: s.deptId,
+          urutan: s.urutan,
+        },
+      });
+    }
   }
   console.log("   ✓ Penandatangan GM & 4 Kepala Bagian terdaftar.");
 

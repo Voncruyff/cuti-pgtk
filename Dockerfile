@@ -46,19 +46,23 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Install prisma & tsx secara global agar skrip entrypoint & seed dapat berjalan
+# Install tools untuk entrypoint & dependency yang dibutuhkan seed
 RUN npm install -g prisma@5.22.0 tsx@4.19.2
+RUN npm install --no-save bcryptjs@2.4.3
 
 # Membuat user non-root demi standar keamanan
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Salin aset statis & hasil build standalone Next.js
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# Siapkan direktori uploads dengan hak akses nextjs
+RUN mkdir -p /app/public/uploads/profile /app/uploads/profile && chown -R nextjs:nodejs /app/public/uploads /app/uploads
 
 # Salin skrip entrypoint
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
