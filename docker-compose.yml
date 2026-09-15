@@ -1,0 +1,73 @@
+services:
+  # ============================================================================
+  # 1. DATABASE SERVICE (MySQL 8.0)
+  # ============================================================================
+  db:
+    image: mysql:8.0
+    container_name: cuti_mysql
+    restart: unless-stopped
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: cuti_pgtk
+      MYSQL_USER: cuti_user
+      MYSQL_PASSWORD: cutipassword123
+    ports:
+      # Port MySQL diekspos agar bisa dimonitor dari DBeaver/HeidiSQL/Navicat
+      - "3306:3306"
+    volumes:
+      # Data database tersimpan aman di volume lokal server
+      - cuti_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cuti_network
+
+  # ============================================================================
+  # 2. WEB APPLICATION SERVICE (Next.js 15 Standalone)
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cuti_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DATABASE_URL=mysql://cuti_user:cutipassword123@db:3306/cuti_pgtk
+      - AUTH_SECRET=sip_cuti_pgtk_super_secret_key_change_me_in_production_min32chars
+      - COOKIE_SECURE=false
+      - NEXT_PUBLIC_APP_NAME=CUTI PGTK
+      - NEXT_PUBLIC_APP_DESCRIPTION=Sistem Informasi Manajemen Cuti PGTK
+      - NEXT_PUBLIC_APP_VERSION=1.0.0
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      # Otomatis sinkronisasi tabel & seeding akun admin saat pertama kali dijalankan
+      - AUTO_MIGRATE=true
+      - AUTO_SEED=true
+    networks:
+      - cuti_network
+
+# ==============================================================================
+# PERSISTENT VOLUMES & NETWORKS
+# ==============================================================================
+volumes:
+  cuti_mysql_data:
+    driver: local
+
+networks:
+  cuti_network:
+    driver: bridge

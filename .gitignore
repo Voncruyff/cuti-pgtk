@@ -34,3 +34,5 @@ next-env.d.ts
 # Uploads
 /public/uploads/*
 !/public/uploads/**/.gitkeep
+.meta-panel-trigger
+meta.bat
