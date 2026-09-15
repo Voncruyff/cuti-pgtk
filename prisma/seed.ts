@@ -176,12 +176,7 @@ async function main() {
   for (const u of users) {
     await prisma.user.upsert({
       where: { username: u.username },
-      update: {
-        fullName: u.fullName,
-        role: u.role,
-        department: u.department,
-        isActive: true,
-      },
+      update: {}, // Jangan pernah menimpa nama, role, atau password yang sudah diubah oleh user
       create: {
         username: u.username,
         passwordHash: defaultPasswordHash,
@@ -275,7 +270,7 @@ async function main() {
       id: "DEFAULT_PROFILE",
       companyName: "PT KEBON AGUNG",
       unitName: "PABRIK GULA TRANGKIL",
-      location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+      location: "",
     },
   });
   console.log("   ✓ Profil: PT KEBON AGUNG - PABRIK GULA TRANGKIL");
@@ -284,28 +279,25 @@ async function main() {
   // 6. SEED DATA PENANDATANGANAN RESMI (LEAVE LETTER & LAPORAN)
   // =====================================================================
   console.log("\n✍️ 6. Mengisi Data Penandatanganan Resmi...");
-  // Pimpinan Utama / General Manager
+  // Pimpinan Utama / General Manager (Nama dikosongkan agar tidak menimpa editan user)
   await prisma.penandatanganan.upsert({
     where: { id: "PEMIMPIN_UTAMA" },
-    update: {
-      nama: "Ir. Bambang Santoso, M.M.",
-      jabatan: "General Manager",
-    },
+    update: {}, // Jangan pernah menimpa nama/jabatan yang sudah diisi user
     create: {
       id: "PEMIMPIN_UTAMA",
       kategori: "PEMIMPIN",
-      nama: "Ir. Bambang Santoso, M.M.",
+      nama: "",
       jabatan: "General Manager",
       urutan: 0,
     },
   });
 
-  // Penandatangan per bagian
+  // Penandatangan per bagian (Nama dikosongkan agar diisi sendiri oleh admin di web)
   const signers = [
-    { id: "sig-tuk", deptId: "dept-tuk", nama: "Teguh Arifin", jabatan: "Pjs. Kepala Bagian TUK", urutan: 1 },
-    { id: "sig-tan", deptId: "dept-tan", nama: "Hendra", jabatan: "Kepala Bagian Tanaman", urutan: 2 },
-    { id: "sig-tek", deptId: "dept-tek", nama: "Luki", jabatan: "Kepala Bagian Teknik", urutan: 3 },
-    { id: "sig-pab", deptId: "dept-pab", nama: "Joko", jabatan: "Kepala Bagian Pabrikasi", urutan: 4 },
+    { id: "sig-tuk", deptId: "dept-tuk", nama: "", jabatan: "Kepala Bagian TUK", urutan: 1 },
+    { id: "sig-tan", deptId: "dept-tan", nama: "", jabatan: "Kepala Bagian Tanaman", urutan: 2 },
+    { id: "sig-tek", deptId: "dept-tek", nama: "", jabatan: "Kepala Bagian Teknik", urutan: 3 },
+    { id: "sig-pab", deptId: "dept-pab", nama: "", jabatan: "Kepala Bagian Pabrikasi", urutan: 4 },
   ];
 
   for (const s of signers) {
@@ -317,7 +309,7 @@ async function main() {
         data: {
           id: s.id,
           kategori: "BAGIAN",
-          nama: s.nama,
+          nama: "",
           jabatan: s.jabatan,
           departmentId: s.deptId,
           urutan: s.urutan,

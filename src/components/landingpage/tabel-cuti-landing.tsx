@@ -413,9 +413,6 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                   <DialogTitle className="text-base font-bold text-[#263238]">
                     Rincian Cuti Karyawan
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#6B7280]">
-                    Data resmi permohonan izin cuti PT Kebon Agung - PG Trangkil
-                  </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
