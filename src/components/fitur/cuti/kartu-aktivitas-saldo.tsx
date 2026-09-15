@@ -1923,9 +1923,11 @@ export function BalanceActivityCard({
                   unoptimized
                   className="h-9 w-auto object-contain"
                 />
-                <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
-                  {companyProfile.location}
-                </div>
+                {companyProfile.location && companyProfile.location.trim() !== "" && (
+                  <div className="text-[9px] text-black leading-tight mt-0.5 font-sans">
+                    {companyProfile.location}
+                  </div>
+                )}
               </div>
             </div>
 

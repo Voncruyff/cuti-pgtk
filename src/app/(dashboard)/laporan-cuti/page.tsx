@@ -619,9 +619,11 @@ export default function HalamanLaporan() {
               unoptimized
               className="h-9 w-auto object-contain"
             />
-            <div className="text-[9px] text-black leading-tight mt-0.5">
-              {companyAddress}
-            </div>
+            {companyAddress && companyAddress.trim() !== "" && (
+              <div className="text-[9px] text-black leading-tight mt-0.5">
+                {companyAddress}
+              </div>
+            )}
           </div>
         </div>
 

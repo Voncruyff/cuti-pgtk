@@ -654,7 +654,7 @@ export async function updateCompanyProfileSettingsAction(payload: {
 export async function updateCompanyProfileOnlyAction(payload: {
   companyName: string;
   unitName: string;
-  location: string;
+  location?: string;
 }): Promise<ActionResult<void>> {
   const user = await requireAuth();
   if (user.role !== "ADMIN_UTAMA") {
@@ -662,18 +662,19 @@ export async function updateCompanyProfileOnlyAction(payload: {
   }
 
   try {
+    const locValue = typeof payload.location === "string" ? payload.location.trim() : "";
     await prisma.profilPerusahaan.upsert({
       where: { id: "DEFAULT_PROFILE" },
       update: {
         companyName: payload.companyName.trim() || "PT KEBON AGUNG",
         unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
-        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+        location: locValue,
       },
       create: {
         id: "DEFAULT_PROFILE",
         companyName: payload.companyName.trim() || "PT KEBON AGUNG",
         unitName: payload.unitName.trim() || "PABRIK GULA TRANGKIL",
-        location: payload.location.trim() || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
+        location: locValue,
       },
     });
 

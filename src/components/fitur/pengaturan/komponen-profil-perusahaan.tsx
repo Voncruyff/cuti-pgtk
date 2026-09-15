@@ -117,17 +117,18 @@ export function KomponenProfilPerusahaan() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-[#263238]">Lokasi / Alamat Pabrik Gula</Label>
+            <Label className="text-xs font-semibold text-[#263238]">
+              Lokasi / Alamat Pabrik Gula <span className="text-[11px] font-normal text-[#6B7280]">(Opsional)</span>
+            </Label>
             <Input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="h-9 text-xs"
-              placeholder="Contoh: Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153"
-              required
+              placeholder="Contoh: Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153 (Boleh dikosongkan)"
             />
             <p className="text-[11px] text-[#6B7280]">
-              Alamat ini akan otomatis tercantum pada kop surat cetak Laporan Cuti, Surat Izin Cuti, dan Kartu Histori Saldo.
+              Opsional. Jika diisi, alamat ini akan tercantum pada kop surat cetak Laporan Cuti, Surat Izin Cuti, dan Kartu Histori Saldo.
             </p>
           </div>
 

@@ -3,10 +3,7 @@
 import { useState, useMemo } from "react";
 import {
   Search,
-  Users,
-  Briefcase,
   Calendar,
-  Layers,
   Clock,
   CheckCircle2,
   X,
@@ -72,7 +69,6 @@ function parseAndFormatDatesLong(tglString: string): string[] {
 export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLandingProps) {
   const [query, setQuery] = useState("");
   const [filterKategori, setFilterKategori] = useState<"SEMUA" | "PIMPINAN" | "PELAKSANA">("SEMUA");
-  const [filterJenis, setFilterJenis] = useState<"SEMUA" | "TAHUNAN" | "BESAR" | "INHALDAGEN">("SEMUA");
   const [selectedKaryawan, setSelectedKaryawan] = useState<KaryawanCutiItem | null>(null);
   const [sortField, setSortField] = useState<string>("nama");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -101,9 +97,6 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
   const totalCount = data.length;
   const countPimpinan = data.filter((d) => (d.category || "").toUpperCase() === "PIMPINAN").length;
   const countPelaksana = data.filter((d) => (d.category || "").toUpperCase() === "PELAKSANA").length;
-  const countTahunan = data.filter((d) => d.cutiTahunan !== null && Number(d.cutiTahunan) !== 0).length;
-  const countBesar = data.filter((d) => d.cutiBesar !== null && Number(d.cutiBesar) !== 0).length;
-  const countInhaldagen = data.filter((d) => d.inhaldagen !== null && Number(d.inhaldagen) !== 0).length;
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -112,16 +105,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
         if ((item.category || "").toUpperCase() !== filterKategori) return false;
       }
 
-      // 2. Jenis Cuti Filter
-      if (filterJenis === "TAHUNAN") {
-        if (!item.cutiTahunan || Number(item.cutiTahunan) === 0) return false;
-      } else if (filterJenis === "BESAR") {
-        if (!item.cutiBesar || Number(item.cutiBesar) === 0) return false;
-      } else if (filterJenis === "INHALDAGEN") {
-        if (!item.inhaldagen || Number(item.inhaldagen) === 0) return false;
-      }
-
-      // 3. Text Search
+      // 2. Text Search
       if (query.trim()) {
         const q = query.toLowerCase();
         const matchNama = (item.nama || "").toLowerCase().includes(q);
@@ -135,7 +119,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
 
       return true;
     });
-  }, [data, query, filterKategori, filterJenis]);
+  }, [data, query, filterKategori]);
 
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
@@ -157,45 +141,16 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
     });
   }, [filteredData, sortField, sortDirection]);
 
-  const hasActiveFilters = query.trim() !== "" || filterKategori !== "SEMUA" || filterJenis !== "SEMUA";
+  const hasActiveFilters = query.trim() !== "" || filterKategori !== "SEMUA";
 
   const resetFilters = () => {
     setQuery("");
     setFilterKategori("SEMUA");
-    setFilterJenis("SEMUA");
   };
 
   return (
     <div className="space-y-3.5">
-      {/* 1. Metrics Bar - Minimalist & Compact Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
-          <span className="text-xs text-[#6B7280] font-medium">Total Cuti</span>
-          <span className="text-sm font-bold text-[#263238]">
-            {totalCount} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
-          </span>
-        </div>
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
-          <span className="text-xs text-[#6B7280] font-medium">Tahunan</span>
-          <span className="text-sm font-bold text-[#0789D1]">
-            {countTahunan} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
-          </span>
-        </div>
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
-          <span className="text-xs text-[#6B7280] font-medium">Besar</span>
-          <span className="text-sm font-bold text-[#005B96]">
-            {countBesar} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
-          </span>
-        </div>
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] px-3.5 py-2 flex items-center justify-between shadow-2xs">
-          <span className="text-xs text-[#6B7280] font-medium">Inhaldagen</span>
-          <span className="text-sm font-bold text-slate-700">
-            {countInhaldagen} <span className="text-[10px] font-normal text-[#6B7280]">orang</span>
-          </span>
-        </div>
-      </div>
-
-      {/* 2. Filter & Search Bar - Minimalist & Compact */}
+      {/* Filter & Search Bar - Minimalist & Compact */}
       <div className="bg-white/90 backdrop-blur-xl rounded-xl border border-[#E8F5FC] p-2.5 sm:p-3 shadow-2xs space-y-2">
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           {/* Search Box */}
@@ -258,18 +213,6 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                 Pelaksana ({countPelaksana})
               </button>
             </div>
-
-            {/* Jenis Cuti Dropdown Selector */}
-            <select
-              value={filterJenis}
-              onChange={(e) => setFilterJenis(e.target.value as any)}
-              className="h-7 text-xs bg-[#F3F6F8] text-[#263238] border border-[#E8F5FC] rounded-lg px-2 cursor-pointer focus:outline-none focus:border-[#0789D1] font-medium transition-colors"
-            >
-              <option value="SEMUA">Semua Jenis Cuti</option>
-              <option value="TAHUNAN">Cuti Tahunan</option>
-              <option value="BESAR">Cuti Besar</option>
-              <option value="INHALDAGEN">Inhaldagen</option>
-            </select>
 
             {hasActiveFilters && (
               <Button
@@ -352,11 +295,10 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                     className="py-3 px-4 min-w-[170px] cursor-pointer select-none group hover:text-[#263238] transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>Unit Penugasan</span>
+                      <span>Bagian</span>
                       {renderSortIcon("bagian")}
                     </div>
                   </th>
-                  <th className="py-3 px-4 min-w-[130px]">Jenis Cuti</th>
                   <th
                     onClick={() => handleSort("totalHari")}
                     className="py-3 px-4 min-w-[100px] cursor-pointer select-none group hover:text-[#263238] transition-colors"
@@ -373,10 +315,6 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
               <tbody className="divide-y divide-[#E8F5FC]/60">
                 {sortedData.map((item, idx) => {
                   const isPimpinan = (item.category || "").toUpperCase() === "PIMPINAN";
-
-                  const hasTahunan = item.cutiTahunan !== null && Number(item.cutiTahunan) !== 0;
-                  const hasBesar = item.cutiBesar !== null && Number(item.cutiBesar) !== 0;
-                  const hasInhaldagen = item.inhaldagen !== null && Number(item.inhaldagen) !== 0;
 
                   return (
                     <tr
@@ -412,7 +350,7 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                         </div>
                       </td>
 
-                      {/* Unit Penugasan */}
+                      {/* Bagian */}
                       <td className="py-3 px-4">
                         <div className="space-y-0.5">
                           <span className="font-medium text-[#263238] block">
@@ -421,32 +359,6 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                           <span className="text-[10px] text-[#6B7280] block">
                             Stasiun: {item.stasiun || "-"}
                           </span>
-                        </div>
-                      </td>
-
-                      {/* Jenis Cuti (Calm Muted Corporate Colors, No Neon) */}
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {hasTahunan && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#E8F5FC] text-[#0789D1] border border-[#0789D1]/30">
-                              Cuti Tahunan
-                            </span>
-                          )}
-                          {hasBesar && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#F3F6F8] text-[#005B96] border border-[#005B96]/30">
-                              Cuti Besar
-                            </span>
-                          )}
-                          {hasInhaldagen && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#E8F5FC] text-[#005B96] border border-[#005B96]/30">
-                              Inhaldagen
-                            </span>
-                          )}
-                          {!hasTahunan && !hasBesar && !hasInhaldagen && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#F3F6F8] text-[#6B7280] border border-slate-200">
-                              Cuti Kerja
-                            </span>
-                          )}
                         </div>
                       </td>
 
@@ -550,41 +462,17 @@ export function TabelCutiLanding({ data, tanggalHariIniFormatted }: TabelCutiLan
                 </div>
               </div>
 
-              {/* Jenis & Durasi Cuti Box */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-[#F3F6F8] border border-[#E8F5FC] space-y-1">
-                  <span className="text-[10px] font-medium text-[#6B7280] block uppercase tracking-wider">
-                    Jenis Cuti
-                  </span>
-                  <div>
-                    {selectedKaryawan.cutiTahunan && Number(selectedKaryawan.cutiTahunan) !== 0 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E8F5FC] text-[#0789D1] border border-[#0789D1]/30">
-                        Cuti Tahunan
-                      </span>
-                    ) : selectedKaryawan.cutiBesar && Number(selectedKaryawan.cutiBesar) !== 0 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white text-[#005B96] border border-[#005B96]/30">
-                        Cuti Besar
-                      </span>
-                    ) : selectedKaryawan.inhaldagen && Number(selectedKaryawan.inhaldagen) !== 0 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E8F5FC] text-[#005B96] border border-[#005B96]/30">
-                        Inhaldagen
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-[#6B7280] border border-slate-200">
-                        Cuti Kerja
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#F3F6F8] border border-[#E8F5FC] space-y-1">
+              {/* Total Durasi Cuti Box */}
+              <div className="p-3.5 rounded-xl bg-[#F3F6F8] border border-[#E8F5FC] flex items-center justify-between">
+                <div>
                   <span className="text-[10px] font-medium text-[#6B7280] block uppercase tracking-wider">
                     Total Durasi
                   </span>
-                  <div className="flex items-center gap-1.5 font-bold text-[#263238] text-sm">
-                    <Clock className="h-4 w-4 text-[#6B7280]" />
-                    <span>{Math.abs(Number(selectedKaryawan.totalHari) || 1)} Hari Kerja</span>
-                  </div>
+                  <span className="text-xs text-[#6B7280]">Lama izin cuti kerja</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-bold text-[#005B96] text-sm bg-white px-3 py-1.5 rounded-lg border border-[#E8F5FC] shadow-2xs">
+                  <Clock className="h-4 w-4 text-[#0789D1]" />
+                  <span>{Math.abs(Number(selectedKaryawan.totalHari) || 1)} Hari Kerja</span>
                 </div>
               </div>
 

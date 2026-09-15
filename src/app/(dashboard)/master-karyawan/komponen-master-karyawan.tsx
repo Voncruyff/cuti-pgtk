@@ -216,7 +216,7 @@ export function KomponenMasterKaryawan({ user, initialData }: KomponenMasterKary
     <>
       {/* Tombol pintasan Master Stasiun (HANYA UNTUK ADMIN UTAMA) */}
       {canManage && (
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 print:hidden">
           <Link href="/master-stasiun">
             <Button variant="outline" size="default" className="font-medium text-slate-700 cursor-pointer">
               <Factory className="h-4 w-4 text-slate-500" />

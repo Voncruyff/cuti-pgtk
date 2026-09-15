@@ -138,7 +138,7 @@ export function KomponenHalamanBagian({ initialData }: KomponenHalamanBagianProp
   return (
     <>
       {/* Tab Navigasi Stasiun & Bagian */}
-      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 w-fit mb-4">
+      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 w-fit mb-4 print:hidden">
         <Link
           href="/master-stasiun"
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-[#0077b6] hover:bg-white/50 rounded-md transition-colors"

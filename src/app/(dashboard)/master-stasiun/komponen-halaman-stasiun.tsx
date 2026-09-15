@@ -164,7 +164,7 @@ export function KomponenHalamanStasiun({
   return (
     <>
       {/* Tab Navigasi */}
-      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 w-fit mb-4">
+      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 w-fit mb-4 print:hidden">
         <Link
           href="/master-stasiun"
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md bg-white text-[#0084c7] shadow-2xs"
