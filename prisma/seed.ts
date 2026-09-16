@@ -174,10 +174,23 @@ async function main() {
   ];
 
   for (const u of users) {
-    await prisma.user.upsert({
-      where: { username: u.username },
-      update: {}, // Jangan pernah menimpa nama, role, atau password yang sudah diubah oleh user
-      create: {
+    // Cek apakah akun ini sudah ada (baik dengan username default maupun jika username sudah diubah oleh admin)
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: u.username },
+          { role: u.role, department: u.department },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      console.log(`   ℹ️ User [${u.role} - ${u.department}] sudah ada (username: '${existingUser.username}'). Tidak dibuat ulang.`);
+      continue;
+    }
+
+    await prisma.user.create({
+      data: {
         username: u.username,
         passwordHash: defaultPasswordHash,
         fullName: u.fullName,
@@ -186,7 +199,7 @@ async function main() {
         isActive: true,
       },
     });
-    console.log(`   ✓ User: ${u.username.padEnd(10)} | Role: ${u.role.padEnd(12)} | Bagian: ${u.department}`);
+    console.log(`   ✓ User dibuat: ${u.username.padEnd(10)} | Role: ${u.role.padEnd(12)} | Bagian: ${u.department}`);
   }
 
   // =====================================================================
