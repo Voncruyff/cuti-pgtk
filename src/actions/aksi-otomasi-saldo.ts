@@ -338,6 +338,43 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
             longLeaveAdded = typeof longLeavePolicy.saldoDiberikan === "number" ? longLeavePolicy.saldoDiberikan : 30;
 
             await prisma.$transaction(async (tx: any) => {
+              // Ambil saldo terkini setelah operasi tahunan jika ada
+              const freshEmp = await tx.employee.findUnique({
+                where: { nip: emp.nip },
+                include: { leaveBalance: true },
+              });
+
+              const curAnnual = freshEmp?.leaveBalance?.cutiTahunan ?? 12;
+              const curInhal = isPelaksana ? 0 : (freshEmp?.leaveBalance?.inhaldagen ?? 0);
+              const curLong = freshEmp?.leaveBalance?.cutiBesar ?? 0;
+
+              // 1. Aturan Non-Akumulasi Cuti Besar (isCarryOver: false)
+              // Jika masih ada sisa cuti besar dari siklus lama, sisa tersebut dihanguskan
+              let oldLongExpired = 0;
+              if (longLeavePolicy.isCarryOver) {
+                const maxCarry = longLeavePolicy.maxCarryOver || 0;
+                if (curLong > maxCarry) {
+                  oldLongExpired = curLong - maxCarry;
+                }
+              } else {
+                oldLongExpired = curLong;
+              }
+
+              if (oldLongExpired > 0) {
+                const expOldLngTxId = `exp-lng-old-${emp.nip}-${latestAnniversaryYear}`;
+                await tx.$executeRaw`
+                  INSERT INTO aktivitas_saldo (
+                    id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
+                  ) VALUES (
+                    ${expOldLngTxId}, ${emp.nip}, ${emp.nama}, 'KEDALUWARSA', 
+                    ${`Kedaluwarsa Kuota Cuti Besar Periode Lalu (Sisa ${oldLongExpired} hari hangus karena terbit siklus baru)`}, 
+                    ${expireDate}, NULL, 0, ${oldLongExpired}, 0, ${oldLongExpired}, 
+                    ${`AUTO_EXPIRE_PREV_LONG_LEAVE_${latestAnniversaryYear}`}, ${expireDate}, ${expireDate}
+                  )
+                `;
+              }
+
+              // 2. Catat penambahan kuota hak cuti besar baru
               const accrualTxId = `acc-lng-${emp.nip}-${latestAnniversaryYear}`;
               await tx.$executeRaw`
                 INSERT INTO aktivitas_saldo (
@@ -350,15 +387,8 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
                 )
               `;
 
-              // Ambil saldo terkini setelah operasi tahunan jika ada
-              const freshEmp = await tx.employee.findUnique({
-                where: { nip: emp.nip },
-                include: { leaveBalance: true },
-              });
-
-              const curAnnual = freshEmp?.leaveBalance?.cutiTahunan ?? 12;
-              const curInhal = isPelaksana ? 0 : (freshEmp?.leaveBalance?.inhaldagen ?? 0);
-              const newLong = (freshEmp?.leaveBalance?.cutiBesar ?? 0) + longLeaveAdded;
+              const keptLong = curLong - oldLongExpired;
+              const newLong = keptLong + longLeaveAdded;
               const newTotal = curAnnual + newLong + curInhal;
 
               await tx.leaveBalance.upsert({
@@ -375,6 +405,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
                 update: {
                   cutiBesar: newLong,
                   total: newTotal,
+                  periode: latestAnniversaryYear,
                 },
               });
             });
@@ -396,7 +427,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
           },
         });
 
-        if (!existingLongExpire && (emp.leaveBalance?.cutiBesar ?? 0) > 0) {
+        if (longLeaveAdded === 0 && !existingLongExpire && (emp.leaveBalance?.cutiBesar ?? 0) > 0) {
           const lastGrantedActivity = await prisma.balanceActivity.findFirst({
             where: {
               nip: emp.nip,
