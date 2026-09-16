@@ -84,6 +84,7 @@ interface BalanceActivityCardProps {
     total: number;
   }) => void;
   actionButton?: React.ReactNode;
+  onlyActionableLeaves?: boolean;
 }
 
 function parseDatesToIso(datesList?: string[]): string[] {
@@ -107,6 +108,7 @@ export function BalanceActivityCard({
   onRefreshHistory,
   onEmployeeBalancesUpdated,
   actionButton,
+  onlyActionableLeaves = false,
 }: BalanceActivityCardProps) {
   const isPelaksana = employee.category?.toUpperCase() === "PELAKSANA";
 
@@ -336,23 +338,32 @@ export function BalanceActivityCard({
     );
   };
 
+  const isActionableLeave = (item: EmployeeLeaveHistoryItem): boolean => {
+    return item.transactionType !== "TAMBAH_SALDO" && item.transactionType !== "KEDALUWARSA";
+  };
+
+  const baseHistory = useMemo(() => {
+    if (!onlyActionableLeaves) return history;
+    return history.filter(isActionableLeave);
+  }, [history, onlyActionableLeaves]);
+
   const countMasuk = useMemo(() => {
-    return history.filter(isSaldoMasuk).length;
-  }, [history]);
+    return baseHistory.filter(isSaldoMasuk).length;
+  }, [baseHistory]);
 
   const countKeluar = useMemo(() => {
-    return history.filter(isSaldoKeluar).length;
-  }, [history]);
+    return baseHistory.filter(isSaldoKeluar).length;
+  }, [baseHistory]);
 
   const filteredHistory = useMemo(() => {
     if (filterType === "MASUK") {
-      return history.filter(isSaldoMasuk);
+      return baseHistory.filter(isSaldoMasuk);
     }
     if (filterType === "KELUAR") {
-      return history.filter(isSaldoKeluar);
+      return baseHistory.filter(isSaldoKeluar);
     }
-    return history;
-  }, [history, filterType]);
+    return baseHistory;
+  }, [baseHistory, filterType]);
 
   const sortedHistory = useMemo(() => {
     return [...filteredHistory].sort((a, b) => {
@@ -1074,10 +1085,20 @@ export function BalanceActivityCard({
               <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
                 <History className="h-4 w-4 text-slate-600 shrink-0" />
                 <CardTitle className="text-sm sm:text-base font-semibold text-slate-800 tracking-tight truncate">
-                  Riwayat Aktivitas Saldo — <span className="font-bold text-slate-900">{employee.name}</span>
+                  {onlyActionableLeaves ? (
+                    <>
+                      Daftar Permohonan Cuti — <span className="font-bold text-slate-900">{employee.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      Riwayat Aktivitas Saldo — <span className="font-bold text-slate-900">{employee.name}</span>
+                    </>
+                  )}
                 </CardTitle>
                 <Badge variant="outline" className="shrink-0 whitespace-nowrap text-[11px] font-mono bg-white border-slate-200 text-slate-600 px-2.5 py-0.5 shadow-2xs">
-                  {filterType !== "ALL" ? (
+                  {onlyActionableLeaves ? (
+                    `${baseHistory.length} Permohonan`
+                  ) : filterType !== "ALL" ? (
                     <>
                       <span className={filterType === "MASUK" ? "text-emerald-700 font-bold" : "text-red-700 font-bold"}>
                         {filteredHistory.length}
@@ -1090,7 +1111,9 @@ export function BalanceActivityCard({
                 </Badge>
               </div>
               <CardDescription className="text-xs text-slate-500 mt-1">
-                Catatan mutasi penambahan dan penggunaan saldo cuti karyawan
+                {onlyActionableLeaves
+                  ? "Daftar permohonan cuti yang dapat dikoreksi, dibatalkan, atau dicetak surat izinnya"
+                  : "Catatan mutasi penambahan dan penggunaan saldo cuti karyawan"}
               </CardDescription>
             </div>
 
@@ -1111,89 +1134,101 @@ export function BalanceActivityCard({
           </div>
         </CardHeader>
 
-        {/* Sub-toolbar Filter Khusus Mutasi (Hanya Slider / Segmented Control yang Rapi & Jelas) */}
-        <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Sub-toolbar Filter Khusus Mutasi / Permohonan Cuti */}
+        {onlyActionableLeaves ? (
+          <div className="px-4 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-2.5">
             <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
               <Filter className="h-3.5 w-3.5 text-slate-400" />
-              Filter Mutasi:
+              Daftar Permohonan Cuti
             </span>
-
-            {/* Segmented Slider Control */}
-            <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setFilterType("ALL")}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
-                  filterType === "ALL"
-                    ? "bg-white text-slate-800 font-bold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                )}
-              >
-                <span>Semua</span>
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
-                    filterType === "ALL"
-                      ? "bg-slate-100 text-slate-700"
-                      : "bg-slate-300/60 text-slate-600"
-                  )}
-                >
-                  {history.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType("MASUK")}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
-                  filterType === "MASUK"
-                    ? "bg-emerald-600 text-white font-bold shadow-2xs"
-                    : "text-slate-600 hover:text-emerald-700"
-                )}
-              >
-                <span>Masuk</span>
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
-                    filterType === "MASUK"
-                      ? "bg-emerald-700/90 text-emerald-100"
-                      : "bg-emerald-100 text-emerald-700"
-                  )}
-                >
-                  {countMasuk}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType("KELUAR")}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
-                  filterType === "KELUAR"
-                    ? "bg-rose-600 text-white font-bold shadow-2xs"
-                    : "text-slate-600 hover:text-rose-700"
-                )}
-              >
-                <span>Keluar</span>
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
-                    filterType === "KELUAR"
-                      ? "bg-rose-700/90 text-rose-100"
-                      : "bg-rose-100 text-rose-700"
-                  )}
-                >
-                  {countKeluar}
-                </span>
-              </button>
+            <div className="text-[11px] text-slate-500 font-medium select-none">
+              Menampilkan <strong className="text-slate-700">{sortedHistory.length}</strong> permohonan cuti yang dapat diproses
             </div>
           </div>
+        ) : (
+          <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-slate-400" />
+                Filter Mutasi:
+              </span>
 
-          <div className="text-[11px] text-slate-500 font-medium select-none">
-            Menampilkan <strong className="text-slate-700">{filteredHistory.length}</strong> dari {history.length} catatan mutasi
+              {/* Segmented Slider Control */}
+              <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setFilterType("ALL")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
+                    filterType === "ALL"
+                      ? "bg-white text-slate-800 font-bold shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  <span>Semua</span>
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                      filterType === "ALL"
+                        ? "bg-slate-100 text-slate-700"
+                        : "bg-slate-300/60 text-slate-600"
+                    )}
+                  >
+                    {history.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType("MASUK")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
+                    filterType === "MASUK"
+                      ? "bg-emerald-600 text-white font-bold shadow-2xs"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <span>Masuk</span>
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                      filterType === "MASUK"
+                        ? "bg-emerald-700/90 text-emerald-100"
+                        : "bg-emerald-100 text-emerald-700"
+                    )}
+                  >
+                    {countMasuk}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType("KELUAR")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
+                    filterType === "KELUAR"
+                      ? "bg-rose-600 text-white font-bold shadow-2xs"
+                      : "text-slate-600 hover:text-rose-700"
+                  )}
+                >
+                  <span>Keluar</span>
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                      filterType === "KELUAR"
+                        ? "bg-rose-700/90 text-rose-100"
+                        : "bg-rose-100 text-rose-700"
+                    )}
+                  >
+                    {countKeluar}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-500 font-medium select-none">
+              Menampilkan <strong className="text-slate-700">{filteredHistory.length}</strong> dari {history.length} catatan mutasi
+            </div>
           </div>
-        </div>
+        )}
 
         <CardContent className="p-0">
           {isLoading ? (
@@ -1201,11 +1236,19 @@ export function BalanceActivityCard({
               <Loader2 className="h-5 w-5 animate-spin text-slate-500" />
               <span className="text-xs">Memuat riwayat aktivitas...</span>
             </div>
-          ) : history.length === 0 ? (
+          ) : baseHistory.length === 0 ? (
             <div className="py-12 text-center text-slate-400 space-y-2">
               <History className="h-8 w-8 mx-auto stroke-1 text-slate-300" />
-              <p className="text-xs font-medium text-slate-500">Belum ada riwayat aktivitas saldo untuk karyawan ini.</p>
-              <p className="text-[11px] text-slate-400">Gunakan tombol di atas untuk mengajukan cuti atau menambah saldo.</p>
+              <p className="text-xs font-medium text-slate-500">
+                {onlyActionableLeaves
+                  ? "Belum ada permohonan pengambilan cuti untuk karyawan ini."
+                  : "Belum ada riwayat aktivitas saldo untuk karyawan ini."}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {onlyActionableLeaves
+                  ? "Permohonan cuti yang diajukan akan muncul di sini agar dapat dikoreksi atau dibatalkan."
+                  : "Gunakan tombol di atas untuk mengajukan cuti atau menambah saldo."}
+              </p>
             </div>
           ) : filteredHistory.length === 0 ? (
             <div className="py-12 text-center text-slate-400 space-y-2">

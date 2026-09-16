@@ -323,6 +323,7 @@ export function KomponenKoreksiCuti() {
           history={employeeHistory}
           isLoading={isLoadingHistory}
           onRefreshHistory={loadEmployeeHistory}
+          onlyActionableLeaves={true}
           onEmployeeBalancesUpdated={(updatedBalances) => {
             const updatedEmp = {
               ...selectedEmployee,
