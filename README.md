@@ -651,28 +651,29 @@ Seluruh logika bisnis dan operasi database diimplementasikan sebagai Next.js Ser
 
 Sistem menggunakan dua peran pengguna dengan batasan akses yang berbeda:
 
-| Fitur / Halaman | Admin Utama | Admin Bagian |
-| :--- | :---: | :---: |
-| Dashboard | Semua Bagian | Bagian Sendiri |
-| Master Karyawan | Akses Penuh | Tidak Ada Akses |
-| Master Bagian | Akses Penuh | Tidak Ada Akses |
-| Master Stasiun | Akses Penuh | Tidak Ada Akses |
-| Pengambilan Cuti | Semua Bagian | Bagian Sendiri |
-| Koreksi Cuti | Semua Bagian | Bagian Sendiri |
-| Tambah Saldo Cuti | Akses Penuh | Tidak Ada Akses |
-| Rincian Cuti | Semua Bagian | Bagian Sendiri |
-| Laporan Cuti | Semua Bagian | Bagian Sendiri |
-| Kelola Pengguna | Akses Penuh | Tidak Ada Akses |
-| Automasi Saldo | Akses Penuh | Tidak Ada Akses |
-| Profil Perusahaan | Akses Penuh | Tidak Ada Akses |
-| Penandatangan | Akses Penuh | Tidak Ada Akses |
-| Keamanan Akun | Akun Sendiri | Akun Sendiri |
-| Landing Page | Publik (Tanpa Login) | Publik (Tanpa Login) |
+| Fitur / Halaman | Admin Utama | Admin Bagian | Keterangan Batasan Akses |
+| :--- | :---: | :---: | :--- |
+| Dashboard | Semua Bagian | Bagian Sendiri | Statistik dan aktivitas cuti disaring per departemen untuk Admin Bagian |
+| Master Karyawan | Akses Penuh | Tidak Ada Akses | Manajemen data pegawai hanya oleh Admin Utama |
+| Master Bagian | Akses Penuh | Tidak Ada Akses | Pengelolaan struktur departemen pabrik |
+| Master Stasiun | Akses Penuh | Tidak Ada Akses | Pengelolaan data stasiun kerja per bagian |
+| Pengambilan Cuti | Semua Bagian | Bagian Sendiri | Form pengajuan cuti dan pemotongan saldo |
+| Koreksi Cuti | Semua Bagian | Bagian Sendiri | Pembatalan transaksi cuti dan pengembalian saldo |
+| Tambah Saldo Cuti | Akses Penuh | Tidak Ada Akses | Injeksi saldo cuti tahunan/besar/tambahan manual |
+| Rincian Cuti | Semua Bagian | Bagian Sendiri | Buku besar ledger saldo dan histori cuti karyawan |
+| Laporan Cuti | Semua Bagian | Bagian Sendiri | Rekapitulasi permohonan cuti dan cetak format A4 |
+| Kelola Pengguna | Akses Penuh | Tidak Ada Akses | Admin Utama dapat membuat, mengedit profil/role/bagian, memblokir, serta **mereset password seluruh akun Admin Bagian** |
+| Automasi Saldo | Akses Penuh | Tidak Ada Akses | Konfigurasi kebijakan hak cuti tahunan/besar dan eksekusi manual |
+| Profil Perusahaan | Akses Penuh | Tidak Ada Akses | Pengaturan data instansi dan kop surat cetak |
+| Penandatangan | Akses Penuh | Tidak Ada Akses | Konfigurasi pejabat penandatangan Pimpinan dan Kepala Bagian |
+| Keamanan Akun | Akun Sendiri | Akun Sendiri | Khusus mengatur foto profil, identitas, dan ganti sandi akun yang **sedang aktif login** |
+| Landing Page | Publik (Tanpa Login) | Publik (Tanpa Login) | Papan informasi publik karyawan yang cuti hari ini |
 
 **Keterangan:**
 
-- **Admin Utama** memiliki akses penuh ke seluruh fitur dan data lintas bagian.
+- **Admin Utama** memiliki hak akses tertinggi ke seluruh fitur dan data lintas bagian, termasuk wewenang penuh mengelola data serta **mereset kata sandi akun Admin Bagian** melalui menu **Kelola Pengguna** (`/kelola-user`).
 - **Admin Bagian** hanya dapat mengakses dan mengelola data karyawan yang berada di bawah departemennya sendiri sesuai nilai `department` yang ditetapkan pada akun pengguna.
+- Menu **Keamanan Akun** (`/pengaturan/keamanan-akun`) merupakan pengaturan profil mandiri untuk akun siapa pun yang sedang aktif masuk ke sistem saat itu.
 
 ---
 
