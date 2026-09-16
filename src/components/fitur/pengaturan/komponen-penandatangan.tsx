@@ -75,15 +75,8 @@ export function KomponenPenandatangan() {
             jabatanPimpinan: s.jabatan,
           }))
         );
-      } else if (depts.length > 0) {
-        setSignatoryRows([
-          {
-            tempId: `row-${Date.now()}`,
-            departmentId: depts[0].id,
-            namaPimpinan: "",
-            jabatanPimpinan: `Kepala Bagian ${depts[0].name}`,
-          },
-        ]);
+      } else {
+        setSignatoryRows([]);
       }
     } else {
       toast.error(res.message || "Gagal memuat data penandatanganan.");

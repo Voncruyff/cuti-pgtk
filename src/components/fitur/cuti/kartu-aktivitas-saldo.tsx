@@ -18,7 +18,6 @@ import {
   Loader2,
   Wallet,
   Filter,
-  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1112,7 +1111,7 @@ export function BalanceActivityCard({
           </div>
         </CardHeader>
 
-        {/* Sub-toolbar Filter Khusus Mutasi (Rapi, Luas, dan Tidak Berdesakan) */}
+        {/* Sub-toolbar Filter Khusus Mutasi (Hanya Slider / Segmented Control yang Rapi & Jelas) */}
         <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
@@ -1120,66 +1119,73 @@ export function BalanceActivityCard({
               Filter Mutasi:
             </span>
 
-            {/* Selector Dropdown */}
-            <div className="relative inline-flex items-center">
-              <select
-                id="filter-aktivitas-saldo"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as FilterSaldoType)}
-                aria-label="Filter jenis saldo"
-                className={cn(
-                  "h-8 pl-3 pr-8 text-xs font-medium rounded-lg border shadow-2xs transition-all cursor-pointer appearance-none focus:outline-none focus:ring-1",
-                  filterType === "MASUK"
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold focus:ring-emerald-400"
-                    : filterType === "KELUAR"
-                    ? "bg-red-50 border-red-300 text-red-800 font-semibold focus:ring-red-400"
-                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-[#0093dc]"
-                )}
-              >
-                <option value="ALL">Semua Mutasi ({history.length})</option>
-                <option value="MASUK">Saldo Masuk ({countMasuk})</option>
-                <option value="KELUAR">Saldo Keluar ({countKeluar})</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-            </div>
-
-            {/* Segmented Quick Toggle */}
-            <div className="inline-flex p-0.5 bg-slate-200/70 rounded-lg text-[11px] font-medium shadow-2xs">
+            {/* Segmented Slider Control */}
+            <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium shadow-2xs">
               <button
                 type="button"
                 onClick={() => setFilterType("ALL")}
                 className={cn(
-                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
                   filterType === "ALL"
-                    ? "bg-white text-slate-800 font-semibold shadow-2xs"
+                    ? "bg-white text-slate-800 font-bold shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
                 )}
               >
-                Semua ({history.length})
+                <span>Semua</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                    filterType === "ALL"
+                      ? "bg-slate-100 text-slate-700"
+                      : "bg-slate-300/60 text-slate-600"
+                  )}
+                >
+                  {history.length}
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setFilterType("MASUK")}
                 className={cn(
-                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
                   filterType === "MASUK"
-                    ? "bg-emerald-600 text-white font-semibold shadow-2xs"
+                    ? "bg-emerald-600 text-white font-bold shadow-2xs"
                     : "text-slate-600 hover:text-emerald-700"
                 )}
               >
-                Masuk ({countMasuk})
+                <span>Masuk</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                    filterType === "MASUK"
+                      ? "bg-emerald-700/90 text-emerald-100"
+                      : "bg-emerald-100 text-emerald-700"
+                  )}
+                >
+                  {countMasuk}
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setFilterType("KELUAR")}
                 className={cn(
-                  "px-2.5 py-1 rounded-md transition-all cursor-pointer",
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
                   filterType === "KELUAR"
-                    ? "bg-red-600 text-white font-semibold shadow-2xs"
-                    : "text-slate-600 hover:text-red-700"
+                    ? "bg-rose-600 text-white font-bold shadow-2xs"
+                    : "text-slate-600 hover:text-rose-700"
                 )}
               >
-                Keluar ({countKeluar})
+                <span>Keluar</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                    filterType === "KELUAR"
+                      ? "bg-rose-700/90 text-rose-100"
+                      : "bg-rose-100 text-rose-700"
+                  )}
+                >
+                  {countKeluar}
+                </span>
               </button>
             </div>
           </div>

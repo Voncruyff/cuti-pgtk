@@ -148,14 +148,14 @@ let systemConfigStore = {
     companyName: "PT KEBON AGUNG",
     unitName: "PABRIK GULA TRANGKIL",
     location: "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153",
-    namaPemimpin: "Ir. Bambang Santoso, M.M.",
-    nipPemimpin: "197805122003121001",
+    namaPemimpin: "",
+    nipPemimpin: "",
     jabatanPemimpin: "General Manager",
-    hrManagerName: "Hendra Wijaya, S.E.",
-    hrManagerNip: "198503152010011002",
+    hrManagerName: "",
+    hrManagerNip: "",
     hrManagerTitle: "Kepala Bagian SDM & Umum",
-    generalManagerName: "Ir. Bambang Santoso, M.M.",
-    generalManagerNip: "197805122003121001",
+    generalManagerName: "",
+    generalManagerNip: "",
   },
 };
 
@@ -839,7 +839,7 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
   }>;
 }>> {
   try {
-    let leader = await prisma.penandatanganan.findFirst({
+    const leader = await prisma.penandatanganan.findFirst({
       where: {
         OR: [
           { kategori: "PEMIMPIN" },
@@ -848,18 +848,6 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
       },
       orderBy: { urutan: "asc" },
     });
-
-    if (!leader) {
-      leader = await prisma.penandatanganan.create({
-        data: {
-          id: "PEMIMPIN_UTAMA",
-          kategori: "PEMIMPIN",
-          nama: "Ir. Bambang Santoso, M.M.",
-          jabatan: "General Manager",
-          urutan: 0,
-        },
-      });
-    }
 
     const allDepts = await prisma.department.findMany({
       where: { isActive: true },
@@ -884,49 +872,31 @@ export async function getSignatoriesAction(): Promise<ActionResult<{
 
     const validSignatories = dbSignatories.filter((s) => s.department !== null || Boolean(s.departmentId));
 
-    // Pastikan tepat 1 penandatangan resmi per bagian kerja (1 department = 1 signatory)
-    const uniqueSignatoriesPerDept = allDepts.map((d, index) => {
-      const matching = validSignatories.filter((s) => s.departmentId === d.id);
-      let chosen = matching[0];
-
-      // Jika ada duplikasi dari database, utamakan entri kustom pengguna
-      if (matching.length > 1) {
-        const customEntry = matching.find(
-          (m) =>
-            m.nama &&
-            m.nama !== "Teguh Arifin" &&
-            m.nama !== "Hendra" &&
-            m.nama !== "Luki" &&
-            m.nama !== "Joko"
-        );
-        chosen = customEntry || matching[matching.length - 1];
-      }
-
-      return {
-        id: chosen?.id || `sig-${d.id}`,
-        departmentId: d.id,
-        departmentCode: d.code,
-        departmentName: d.name,
-        nama: chosen?.nama || "",
-        jabatan: chosen?.jabatan || `Kepala Bagian ${d.name}`,
-        urutan: chosen?.urutan ?? index + 1,
-      };
-    });
+    // Hanya kembalikan penandatangan yang benar-benar tersimpan di database (manual dibuat oleh pengguna)
+    const signatories = validSignatories.map((s, index) => ({
+      id: s.id,
+      departmentId: s.departmentId || "",
+      departmentCode: s.department?.code || "",
+      departmentName: s.department?.name || "",
+      nama: s.nama || "",
+      jabatan: s.jabatan || (s.department ? `Kepala Bagian ${s.department.name}` : "Kepala Bagian"),
+      urutan: s.urutan ?? index + 1,
+    }));
 
     return {
       success: true,
       data: {
         leader: {
-          namaPemimpin: leader.nama,
-          jabatanPemimpin: leader.jabatan,
+          namaPemimpin: leader?.nama || "",
+          jabatanPemimpin: leader?.jabatan || "General Manager",
         },
-        signatories: uniqueSignatoriesPerDept,
+        signatories,
         allDepartments: allDepts.map((d) => ({
           id: d.id,
           code: d.code,
           name: d.name,
         })),
-        departmentSignatories: uniqueSignatoriesPerDept.map((s) => ({
+        departmentSignatories: signatories.map((s) => ({
           id: s.departmentId,
           code: s.departmentCode,
           name: s.departmentName,
@@ -975,7 +945,7 @@ export async function getCompanyProfileAction(): Promise<ActionResult<{
     const companyName = profileRecord?.companyName || "PT KEBON AGUNG";
     const unitName = profileRecord?.unitName || "PABRIK GULA TRANGKIL";
     const location = profileRecord?.location || "Trangkil Lor, Desa Trangkil, Kecamatan Trangkil, Kabupaten Pati, Jawa Tengah 59153";
-    const namaPemimpin = leaderRecord?.nama || "Ir. Bambang Santoso, M.M.";
+    const namaPemimpin = leaderRecord?.nama || "";
     const nipPemimpin = "-";
     const jabatanPemimpin = leaderRecord?.jabatan || "General Manager";
 

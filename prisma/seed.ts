@@ -275,52 +275,8 @@ async function main() {
   });
   console.log("   ✓ Profil: PT KEBON AGUNG - PABRIK GULA TRANGKIL");
 
-  // =====================================================================
-  // 6. SEED DATA PENANDATANGANAN RESMI (LEAVE LETTER & LAPORAN)
-  // =====================================================================
-  console.log("\n✍️ 6. Mengisi Data Penandatanganan Resmi...");
-  // Pimpinan Utama / General Manager (Nama dikosongkan agar tidak menimpa editan user)
-  await prisma.penandatanganan.upsert({
-    where: { id: "PEMIMPIN_UTAMA" },
-    update: {}, // Jangan pernah menimpa nama/jabatan yang sudah diisi user
-    create: {
-      id: "PEMIMPIN_UTAMA",
-      kategori: "PEMIMPIN",
-      nama: "",
-      jabatan: "General Manager",
-      urutan: 0,
-    },
-  });
-
-  // Penandatangan per bagian (Nama dikosongkan agar diisi sendiri oleh admin di web)
-  const signers = [
-    { id: "sig-tuk", deptId: "dept-tuk", nama: "", jabatan: "Kepala Bagian TUK", urutan: 1 },
-    { id: "sig-tan", deptId: "dept-tan", nama: "", jabatan: "Kepala Bagian Tanaman", urutan: 2 },
-    { id: "sig-tek", deptId: "dept-tek", nama: "", jabatan: "Kepala Bagian Teknik", urutan: 3 },
-    { id: "sig-pab", deptId: "dept-pab", nama: "", jabatan: "Kepala Bagian Pabrikasi", urutan: 4 },
-  ];
-
-  for (const s of signers) {
-    const existing = await prisma.penandatanganan.findFirst({
-      where: { departmentId: s.deptId },
-    });
-    if (!existing) {
-      await prisma.penandatanganan.create({
-        data: {
-          id: s.id,
-          kategori: "BAGIAN",
-          nama: "",
-          jabatan: s.jabatan,
-          departmentId: s.deptId,
-          urutan: s.urutan,
-        },
-      });
-    }
-  }
-  console.log("   ✓ Penandatangan GM & 4 Kepala Bagian terdaftar.");
-
   console.log("\n=====================================================================");
-  console.log("🎉 SEEDING BERHASIL: 4 Bagian, 28 Stasiun, 5 Akun, Konfigurasi & Profil Siap!");
+  console.log("🎉 SEEDING BERHASIL: 4 Bagian, 28 Stasiun, 5 Akun, Kebijakan Saldo & Profil Siap!");
   console.log("=====================================================================\n");
 }
 
