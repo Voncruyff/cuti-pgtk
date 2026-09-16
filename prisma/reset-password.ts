@@ -9,7 +9,7 @@ async function resetPassword() {
   const newPassword = process.argv[3] || "admin123";
 
   console.log("\n=================================================");
-  console.log("🔐 ALAT RESET PASSWORD DARURAT (SIP-CUTI)");
+  console.log("ALAT RESET PASSWORD DARURAT (SIP-CUTI)");
   console.log("=================================================");
 
   let user = null;
@@ -37,13 +37,13 @@ async function resetPassword() {
         where: { role: "ADMIN_UTAMA" },
       });
       if (user) {
-        console.log(`ℹ️ Username 'admin' tidak ditemukan, otomatis mendeteksi akun ADMIN_UTAMA: '${user.username}'`);
+        console.log(`Informasi: Username 'admin' tidak ditemukan, otomatis mendeteksi akun ADMIN_UTAMA: '${user.username}'`);
       }
     }
   }
 
   if (!user) {
-    console.error(`\n❌ Error: Akun ${argTarget ? `'${argTarget}' ` : ""}tidak ditemukan di database!`);
+    console.error(`\nError: Akun ${argTarget ? `'${argTarget}' ` : ""}tidak ditemukan di database.`);
     
     // Tampilkan daftar semua akun yang ada di database agar admin tahu username yang benar
     const allUsers = await prisma.user.findMany({
@@ -52,16 +52,16 @@ async function resetPassword() {
     });
 
     if (allUsers.length === 0) {
-      console.log("⚠️ Database belum memiliki akun sama sekali. Jalankan seeding: npm run db:seed");
+      console.log("Peringatan: Database belum memiliki akun sama sekali. Jalankan seeding: npm run db:seed");
     } else {
-      console.log("\n📋 Daftar akun yang terdaftar di database saat ini:");
+      console.log("\nDaftar akun yang terdaftar di database saat ini:");
       console.log("------------------------------------------------------------------");
       allUsers.forEach((u, i) => {
         const status = u.isActive ? "Aktif" : "Nonaktif";
         console.log(` ${i + 1}. Username : ${u.username.padEnd(16)} | Role: ${u.role.padEnd(14)} | Nama: ${u.fullName} (${status})`);
       });
       console.log("------------------------------------------------------------------");
-      console.log("\n👉 Cara reset akun tertentu:");
+      console.log("\nPetunjuk reset akun tertentu:");
       console.log("   npm run db:reset-password <username> <password_baru>");
       console.log("   Contoh: npm run db:reset-password admintuk passwordbaru123\n");
     }
@@ -79,19 +79,19 @@ async function resetPassword() {
     },
   });
 
-  console.log(`✅ BERHASIL! Password untuk akun berikut telah direset:`);
+  console.log(`Reset password berhasil untuk akun:`);
   console.log(`   - Username  : ${user.username}`);
   console.log(`   - Nama      : ${user.fullName}`);
   console.log(`   - Role      : ${user.role}`);
   console.log(`   - Bagian    : ${user.department || "-"}`);
   console.log(`   - Password  : ${newPassword}`);
-  console.log("\n👉 Silakan login kembali dengan kredensial di atas.");
+  console.log("\nSilakan login kembali dengan kredensial di atas.");
   console.log("=================================================\n");
 }
 
 resetPassword()
   .catch((err) => {
-    console.error("❌ Terjadi kesalahan saat reset password:", err);
+    console.error("Terjadi kesalahan saat reset password:", err);
     process.exit(1);
   })
   .finally(async () => {

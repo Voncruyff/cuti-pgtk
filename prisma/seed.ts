@@ -93,7 +93,7 @@ async function main() {
   // =====================================================================
   // 1. SEED 4 BAGIAN / DEPARTEMEN UTAMA PG TRANGKIL
   // =====================================================================
-  console.log("\n📦 1. Mengisi Data Master 4 Bagian PG Trangkil...");
+  console.log("\n[1/5] Mengisi Data Master 4 Bagian PG Trangkil...");
   for (const dept of departmentsData) {
     const res = await prisma.department.upsert({
       where: { code: dept.code },
@@ -108,13 +108,13 @@ async function main() {
         isActive: true,
       },
     });
-    console.log(`   ✓ [${res.code}] ${res.name}`);
+    console.log(`   - [${res.code}] ${res.name}`);
   }
 
   // =====================================================================
   // 2. SEED 28 MASTER STASIUN PABRIK PG TRANGKIL
   // =====================================================================
-  console.log("\n🏭 2. Mengisi Data Master 28 Stasiun Pabrik PG Trangkil...");
+  console.log("\n[2/5] Mengisi Data Master 28 Stasiun Pabrik PG Trangkil...");
   let countStasiun = 0;
   for (const item of stationsData) {
     const res = await prisma.station.upsert({
@@ -132,14 +132,14 @@ async function main() {
       },
     });
     countStasiun++;
-    console.log(`   ✓ [KOBAG: ${res.code}] ${res.name.padEnd(26)} -> Bagian: ${item.departmentCode}`);
+    console.log(`   - [KOBAG: ${res.code}] ${res.name.padEnd(26)} -> Bagian: ${item.departmentCode}`);
   }
   console.log(`   Total Stasiun Berhasil Di-seed: ${countStasiun} stasiun.`);
 
   // =====================================================================
   // 3. SEED AKUN PENGGUNA (LOGIN STANDAR SISTEM)
   // =====================================================================
-  console.log("\n👤 3. Mengisi Akun Login Standar (Password: admin123)...");
+  console.log("\n[3/5] Mengisi Akun Login Standar (Password: admin123)...");
   const users = [
     {
       username: "admin",
@@ -196,7 +196,7 @@ async function main() {
             isActive: true,
           },
         });
-        console.log(`   🔄 [ADMIN_UTAMA] Kredensial berhasil dipulihkan ke default: 'admin' / 'admin123'.`);
+        console.log(`   - [ADMIN_UTAMA] Kredensial berhasil dipulihkan ke default: 'admin' / 'admin123'.`);
       } else {
         await prisma.user.create({
           data: {
@@ -208,7 +208,7 @@ async function main() {
             isActive: true,
           },
         });
-        console.log(`   ✓ [ADMIN_UTAMA] Akun baru dibuat: ${u.username}`);
+        console.log(`   - [ADMIN_UTAMA] Akun baru dibuat: ${u.username}`);
       }
       continue;
     }
@@ -225,7 +225,7 @@ async function main() {
     });
 
     if (existingBagian) {
-      console.log(`   ℹ️ User [${u.role} - ${u.department}] sudah ada (username: '${existingBagian.username}'). Tidak diubah.`);
+      console.log(`   - User [${u.role} - ${u.department}] sudah ada (username: '${existingBagian.username}'). Tidak diubah.`);
       continue;
     }
 
@@ -239,13 +239,13 @@ async function main() {
         isActive: true,
       },
     });
-    console.log(`   ✓ User dibuat: ${u.username.padEnd(10)} | Role: ${u.role.padEnd(12)} | Bagian: ${u.department}`);
+    console.log(`   - User dibuat: ${u.username.padEnd(10)} | Role: ${u.role.padEnd(12)} | Bagian: ${u.department}`);
   }
 
   // =====================================================================
   // 4. SEED KEBIJAKAN OTOMASI SALDO CUTI
   // =====================================================================
-  console.log("\n⚙️ 4. Mengisi Konfigurasi Otomasi Saldo Cuti...");
+  console.log("\n[4/5] Mengisi Konfigurasi Otomasi Saldo Cuti...");
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "CUTI_TAHUNAN" },
     update: {},
@@ -266,7 +266,7 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
-  console.log("   ✓ Kebijakan Cuti Tahunan (12 hari/tahun, carry-over maks 6 hari)");
+  console.log("   - Kebijakan Cuti Tahunan (12 hari/tahun, carry-over maks 6 hari)");
 
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "CUTI_BESAR" },
@@ -288,7 +288,7 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
-  console.log("   ✓ Kebijakan Cuti Besar (30 hari setiap kelipatan 6 tahun, masa berlaku 3 tahun)");
+  console.log("   - Kebijakan Cuti Besar (30 hari setiap kelipatan 6 tahun, masa berlaku 3 tahun)");
 
   await prisma.otomasiSaldoCuti.upsert({
     where: { jenisCuti: "INHALDAGEN" },
@@ -310,12 +310,12 @@ async function main() {
       satuanCarryOver: "HARI",
     },
   });
-  console.log("   ✓ Kebijakan Inhaldagen (Masa berlaku 12 bulan)");
+  console.log("   - Kebijakan Inhaldagen (Masa berlaku 12 bulan)");
 
   // =====================================================================
   // 5. SEED PROFIL PERUSAHAAN (KOP SURAT DOKUMEN CETAK)
   // =====================================================================
-  console.log("\n🏢 5. Mengisi Profil Perusahaan PG Trangkil...");
+  console.log("\n[5/5] Mengisi Profil Perusahaan PG Trangkil...");
   await prisma.profilPerusahaan.upsert({
     where: { id: "DEFAULT_PROFILE" },
     update: {},
@@ -326,16 +326,16 @@ async function main() {
       location: "",
     },
   });
-  console.log("   ✓ Profil: PT KEBON AGUNG - PABRIK GULA TRANGKIL");
+  console.log("   - Profil: PT KEBON AGUNG - PABRIK GULA TRANGKIL");
 
   console.log("\n=====================================================================");
-  console.log("🎉 SEEDING BERHASIL: 4 Bagian, 28 Stasiun, 5 Akun, Kebijakan Saldo & Profil Siap!");
+  console.log("SEEDING SELESAI: 4 Bagian, 28 Stasiun, 5 Akun, Kebijakan Saldo & Profil.");
   console.log("=====================================================================\n");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seeding gagal:", e);
+    console.error("Seeding gagal:", e);
     process.exit(1);
   })
   .finally(async () => {
