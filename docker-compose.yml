@@ -10,7 +10,9 @@ services:
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
+      --default-time-zone='+07:00'
     environment:
+      TZ: Asia/Jakarta
       MYSQL_ROOT_PASSWORD: rootpassword123
       MYSQL_DATABASE: cuti_pgtk
       MYSQL_USER: cuti_user
@@ -45,6 +47,7 @@ services:
     ports:
       - "3001:3000"
     environment:
+      - TZ=Asia/Jakarta
       - NODE_ENV=production
       - DB_HOST=db
       - DB_PORT=3306

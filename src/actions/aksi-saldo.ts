@@ -56,34 +56,6 @@ export async function addLeaveBalanceAction(
 
     const total = annual + longLeave + inhaldagen;
 
-    // Save to MySQL saldo_cuti table
-    await prisma.leaveBalance.upsert({
-      where: { nip: employee.nip },
-      create: {
-        nip: employee.nip,
-        nama: employee.nama,
-        cutiTahunan: annual,
-        cutiBesar: longLeave,
-        inhaldagen,
-        total,
-        periode: new Date().getFullYear(),
-      },
-      update: {
-        nama: employee.nama,
-        cutiTahunan: annual,
-        cutiBesar: longLeave,
-        inhaldagen,
-        total,
-      },
-    });
-
-    const updatedBalances = {
-      annual,
-      longLeave,
-      inhaldagen,
-      total,
-    };
-
     const targetName =
       leaveTypeCode === "ANNUAL"
         ? "Cuti Tahunan"
@@ -92,6 +64,53 @@ export async function addLeaveBalanceAction(
         : "Inhaldagen";
 
     const txId = `tx-${Date.now()}`;
+    const uraianStr = description?.trim() || `Penambahan Saldo ${targetName}`;
+
+    // Simpan ke saldo_cuti dan aktivitas_saldo dalam satu transaksi atomik
+    await prisma.$transaction([
+      prisma.leaveBalance.upsert({
+        where: { nip: employee.nip },
+        create: {
+          nip: employee.nip,
+          nama: employee.nama,
+          cutiTahunan: annual,
+          cutiBesar: longLeave,
+          inhaldagen,
+          total,
+          periode: new Date().getFullYear(),
+        },
+        update: {
+          nama: employee.nama,
+          cutiTahunan: annual,
+          cutiBesar: longLeave,
+          inhaldagen,
+          total,
+        },
+      }),
+      prisma.balanceActivity.create({
+        data: {
+          id: txId,
+          nip: employee.nip,
+          nama: employee.nama,
+          jenisTransaksi: "TAMBAH_SALDO",
+          uraian: uraianStr,
+          tglTransaksi: new Date(transactionDate),
+          tglCuti: null,
+          cutiTahunan: leaveTypeCode === "ANNUAL" ? Number(amount) : 0,
+          cutiBesar: leaveTypeCode === "LONG_LEAVE" ? Number(amount) : 0,
+          inhaldagen: leaveTypeCode === "INHALDAGEN" ? Number(amount) : 0,
+          totalHari: Number(amount),
+          keperluan: notes?.trim() || "-",
+        },
+      }),
+    ]);
+
+    const updatedBalances = {
+      annual,
+      longLeave,
+      inhaldagen,
+      total,
+    };
 
     // Audit log
     await logAudit({

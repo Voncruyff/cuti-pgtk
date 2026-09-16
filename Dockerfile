@@ -6,7 +6,8 @@
 # 1. Base Image: Alpine Linux dengan Node.js 20 & OpenSSL untuk Prisma
 # ------------------------------------------------------------------------------
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl netcat-openbsd
+RUN apk add --no-cache libc6-compat openssl netcat-openbsd tzdata
+ENV TZ="Asia/Jakarta"
 
 # ------------------------------------------------------------------------------
 # 2. Dependencies: Menginstal paket npm yang dibutuhkan

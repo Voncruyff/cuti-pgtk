@@ -17,16 +17,22 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
+  // Dapatkan waktu WIB (Asia/Jakarta, UTC+7) agar konsisten terlepas dari zona waktu server
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = String(now.getFullYear());
+  const wibFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const [year, month, day] = wibFormatter.format(now).split("-");
   const todayDMY = `${day}/${month}/${year}`;
   const todayYMD = `${year}-${month}-${day}`;
   const todayDMYHyphen = `${day}-${month}-${year}`;
   const searchFormats = [todayDMY, todayYMD, todayDMYHyphen];
 
-  const tanggalHariIniFormatted = format(now, "EEEE, dd MMMM yyyy", {
+  const nowWib = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const tanggalHariIniFormatted = format(nowWib, "EEEE, dd MMMM yyyy", {
     locale: id,
   });
 

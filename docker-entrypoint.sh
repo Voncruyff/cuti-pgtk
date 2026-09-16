@@ -28,6 +28,9 @@ if [ "${AUTO_SEED:-false}" = "true" ]; then
   tsx prisma/seed.ts || echo "⚠️ Seeding selesai/dilewati."
 fi
 
+# Pastikan direktori unggahan foto profil tersedia
+mkdir -p /app/public/uploads/profile /app/uploads/profile 2>/dev/null || true
+
 echo "================================================="
 echo "🌐 Server aktif di http://0.0.0.0:${PORT:-3000}"
 echo "================================================="

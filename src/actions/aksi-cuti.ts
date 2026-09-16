@@ -196,33 +196,10 @@ export async function createLeaveRequestAction(
     const newInhaldagen = currentInhaldagen - inhaldagenDays;
     const newTotal = newAnnual + newLongLeave + newInhaldagen;
 
-    // Update MySQL saldo_cuti table
-    await prisma.leaveBalance.upsert({
-      where: { nip: employee.nip },
-      create: {
-        nip: employee.nip,
-        nama: employee.nama,
-        cutiTahunan: newAnnual,
-        cutiBesar: newLongLeave,
-        inhaldagen: newInhaldagen,
-        total: newTotal,
-        periode: new Date().getFullYear(),
-      },
-      update: {
-        nama: employee.nama,
-        cutiTahunan: newAnnual,
-        cutiBesar: newLongLeave,
-        inhaldagen: newInhaldagen,
-        total: newTotal,
-      },
-    });
-
     const totalDays = annualDays + longLeaveDays + inhaldagenDays;
-    const now = new Date();
-    const requestNumber = `CT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}-${String(Math.floor(1000 + Math.random() * 9000))}`;
     const reqId = `req-${Date.now()}`;
 
-    // Compute effective dates from selectedDates
+    // Hitung tanggal efektif dari selectedDates
     const sortedDates = [...(selectedDates || [])].sort();
     const effectiveStartDate = startDate || sortedDates[0] || requestDate;
     const effectiveEndDate = endDate || sortedDates[sortedDates.length - 1] || effectiveStartDate;
@@ -233,28 +210,50 @@ export async function createLeaveRequestAction(
       })
       .join(", ");
 
-    const dateDetailNote = formattedDatesList ? `Tgl: ${formattedDatesList}` : "";
-    const combinedNotes = [notes, dateDetailNote].filter(Boolean).join(" • ");
-
     const typesList: string[] = [];
     if (annualDays > 0) typesList.push("Cuti Tahunan");
     if (longLeaveDays > 0) typesList.push("Cuti Besar");
     if (inhaldagenDays > 0) typesList.push("Inhaldagen");
     const uraianStr = `Pengambilan ${typesList.join(" & ") || "Cuti"}`;
 
-    // Simpan langsung ke tabel MySQL `aktivitas_saldo`
-    try {
-      await prisma.$executeRaw`
-        INSERT INTO aktivitas_saldo (
-          id, nip, nama, jenis_transaksi, uraian, tgl_transaksi, tgl_cuti, cuti_tahunan, cuti_besar, inhaldagen, total_hari, keperluan, created_at, updated_at
-        ) VALUES (
-          ${reqId}, ${employee.nip}, ${employee.nama}, 'AMBIL_CUTI', ${uraianStr}, ${new Date(requestDate)}, ${formattedDatesList || effectiveStartDate}, 
-          ${annualDays}, ${longLeaveDays}, ${inhaldagenDays}, ${totalDays}, ${purpose || "-"}, NOW(), NOW()
-        )
-      `;
-    } catch (dbErr) {
-      console.error("Gagal simpan ke tabel aktivitas_saldo:", dbErr);
-    }
+    // Jalankan pemotongan saldo dan pencatatan riwayat aktivitas dalam satu transaksi atomik (prisma.$transaction)
+    await prisma.$transaction([
+      prisma.leaveBalance.upsert({
+        where: { nip: employee.nip },
+        create: {
+          nip: employee.nip,
+          nama: employee.nama,
+          cutiTahunan: newAnnual,
+          cutiBesar: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+          periode: new Date().getFullYear(),
+        },
+        update: {
+          nama: employee.nama,
+          cutiTahunan: newAnnual,
+          cutiBesar: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+        },
+      }),
+      prisma.balanceActivity.create({
+        data: {
+          id: reqId,
+          nip: employee.nip,
+          nama: employee.nama,
+          jenisTransaksi: "AMBIL_CUTI",
+          uraian: uraianStr,
+          tglTransaksi: new Date(requestDate),
+          tglCuti: formattedDatesList || effectiveStartDate,
+          cutiTahunan: annualDays,
+          cutiBesar: longLeaveDays,
+          inhaldagen: inhaldagenDays,
+          totalHari: totalDays,
+          keperluan: purpose || "-",
+        },
+      }),
+    ]);
 
     // Log Audit
     await logAudit({
@@ -577,29 +576,7 @@ export async function correctLeaveRequestAction(
     const newLongLeave = effectiveLongLeave - longLeaveDays;
     const newInhaldagen = effectiveInhaldagen - inhaldagenDays;
     const newTotal = newAnnual + newLongLeave + newInhaldagen;
-
-    // Update MySQL saldo_cuti
-    await prisma.leaveBalance.upsert({
-      where: { nip: employee.nip },
-      create: {
-        nip: employee.nip,
-        nama: employee.nama,
-        cutiTahunan: newAnnual,
-        cutiBesar: newLongLeave,
-        inhaldagen: newInhaldagen,
-        total: newTotal,
-        periode: new Date().getFullYear(),
-      },
-      update: {
-        nama: employee.nama,
-        cutiTahunan: newAnnual,
-        cutiBesar: newLongLeave,
-        inhaldagen: newInhaldagen,
-        total: newTotal,
-      },
-    });
-
-    // Format new selectedDates
+    // Format tanggal cuti baru
     const sortedDates = [...selectedDates].sort();
     const formattedDatesList = sortedDates
       .map((d) => {
@@ -615,21 +592,41 @@ export async function correctLeaveRequestAction(
     if (inhaldagenDays > 0) typesList.push("Inhaldagen");
     const uraianStr = `Pengambilan ${typesList.join(" & ") || "Cuti"}`;
 
-    // Update MySQL aktivitas_saldo
-    await prisma.$executeRaw`
-      UPDATE aktivitas_saldo
-      SET
-        uraian = ${uraianStr},
-        tgl_transaksi = ${new Date(requestDate)},
-        tgl_cuti = ${formattedDatesList},
-        cuti_tahunan = ${annualDays},
-        cuti_besar = ${longLeaveDays},
-        inhaldagen = ${inhaldagenDays},
-        total_hari = ${totalDays},
-        keperluan = ${purpose || "-"},
-        updated_at = NOW()
-      WHERE id = ${activityId}
-    `;
+    // Jalankan koreksi saldo dan pembaruan riwayat aktivitas dalam satu transaksi atomik (prisma.$transaction)
+    await prisma.$transaction([
+      prisma.leaveBalance.upsert({
+        where: { nip: employee.nip },
+        create: {
+          nip: employee.nip,
+          nama: employee.nama,
+          cutiTahunan: newAnnual,
+          cutiBesar: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+          periode: new Date().getFullYear(),
+        },
+        update: {
+          nama: employee.nama,
+          cutiTahunan: newAnnual,
+          cutiBesar: newLongLeave,
+          inhaldagen: newInhaldagen,
+          total: newTotal,
+        },
+      }),
+      prisma.balanceActivity.update({
+        where: { id: activityId },
+        data: {
+          uraian: uraianStr,
+          tglTransaksi: new Date(requestDate),
+          tglCuti: formattedDatesList,
+          cutiTahunan: annualDays,
+          cutiBesar: longLeaveDays,
+          inhaldagen: inhaldagenDays,
+          totalHari: totalDays,
+          keperluan: purpose || "-",
+        },
+      }),
+    ]);
 
     // Audit log
     await logAudit({
@@ -701,16 +698,23 @@ export interface EmployeeOnLeaveToday {
 export async function getEmployeesOnLeaveTodayAction(): Promise<ActionResult<EmployeeOnLeaveToday[]>> {
   const user = await requireAuth();
 
+  // Dapatkan waktu WIB (Asia/Jakarta, UTC+7) agar pencarian cuti hari ini akurat di server
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const d2 = pad(now.getDate());
-  const m2 = pad(now.getMonth() + 1);
-  const y4 = now.getFullYear();
+  const wibFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const [y4, m2, d2] = wibFormatter.format(now).split("-");
+  const dayShort = String(parseInt(d2, 10));
+  const monthShort = String(parseInt(m2, 10));
 
   const todayDMY = `${d2}/${m2}/${y4}`;
-  const todayDMYShort = `${now.getDate()}/${now.getMonth() + 1}/${y4}`;
+  const todayDMYShort = `${dayShort}/${monthShort}/${y4}`;
   const todayYMD = `${y4}-${m2}-${d2}`;
-  const searchFormats = [todayDMY, todayDMYShort, todayYMD];
+  const todayDMYHyphen = `${d2}-${m2}-${y4}`;
+  const searchFormats = [todayDMY, todayDMYShort, todayYMD, todayDMYHyphen];
 
   try {
     const rawCutiHariIni = await prisma.balanceActivity.findMany({
