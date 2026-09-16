@@ -241,7 +241,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
           const curAnnualBalance = emp.leaveBalance?.cutiTahunan ?? 0;
 
           if (annualPolicy.isCarryOver) {
-            const maxCarry = annualPolicy.maxCarryOver || 6;
+            const maxCarry = typeof annualPolicy.maxCarryOver === "number" ? annualPolicy.maxCarryOver : 6;
             if (curAnnualBalance > maxCarry) {
               annualExpired = curAnnualBalance - maxCarry;
             }
@@ -352,7 +352,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
               // Jika masih ada sisa cuti besar dari siklus lama, sisa tersebut dihanguskan
               let oldLongExpired = 0;
               if (longLeavePolicy.isCarryOver) {
-                const maxCarry = longLeavePolicy.maxCarryOver || 0;
+                const maxCarry = typeof longLeavePolicy.maxCarryOver === "number" ? longLeavePolicy.maxCarryOver : 0;
                 if (curLong > maxCarry) {
                   oldLongExpired = curLong - maxCarry;
                 }
@@ -487,7 +487,7 @@ export async function executeAutomatedLeaveAccrualsAction(options?: {
       // ----------------------------------------------------
       // C. EKSEKUSI KEDALUWARSA INHALDAGEN (Pimpinan, 12 Bulan)
       // ----------------------------------------------------
-      if (!isPelaksana && (emp.leaveBalance?.inhaldagen ?? 0) > 0) {
+      if (inhaldagenPolicy.isOtomatisAktif && !isPelaksana && (emp.leaveBalance?.inhaldagen ?? 0) > 0) {
         const inhalVal = Number(inhaldagenPolicy.masaBerlaku) || 1;
         const inhalUnit = (inhaldagenPolicy.satuanBerlaku || "BULAN").toUpperCase();
         const cutoffDate = new Date(today);

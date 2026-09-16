@@ -201,7 +201,7 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] shadow-xl py-1.5 z-50 origin-top-right"
+              className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8F5FC] shadow-xl pt-1.5 pb-0 overflow-hidden z-50 origin-top-right"
             >
               {/* Header User Detail di dalam dropdown */}
               <div className="px-3.5 py-3 border-b border-[#E8F5FC] flex items-center gap-3">
@@ -259,6 +259,19 @@ export function Header({ user, onOpenMobileMenu: propOnOpen }: HeaderProps) {
                 )}
                 <span>Keluar</span>
               </button>
+            </div>
+
+            {/* Versi & Copyright Profesional */}
+            <div className="mt-1 px-3.5 py-2.5 border-t border-[#E8F5FC] bg-slate-50/70 select-none">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-slate-700 tracking-tight">SIP-CUTI</span>
+                <span className="font-mono text-[10px] text-slate-400 bg-white border border-slate-200/80 px-1.5 py-0.2 rounded font-medium">
+                  v1.0.0
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                © 2026 PG Trangkil • PT Kebon Agung
+              </p>
             </div>
           </motion.div>
         )}
