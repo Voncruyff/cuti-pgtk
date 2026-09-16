@@ -174,8 +174,48 @@ async function main() {
   ];
 
   for (const u of users) {
-    // Cek apakah akun ini sudah ada (baik dengan username default maupun jika username sudah diubah oleh admin)
-    const existingUser = await prisma.user.findFirst({
+    // 1. Perlakuan Khusus Akun ADMIN_UTAMA:
+    // Jika db:seed dijalankan secara manual, akun ADMIN_UTAMA akan direset sandinya ke default 'admin123'
+    // (sebagai pemulihan darurat jika lupa sandi admin)
+    if (u.role === UserRole.ADMIN_UTAMA) {
+      const existingAdmin = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: u.username },
+            { role: UserRole.ADMIN_UTAMA },
+          ],
+        },
+      });
+
+      if (existingAdmin) {
+        await prisma.user.update({
+          where: { id: existingAdmin.id },
+          data: {
+            username: "admin", // Pulihkan username ke 'admin'
+            passwordHash: defaultPasswordHash, // Reset sandi ke 'admin123'
+            isActive: true,
+          },
+        });
+        console.log(`   🔄 [ADMIN_UTAMA] Kredensial berhasil dipulihkan ke default: 'admin' / 'admin123'.`);
+      } else {
+        await prisma.user.create({
+          data: {
+            username: u.username,
+            passwordHash: defaultPasswordHash,
+            fullName: u.fullName,
+            role: u.role,
+            department: u.department,
+            isActive: true,
+          },
+        });
+        console.log(`   ✓ [ADMIN_UTAMA] Akun baru dibuat: ${u.username}`);
+      }
+      continue;
+    }
+
+    // 2. Untuk Akun Lainnya (ADMIN_BAGIAN):
+    // JANGAN PERNAH mengubah nama, username, atau password yang sudah diatur oleh pengguna
+    const existingBagian = await prisma.user.findFirst({
       where: {
         OR: [
           { username: u.username },
@@ -184,8 +224,8 @@ async function main() {
       },
     });
 
-    if (existingUser) {
-      console.log(`   ℹ️ User [${u.role} - ${u.department}] sudah ada (username: '${existingUser.username}'). Tidak dibuat ulang.`);
+    if (existingBagian) {
+      console.log(`   ℹ️ User [${u.role} - ${u.department}] sudah ada (username: '${existingBagian.username}'). Tidak diubah.`);
       continue;
     }
 
